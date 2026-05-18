@@ -3,8 +3,8 @@ const {
   useMultiFileAuthState,
   DisconnectReason,
   fetchLatestBaileysVersion,
-  makeInMemoryStore,
-  jidNormalizedUser,
+  makeCacheableSignalKeyStore,
+  isJidBroadcast,
 } = require('@whiskeysockets/baileys');
 const { Boom } = require('@hapi/boom');
 const readline = require('readline');
@@ -18,107 +18,120 @@ const config = require('./config');
 const AUTH_DIR = path.join(__dirname, '../auth_info_baileys');
 const DATA_DIR = path.join(__dirname, '../data');
 
-if (!fs.existsSync(AUTH_DIR)) fs.mkdirSync(AUTH_DIR, { recursive: true });
-if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
+[AUTH_DIR, DATA_DIR].forEach(d => { if (!fs.existsSync(d)) fs.mkdirSync(d, { recursive: true }); });
 
 const logger = pino({ level: 'silent' });
 
-function question(prompt) {
+function ask(prompt) {
   const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
-  return new Promise(resolve => rl.question(prompt, answer => { rl.close(); resolve(answer.trim()); }));
+  return new Promise(resolve => rl.question(prompt, ans => { rl.close(); resolve(ans.trim()); }));
 }
 
 function printBanner() {
-  console.log('\n');
-  console.log('╭━━━〔 💵 DOLLARBOT V5 〕━━━⬣');
-  console.log('┃ ✦ Owner  : Dollar');
-  console.log('┃ ✦ Country: Canada 🇨🇦');
-  console.log('┃ ✦ Engine : Cortex AI');
-  console.log('┃ ✦ Version: 5.0.0');
-  console.log('╰━━━━━━━━━━━━━━━━━━⬣');
-  console.log('«⚡ Powered By Cortex & Mera AI»\n');
+  console.log('\n\x1b[33m╭━━━〔 💵 DOLLARBOT V5 〕━━━⬣\x1b[0m');
+  console.log('\x1b[33m┃\x1b[0m ✦ Owner  : Dollar');
+  console.log('\x1b[33m┃\x1b[0m ✦ Country: Canada 🇨🇦');
+  console.log('\x1b[33m┃\x1b[0m ✦ Engine : Cortex AI');
+  console.log('\x1b[33m┃\x1b[0m ✦ Version: 5.0.0');
+  console.log('\x1b[33m╰━━━━━━━━━━━━━━━━━━⬣\x1b[0m');
+  console.log('\x1b[36m«⚡ Powered By Cortex & Mera AI»\x1b[0m\n');
 }
 
+let reconnectDelay = 3000;
+let isConnecting = false;
+
 async function startBot() {
+  if (isConnecting) return;
+  isConnecting = true;
+
   printBanner();
 
   const { state, saveCreds } = await useMultiFileAuthState(AUTH_DIR);
   const { version } = await fetchLatestBaileysVersion();
 
   const hasSession = fs.existsSync(path.join(AUTH_DIR, 'creds.json'));
-  let pairingCode = false;
+  let usePairingCode = false;
   let phoneNumber = '';
 
   if (!hasSession) {
-    console.log('╭━━━〔 🔐 LOGIN METHOD 〕━━━⬣');
-    console.log('┃ 1. QR Code (scan with WhatsApp)');
-    console.log('┃ 2. Pairing Code (enter phone number)');
-    console.log('╰━━━━━━━━━━━━━━━━━━⬣\n');
-    const choice = await question('Choose login method (1 for QR / 2 for Pairing Code): ');
+    console.log('\x1b[36m╭━━━〔 🔐 LOGIN METHOD 〕━━━⬣\x1b[0m');
+    console.log('\x1b[36m┃\x1b[0m 1. QR Code  — scan with WhatsApp');
+    console.log('\x1b[36m┃\x1b[0m 2. Pairing Code — enter phone number');
+    console.log('\x1b[36m╰━━━━━━━━━━━━━━━━━━⬣\x1b[0m\n');
+
+    const choice = await ask('Choose method (1 = QR / 2 = Pairing Code): ');
     if (choice === '2') {
-      pairingCode = true;
-      phoneNumber = await question('Enter your WhatsApp number (e.g. 14378898269): ');
-      phoneNumber = phoneNumber.replace(/\D/g, '');
+      usePairingCode = true;
+      phoneNumber = (await ask('Enter phone number (digits only, e.g. 14378898269): ')).replace(/\D/g, '');
       console.log(`\n📱 Requesting pairing code for +${phoneNumber}...\n`);
     } else {
-      console.log('\n📷 Scan the QR code below with WhatsApp:\n');
+      console.log('\n📷 QR Code will appear below. Scan it with WhatsApp:\n');
     }
   } else {
-    console.log('✅ Session found — reconnecting...\n');
+    console.log('\x1b[32m✅ Session found — reconnecting automatically...\x1b[0m\n');
   }
 
   const sock = makeWASocket({
     version,
-    auth: state,
+    auth: {
+      creds: state.creds,
+      keys: makeCacheableSignalKeyStore(state.keys, logger),
+    },
     logger,
-    printQRInTerminal: !pairingCode,
-    browser: ['DollarBot V5', 'Chrome', '5.0.0'],
+    printQRInTerminal: !usePairingCode,
+    browser: ['DollarBot V5', 'Chrome', '120.0.0'],
     connectTimeoutMs: 60000,
-    defaultQueryTimeoutMs: 0,
-    keepAliveIntervalMs: 10000,
+    defaultQueryTimeoutMs: 60000,
+    keepAliveIntervalMs: 30000,
+    retryRequestDelayMs: 500,
+    maxMsgRetryCount: 5,
     markOnlineOnConnect: true,
     syncFullHistory: false,
+    shouldIgnoreJid: jid => isJidBroadcast(jid),
     getMessage: async () => ({ conversation: '' }),
   });
 
-  if (pairingCode && phoneNumber && !hasSession) {
+  if (usePairingCode && phoneNumber && !hasSession) {
     await new Promise(r => setTimeout(r, 3000));
     try {
       const code = await sock.requestPairingCode(phoneNumber);
-      console.log('╭━━━〔 🔑 PAIRING CODE 〕━━━⬣');
-      console.log(`┃ Code: ${code}`);
-      console.log(`┃ Number: +${phoneNumber}`);
-      console.log('┃');
-      console.log('┃ Steps:');
-      console.log('┃ 1. Open WhatsApp on your phone');
-      console.log('┃ 2. Go to Settings > Linked Devices');
-      console.log('┃ 3. Tap "Link with phone number"');
-      console.log(`┃ 4. Enter code: ${code}`);
-      console.log('╰━━━━━━━━━━━━━━━━━━⬣\n');
+      const fmt = code.match(/.{1,4}/g)?.join('-') || code;
+      console.log('\x1b[32m╭━━━〔 🔑 PAIRING CODE 〕━━━⬣\x1b[0m');
+      console.log(`\x1b[32m┃\x1b[0m Code   : \x1b[33m${fmt}\x1b[0m`);
+      console.log(`\x1b[32m┃\x1b[0m Number : +${phoneNumber}`);
+      console.log('\x1b[32m┃\x1b[0m');
+      console.log('\x1b[32m┃\x1b[0m Steps:');
+      console.log('\x1b[32m┃\x1b[0m 1. Open WhatsApp on your phone');
+      console.log('\x1b[32m┃\x1b[0m 2. Go to Settings → Linked Devices');
+      console.log('\x1b[32m┃\x1b[0m 3. Tap "Link with phone number"');
+      console.log(`\x1b[32m┃\x1b[0m 4. Enter code: \x1b[33m${fmt}\x1b[0m`);
+      console.log('\x1b[32m╰━━━━━━━━━━━━━━━━━━⬣\x1b[0m\n');
     } catch (e) {
-      console.error('❌ Failed to get pairing code:', e.message);
+      console.error('\x1b[31m❌ Failed to get pairing code:', e.message, '\x1b[0m');
     }
   }
 
-  sock.ev.on('connection.update', async (update) => {
-    const { connection, lastDisconnect, qr } = update;
+  sock.ev.on('connection.update', async update => {
+    const { connection, lastDisconnect } = update;
+    isConnecting = false;
 
     if (connection === 'open') {
-      console.log('\n╭━━━〔 ✅ CONNECTED 〕━━━⬣');
-      console.log(`┃ DollarBot V5 is Online!`);
-      console.log(`┃ Number: +${config.ownerNumber}`);
-      console.log(`┃ Engine: ${config.engine}`);
-      console.log('╰━━━━━━━━━━━━━━━━━━⬣\n');
-      console.log('💵 DollarBot V5 — Smart • Fast • Limitless\n');
+      reconnectDelay = 3000;
+      console.log('\x1b[32m╭━━━〔 ✅ CONNECTED 〕━━━⬣\x1b[0m');
+      console.log('\x1b[32m┃\x1b[0m DollarBot V5 is Online!');
+      console.log(`\x1b[32m┃\x1b[0m Engine: ${config.engine}`);
+      console.log('\x1b[32m╰━━━━━━━━━━━━━━━━━━⬣\x1b[0m\n');
+      console.log('\x1b[33m💵 DollarBot V5 — Smart • Fast • Limitless\x1b[0m\n');
 
       try {
         await sock.sendMessage(config.ownerJid, {
           text:
-            `╭━━━〔 💵 DOLLARBOT V5 STARTED 〕━━━⬣\n` +
-            `┃ ✦ Status : Online ✅\n` +
-            `┃ ✦ Engine : ${config.engine}\n` +
-            `┃ ✦ Version: ${config.version}\n` +
-            `┃ ✦ Prefix : [ ${config.prefix} ]\n` +
+            `╭━━━〔 💵 DOLLARBOT V5 ONLINE 〕━━━⬣\n` +
+            `┃ ✦ Status  : Online ✅\n` +
+            `┃ ✦ Engine  : ${config.engine}\n` +
+            `┃ ✦ Version : ${config.version}\n` +
+            `┃ ✦ AI Mem  : Active 🧠\n` +
+            `┃ ✦ Search  : Ready 🔍\n` +
             `╰━━━━━━━━━━━━━━━━━━⬣\n\n` +
             `Type *.menu* to see all commands!\n` +
             `«💵 DollarBot V5 — Smart • Fast • Limitless»`,
@@ -127,20 +140,20 @@ async function startBot() {
     }
 
     if (connection === 'close') {
-      const reason = new Boom(lastDisconnect?.error)?.output?.statusCode;
-      const shouldReconnect = reason !== DisconnectReason.loggedOut;
-      console.log(`\n⚠️  Connection closed. Reason: ${reason}`);
-      if (shouldReconnect) {
-        console.log('🔄 Reconnecting in 5 seconds...');
-        setTimeout(startBot, 5000);
+      const statusCode = new Boom(lastDisconnect?.error)?.output?.statusCode;
+      const loggedOut = statusCode === DisconnectReason.loggedOut;
+      console.log(`\n\x1b[31m⚠️  Disconnected. Code: ${statusCode}\x1b[0m`);
+
+      if (loggedOut) {
+        console.log('\x1b[31m🚪 Logged out. Clearing session...\x1b[0m');
+        try { fs.rmSync(AUTH_DIR, { recursive: true, force: true }); } catch (_) {}
+        fs.mkdirSync(AUTH_DIR, { recursive: true });
+        console.log('🔄 Restarting bot in 3 seconds...');
+        setTimeout(startBot, 3000);
       } else {
-        console.log('🚪 Logged out. Clearing session...');
-        try {
-          fs.rmSync(AUTH_DIR, { recursive: true, force: true });
-          fs.mkdirSync(AUTH_DIR, { recursive: true });
-        } catch (_) {}
-        console.log('🔄 Restarting bot...');
-        setTimeout(startBot, 2000);
+        console.log(`\x1b[33m🔄 Reconnecting in ${reconnectDelay / 1000}s...\x1b[0m`);
+        setTimeout(startBot, reconnectDelay);
+        reconnectDelay = Math.min(reconnectDelay * 1.5, 30000);
       }
     }
   });
@@ -156,19 +169,22 @@ async function startBot() {
     }
   });
 
-  sock.ev.on('group-participants.update', async (update) => {
+  sock.ev.on('group-participants.update', async update => {
     await handleGroupParticipants(sock, update);
   });
 
-  process.on('uncaughtException', (err) => {
-    console.error('[Uncaught Exception]', err.message);
+  process.on('uncaughtException', err => {
+    if (!err.message?.includes('ECONNRESET') && !err.message?.includes('write EPIPE')) {
+      console.error('[Uncaught Exception]', err.message);
+    }
   });
 
-  process.on('unhandledRejection', (err) => {
-    console.error('[Unhandled Rejection]', err?.message || err);
+  process.on('unhandledRejection', err => {
+    const msg = err?.message || String(err);
+    if (!msg.includes('ECONNRESET') && !msg.includes('timed out')) {
+      console.error('[Unhandled Rejection]', msg);
+    }
   });
-
-  return sock;
 }
 
 startBot().catch(console.error);

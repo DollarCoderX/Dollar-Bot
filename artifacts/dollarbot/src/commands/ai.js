@@ -1,26 +1,29 @@
 const pollinations = require('../lib/pollinations');
+const memory = require('../lib/memory');
 const fetch = require('node-fetch');
 
 const aiCommands = {
-  async cortex(sock, msg, args) {
-    const jid = msg.key.remoteJid;
+  async cortex(sock, msg, args, jid) {
     if (!args.length) {
       return sock.sendMessage(jid, {
         text:
           `╭━━━〔 🧠 CORTEX AI 〕━━━⬣\n` +
           `┃ Usage: .cortex <your question>\n` +
           `┃\n` +
-          `┃ Cortex is an expert-level AI that\n` +
-          `┃ adapts its personality to any topic.\n` +
+          `┃ Expert-level AI with memory.\n` +
+          `┃ Adapts personality to any topic.\n` +
           `┃ Ask anything — coding, science,\n` +
           `┃ philosophy, creative writing & more.\n` +
+          `┃\n` +
+          `┃ 💡 It remembers your conversation!\n` +
+          `┃ Type .clear to reset memory.\n` +
           `╰━━━━━━━━━━━━━━━━━━⬣\n\n` +
-          `Example: .cortex explain quantum physics`,
+          `Example: .cortex explain quantum entanglement`,
       });
     }
-    await sock.sendMessage(jid, { text: '🧠 *Cortex is thinking...*' });
+    await sock.sendMessage(jid, { text: '🧠 *Cortex is processing...*' });
     try {
-      const response = await pollinations.cortex(args.join(' '));
+      const response = await pollinations.cortex(jid, args.join(' '));
       await sock.sendMessage(jid, {
         text: `╭━━━〔 🧠 CORTEX AI 〕━━━⬣\n\n${response}\n\n╰━━━━━━━━━━━━━━━━━━⬣\n\n⚡ Powered by Cortex AI`,
       });
@@ -29,24 +32,25 @@ const aiCommands = {
     }
   },
 
-  async mera(sock, msg, args) {
-    const jid = msg.key.remoteJid;
+  async mera(sock, msg, args, jid) {
     if (!args.length) {
       return sock.sendMessage(jid, {
         text:
           `╭━━━〔 💖 MERA AI 〕━━━⬣\n` +
           `┃ Usage: .mera <your message>\n` +
           `┃\n` +
-          `┃ Mera is a friendly, human-like\n` +
-          `┃ female AI. She's warm, funny,\n` +
-          `┃ and loves chatting with you!\n` +
+          `┃ Friendly, warm female AI.\n` +
+          `┃ She remembers your chats!\n` +
+          `┃ Talk to her about anything.\n` +
+          `┃\n` +
+          `┃ 💡 Type .clear to reset memory.\n` +
           `╰━━━━━━━━━━━━━━━━━━⬣\n\n` +
           `Example: .mera how are you today?`,
       });
     }
     await sock.sendMessage(jid, { text: '💖 *Mera is typing...*' });
     try {
-      const response = await pollinations.mera(args.join(' '));
+      const response = await pollinations.mera(jid, args.join(' '));
       await sock.sendMessage(jid, {
         text: `╭━━━〔 💖 MERA AI 〕━━━⬣\n\n${response}\n\n╰━━━━━━━━━━━━━━━━━━⬣\n\n💖 Powered by Mera AI`,
       });
@@ -55,19 +59,18 @@ const aiCommands = {
     }
   },
 
-  async codeai(sock, msg, args) {
-    const jid = msg.key.remoteJid;
+  async codeai(sock, msg, args, jid) {
     if (!args.length) {
       return sock.sendMessage(jid, {
         text:
           `╭━━━〔 💻 CODE AI 〕━━━⬣\n` +
-          `┃ Usage: .codeai <your question>\n` +
+          `┃ Usage: .codeai <question>\n` +
           `┃\n` +
-          `┃ CodeAI is a programming expert.\n` +
-          `┃ Ask for code in any language,\n` +
-          `┃ debug help, or explanations.\n` +
+          `┃ Expert coding AI. Supports all\n` +
+          `┃ languages — Python, JS, Rust,\n` +
+          `┃ Go, C++, SQL and more.\n` +
           `╰━━━━━━━━━━━━━━━━━━⬣\n\n` +
-          `Example: .codeai write a Python web scraper`,
+          `Example: .codeai write a REST API in Node.js`,
       });
     }
     await sock.sendMessage(jid, { text: '💻 *CodeAI is generating...*' });
@@ -81,8 +84,7 @@ const aiCommands = {
     }
   },
 
-  async roast(sock, msg, args) {
-    const jid = msg.key.remoteJid;
+  async roast(sock, msg, args, jid) {
     if (!args.length) {
       return sock.sendMessage(jid, { text: '❌ Usage: .roast <name>\nExample: .roast John' });
     }
@@ -95,8 +97,7 @@ const aiCommands = {
     }
   },
 
-  async complimentai(sock, msg, args) {
-    const jid = msg.key.remoteJid;
+  async complimentai(sock, msg, args, jid) {
     if (!args.length) {
       return sock.sendMessage(jid, { text: '❌ Usage: .complimentai <name>\nExample: .complimentai Sarah' });
     }
@@ -109,8 +110,7 @@ const aiCommands = {
     }
   },
 
-  async weather(sock, msg, args) {
-    const jid = msg.key.remoteJid;
+  async weather(sock, msg, args, jid) {
     if (!args.length) {
       return sock.sendMessage(jid, { text: '❌ Usage: .weather <city>\nExample: .weather Toronto' });
     }
@@ -123,22 +123,21 @@ const aiCommands = {
     }
   },
 
-  async imagine(sock, msg, args) {
-    const jid = msg.key.remoteJid;
+  async imagine(sock, msg, args, jid) {
     if (!args.length) {
       return sock.sendMessage(jid, {
         text:
           `╭━━━〔 🎨 IMAGINE AI 〕━━━⬣\n` +
           `┃ Usage: .imagine <prompt>\n` +
           `┃\n` +
-          `┃ Generate AI images from text!\n` +
-          `┃ Be descriptive for best results.\n` +
+          `┃ AI image generation from text.\n` +
+          `┃ Be descriptive for best results!\n` +
           `╰━━━━━━━━━━━━━━━━━━⬣\n\n` +
-          `Example: .imagine a futuristic city at sunset`,
+          `Example: .imagine a cyberpunk city at night with neon lights`,
       });
     }
     const prompt = args.join(' ');
-    await sock.sendMessage(jid, { text: `🎨 *Generating image for:* "${prompt}"\n⏳ Please wait...` });
+    await sock.sendMessage(jid, { text: `🎨 *Generating:* "${prompt}"\n⏳ This may take 15-30 seconds...` });
     try {
       const imageUrl = pollinations.getImageUrl(prompt);
       const response = await fetch(imageUrl, { timeout: 60000 });
@@ -146,15 +145,14 @@ const aiCommands = {
       const buffer = await response.buffer();
       await sock.sendMessage(jid, {
         image: buffer,
-        caption: `🎨 *Generated Image*\n📝 Prompt: ${prompt}\n\n⚡ Powered by Pollinations AI`,
+        caption: `🎨 *AI Generated Image*\n📝 Prompt: ${prompt}\n\n⚡ Powered by Pollinations AI`,
       });
     } catch (e) {
       await sock.sendMessage(jid, { text: `❌ Image Error: ${e.message}` });
     }
   },
 
-  async translate(sock, msg, args) {
-    const jid = msg.key.remoteJid;
+  async translate(sock, msg, args, jid) {
     if (!args.length) {
       return sock.sendMessage(jid, { text: '❌ Usage: .translate <text>\nExample: .translate Hola como estas' });
     }
@@ -165,6 +163,18 @@ const aiCommands = {
     } catch (e) {
       await sock.sendMessage(jid, { text: `❌ Translation Error: ${e.message}` });
     }
+  },
+
+  async clear(sock, msg, args, jid) {
+    const persona = args[0]?.toLowerCase();
+    if (persona && !['cortex', 'mera'].includes(persona)) {
+      return sock.sendMessage(jid, { text: '❌ Usage: .clear [cortex/mera]\nOmit to clear all AI memory.' });
+    }
+    memory.clearHistory(jid, persona || null);
+    const what = persona ? `*${persona.charAt(0).toUpperCase() + persona.slice(1)} AI*` : '*all AI*';
+    await sock.sendMessage(jid, {
+      text: `🗑️ Memory cleared for ${what} in this chat.\n\nFresh conversation started! ✨`,
+    });
   },
 };
 
