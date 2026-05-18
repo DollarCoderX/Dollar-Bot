@@ -25,7 +25,7 @@ const aiCommands = {
     try {
       const response = await pollinations.cortex(jid, args.join(' '));
       await sock.sendMessage(jid, {
-        text: `╭━━━〔 🧠 CORTEX AI 〕━━━⬣\n\n${response}\n\n╰━━━━━━━━━━━━━━━━━━⬣\n\n⚡ Powered by Cortex AI`,
+        text: `╭━━━〔 CORTEX AI 〕━━━⬣\n\n${response}\n\n╰━━━━━━━━━━━━━━━━━━⬣\n\n⚡ Powered by Cortex AI`,
       });
     } catch (e) {
       await sock.sendMessage(jid, { text: `❌ Cortex Error: ${e.message}` });
@@ -52,7 +52,7 @@ const aiCommands = {
     try {
       const response = await pollinations.mera(jid, args.join(' '));
       await sock.sendMessage(jid, {
-        text: `╭━━━〔 💖 MERA AI 〕━━━⬣\n\n${response}\n\n╰━━━━━━━━━━━━━━━━━━⬣\n\n💖 Powered by Mera AI`,
+        text: `╭━━━〔 MERA AI 〕━━━⬣\n\n${response}\n\n╰━━━━━━━━━━━━━━━━━━⬣\n\n💖 Powered by Mera AI`,
       });
     } catch (e) {
       await sock.sendMessage(jid, { text: `❌ Mera Error: ${e.message}` });
@@ -77,7 +77,7 @@ const aiCommands = {
     try {
       const response = await pollinations.codeAI(args.join(' '));
       await sock.sendMessage(jid, {
-        text: `╭━━━〔 💻 CODE AI 〕━━━⬣\n\n${response}\n\n╰━━━━━━━━━━━━━━━━━━⬣\n\n⚡ Powered by CodeAI`,
+        text: `╭━━━〔 CODE AI 〕━━━⬣\n\n${response}\n\n╰━━━━━━━━━━━━━━━━━━⬣\n\n⚡ Powered by CodeAI`,
       });
     } catch (e) {
       await sock.sendMessage(jid, { text: `❌ CodeAI Error: ${e.message}` });
@@ -91,7 +91,7 @@ const aiCommands = {
     await sock.sendMessage(jid, { text: '🔥 *Roasting in progress...*' });
     try {
       const response = await pollinations.roast(args.join(' '));
-      await sock.sendMessage(jid, { text: `🔥 *ROAST TIME!* 🔥\n\n${response}` });
+      await sock.sendMessage(jid, { text: `🔥 *ROAST TIME!*\n\n${response}` });
     } catch (e) {
       await sock.sendMessage(jid, { text: `❌ Error: ${e.message}` });
     }
@@ -104,7 +104,7 @@ const aiCommands = {
     await sock.sendMessage(jid, { text: '💐 *Creating compliment...*' });
     try {
       const response = await pollinations.complimentAI(args.join(' '));
-      await sock.sendMessage(jid, { text: `💐 *COMPLIMENT TIME!* 💐\n\n${response}` });
+      await sock.sendMessage(jid, { text: `💐 *COMPLIMENT TIME!*\n\n${response}` });
     } catch (e) {
       await sock.sendMessage(jid, { text: `❌ Error: ${e.message}` });
     }

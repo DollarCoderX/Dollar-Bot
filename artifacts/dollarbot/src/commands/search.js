@@ -58,7 +58,7 @@ const searchCommands = {
     if (!args.length) {
       return sock.sendMessage(jid, {
         text:
-          `╭━━━〔 🔍 WEB SEARCH 〕━━━⬣\n` +
+          `╭━━━〔 WEB SEARCH 〕━━━⬣\n` +
           `┃ Usage: .search <query>\n` +
           `┃\n` +
           `┃ Searches the web using DuckDuckGo.\n` +
@@ -68,7 +68,7 @@ const searchCommands = {
       });
     }
     const query = args.join(' ');
-    await sock.sendMessage(jid, { text: `🔍 *Searching for:* "${query}"...` });
+    await sock.sendMessage(jid, { text: `*Searching for:* "${query}"...` });
     try {
       const results = await duckSearch(query);
       if (!results.length) {
@@ -82,7 +82,7 @@ const searchCommands = {
         if (r.url) text += `┃    🔗 ${r.url}\n`;
         text += `┃\n`;
       });
-      text += `╰━━━━━━━━━━━━━━━━━━⬣\n\n⚡ Powered by DuckDuckGo`;
+      text += `╰━━━━━━━━━━━━━━━━━━⬣\n\n⚡ Powered by DollarSearch`;
       await sock.sendMessage(jid, { text });
     } catch (e) {
       await sock.sendMessage(jid, { text: `❌ Search Error: ${e.message}` });

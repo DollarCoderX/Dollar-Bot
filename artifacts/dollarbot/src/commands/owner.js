@@ -94,18 +94,13 @@ const ownerCommands = {
     }
 
     const qMsg = ctx.quotedMessage;
-
-    // Baileys stores view-once in these keys (camelCase, lowercase 'v')
-    const viewOnceInner =
-      qMsg?.viewOnceMessage?.message ||
-      qMsg?.viewOnceMessageV2?.message ||
-      qMsg?.viewOnceMessageV2Extension?.message;
+    const viewOnceMsg = qMsg?.viewOnceMessage || qMsg?.viewOnceMessageV2 || qMsg?.viewOnceMessageV2Extension;
+    const viewOnceInner = viewOnceMsg?.message;
 
     if (!viewOnceInner) {
       return sock.sendMessage(jid, { text: '❌ That message is not a view-once photo/video.' });
     }
 
-    // Determine media type (imageMessage or videoMessage)
     const mediaType = Object.keys(viewOnceInner).find(k =>
       ['imageMessage', 'videoMessage', 'audioMessage'].includes(k)
     );
@@ -115,9 +110,32 @@ const ownerCommands = {
     }
 
     try {
-      const mediaMsgContent = { ...viewOnceInner[mediaType], viewOnce: false };
-      await sock.sendMessage(jid, { [mediaType]: mediaMsgContent });
-      await sock.sendMessage(jid, { text: '✅ View-once media revealed!' });
+      const { downloadMediaMessage } = require('@whiskeysockets/baileys');
+      // Create a fake message object for downloadMediaMessage to process
+      const fakeMsg = {
+        key: {
+          remoteJid: jid,
+          id: ctx.stanzaId,
+          fromMe: false,
+          participant: ctx.participant
+        },
+        message: viewOnceInner
+      };
+      
+      const buffer = await downloadMediaMessage(
+        fakeMsg,
+        'buffer',
+        {},
+        { logger: sock.logger, reuploadRequest: sock.updateMediaMessage }
+      );
+
+      if (mediaType === 'imageMessage') {
+        await sock.sendMessage(jid, { image: buffer, caption: viewOnceInner[mediaType].caption || '✅ View-once media revealed!' });
+      } else if (mediaType === 'videoMessage') {
+        await sock.sendMessage(jid, { video: buffer, caption: viewOnceInner[mediaType].caption || '✅ View-once media revealed!' });
+      } else if (mediaType === 'audioMessage') {
+        await sock.sendMessage(jid, { audio: buffer, mimetype: 'audio/mp4', ptt: viewOnceInner[mediaType].ptt });
+      }
     } catch (e) {
       await sock.sendMessage(jid, { text: `❌ VV Error: ${e.message}` });
     }

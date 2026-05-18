@@ -141,9 +141,9 @@ async function startBot(method, phone) {
             `┃ ✦ Status  : Online ✅\n` +
             `┃ ✦ Engine  : ${config.engine}\n` +
             `┃ ✦ Version : ${config.version}\n` +
-            `┃ ✦ AI Mem  : Active 🧠\n` +
-            `┃ ✦ Search  : Ready 🔍\n` +
-            `┃ ✦ TTS     : Ready 🔊\n` +
+            `┃ ✦ AI Mem  : Active\n` +
+            `┃ ✦ Search  : Ready\n` +
+            `┃ ✦ TTS     : Ready\n` +
             `╰━━━━━━━━━━━━━━━━━━⬣\n\n` +
             `Type *.menu* to see all commands!\n` +
             `«💵 DollarBot V5 — Smart • Fast • Limitless»`,

@@ -2,15 +2,41 @@ const fetch = require('node-fetch');
 const config = require('../config');
 const memory = require('./memory');
 
-async function textGenerate(messages, model = 'openai') {
-  const res = await fetch('https://text.pollinations.ai/', {
+async function textGenerate(messages, model = 'llama3-8b-8192') {
+  let groqError;
+  // Try Groq First
+  if (config.groqApiKey && !config.groqApiKey.includes('YOUR_GROQ')) {
+    try {
+      const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${config.groqApiKey}`
+        },
+        body: JSON.stringify({ messages, model }),
+        timeout: 45000,
+      });
+      if (res.ok) {
+        const data = await res.json();
+        return data.choices[0].message.content.trim();
+      } else {
+        groqError = `Groq HTTP ${res.status}`;
+      }
+    } catch (e) {
+      groqError = e.message;
+    }
+  }
+
+  // Fallback to Pollinations
+  console.log(`[AI] Groq failed or not configured (${groqError}). Falling back to Pollinations...`);
+  const pollinationsRes = await fetch('https://text.pollinations.ai/', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ messages, model, seed: Math.floor(Math.random() * 99999), private: true }),
+    body: JSON.stringify({ messages, model: 'openai', seed: Math.floor(Math.random() * 99999), private: true }),
     timeout: 45000,
   });
-  if (!res.ok) throw new Error(`AI service error (${res.status})`);
-  return (await res.text()).trim();
+  if (!pollinationsRes.ok) throw new Error(`Primary and Backup AI failed.`);
+  return (await pollinationsRes.text()).trim();
 }
 
 async function cortex(jid, question) {
@@ -69,36 +95,51 @@ function getImageUrl(prompt) {
   return `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=1024&height=1024&nologo=true&enhance=true&seed=${Math.floor(Math.random() * 99999)}`;
 }
 
-// TTS: Uses Pollinations OpenAI-compatible audio endpoint
+// TTS: Primary Canopy (via Groq), Fallback Pollinations
 async function tts(text) {
-  // Try Pollinations TTS first
-  try {
-    const res = await fetch('https://text.pollinations.ai/openai/audio/speech', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ model: 'tts-1', input: text.slice(0, 4000), voice: 'nova' }),
-      timeout: 30000,
-    });
-    if (res.ok) {
-      const ct = res.headers.get('content-type') || '';
-      if (ct.includes('audio')) {
+  let groqError;
+  // Try Canopy (via Groq) First
+  if (config.groqApiKey && !config.groqApiKey.includes('YOUR_GROQ')) {
+    try {
+      const res = await fetch('https://api.groq.com/openai/v1/audio/speech', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${config.groqApiKey}`
+        },
+        body: JSON.stringify({ 
+          model: 'canopy', 
+          input: text.slice(0, 4000), 
+          voice: 'austin' 
+        }),
+        timeout: 30000,
+      });
+
+      if (res.ok) {
         const buffer = await res.buffer();
         return { buffer, mime: 'audio/mpeg' };
+      } else {
+        groqError = `Groq HTTP ${res.status}`;
       }
+    } catch (e) {
+      groqError = e.message;
     }
-  } catch (_) {}
-
-  // Fallback: StreamElements TTS (reliable, free, no key needed)
-  const encoded = encodeURIComponent(text.slice(0, 400));
-  const url = `https://api.streamelements.com/kappa/v2/speech?voice=Brian&text=${encoded}`;
-  const res2 = await fetch(url, { timeout: 20000 });
-  if (!res2.ok) throw new Error('TTS service unavailable');
-  const ct2 = res2.headers.get('content-type') || '';
-  if (!ct2.includes('audio') && !ct2.includes('mpeg') && !ct2.includes('octet')) {
-    throw new Error('TTS returned non-audio response');
   }
-  const buffer = await res2.buffer();
-  return { buffer, mime: 'audio/mpeg' };
+
+  // Fallback to Pollinations
+  console.log(`[TTS] Canopy (Groq) failed or not configured (${groqError}). Falling back to Pollinations...`);
+  const res2 = await fetch('https://text.pollinations.ai/openai/audio/speech', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ model: 'tts-1', input: text.slice(0, 4000), voice: 'nova' }),
+    timeout: 30000,
+  });
+  if (res2.ok) {
+    const buffer = await res2.buffer();
+    return { buffer, mime: 'audio/mpeg' };
+  }
+  
+  throw new Error(`Both Canopy (Groq) and Pollinations TTS Failed.`);
 }
 
 module.exports = { cortex, mera, codeAI, roast, complimentAI, getWeather, translate, getImageUrl, tts, textGenerate };

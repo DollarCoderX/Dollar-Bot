@@ -1,16 +1,17 @@
 const fetch = require('node-fetch');
+const pollinations = require('../lib/pollinations');
 
 const jokes = [
-  "Why don't scientists trust atoms? Because they make up everything! 😂",
+  "Why don't scientists trust atoms? Because they make up everything!",
   "I told my wife she was drawing her eyebrows too high. She looked surprised.",
-  "Why do cows wear bells? Because their horns don't work! 🐄",
-  "What do you call a fish with no eyes? A fsh! 🐟",
-  "Why did the scarecrow win an award? He was outstanding in his field! 🌾",
+  "Why do cows wear bells? Because their horns don't work!",
+  "What do you call a fish with no eyes? A fsh!",
+  "Why did the scarecrow win an award? He was outstanding in his field!",
   "I'm reading a book about anti-gravity. It's impossible to put down!",
   "Why don't eggs tell jokes? They'd crack each other up!",
-  "What do you call cheese that isn't yours? Nacho cheese! 🧀",
-  "Why did the bicycle fall over? Because it was two-tired! 🚲",
-  "What do you get when you cross a snowman and a vampire? Frostbite! ❄️",
+  "What do you call cheese that isn't yours? Nacho cheese!",
+  "Why did the bicycle fall over? Because it was two-tired!",
+  "What do you get when you cross a snowman and a vampire? Frostbite!",
 ];
 
 const dadjokes = [
@@ -26,18 +27,7 @@ const dadjokes = [
   "I asked my dog what two minus two is. He said nothing.",
 ];
 
-const facts = [
-  "🦦 Otters hold hands while sleeping so they don't drift apart.",
-  "🐙 Octopuses have three hearts, blue blood, and nine brains.",
-  "🍯 Honey never spoils. Archaeologists found 3000-year-old honey in Egyptian tombs still edible.",
-  "🌍 There are more stars in the universe than grains of sand on Earth.",
-  "🦈 Sharks are older than trees — they've been around for over 400 million years.",
-  "🐘 Elephants are the only animals that can't jump.",
-  "🧠 Your brain generates about 20 watts of power — enough to light a dim bulb.",
-  "🦆 A group of flamingos is called a 'flamboyance'.",
-  "🌙 The Moon is drifting away from Earth at about 3.8 cm per year.",
-  "🐝 Bees can recognize human faces.",
-];
+const facts = []; // Replaced by Groq API
 
 const advices = [
   "💡 Drink more water. Most problems start with dehydration.",
@@ -137,7 +127,13 @@ const funCommands = {
   },
 
   async fact(sock, msg) {
-    await sock.sendMessage(msg.key.remoteJid, { text: `🤯 *Random Fact!*\n\n${getRandom(facts)}` });
+    const jid = msg.key.remoteJid;
+    try {
+      const fact = await pollinations.textGenerate([{ role: 'system', content: 'You are an encyclopedia of fascinating, obscure, and mind-blowing facts. Output exactly one random, highly interesting fact. Do not use conversational filler, just the fact.' }]);
+      await sock.sendMessage(jid, { text: `🧠 *Random Fact!*\n\n${fact}` });
+    } catch (e) {
+      await sock.sendMessage(jid, { text: `❌ Fact Error: ${e.message}` });
+    }
   },
 
   async advice(sock, msg) {
@@ -180,7 +176,7 @@ const funCommands = {
     const name = args.join(' ') || msg.pushName || 'You';
     const pct = getPercent(name + 'hot');
     await sock.sendMessage(jid, {
-      text: `🔥 *Hot Check for ${name}*\n\n${getBar(pct)} ${pct}%\n\n${pct >= 80 ? '🔥 Absolutely smoking!' : pct >= 60 ? '😍 Pretty hot!' : pct >= 40 ? '😊 Decent!' : '❄️ Needs warming up!'}`,
+      text: `🔥 *Hot Check for ${name}*\n\n${getBar(pct)} ${pct}%\n\n${pct >= 80 ? 'Absolutely smoking!' : pct >= 60 ? 'Pretty hot!' : pct >= 40 ? 'Decent!' : 'Needs warming up!'}`,
     });
   },
 
@@ -189,7 +185,7 @@ const funCommands = {
     const name = args.join(' ') || msg.pushName || 'You';
     const pct = getPercent(name + 'smart');
     await sock.sendMessage(jid, {
-      text: `🧠 *Smart Check for ${name}*\n\n${getBar(pct)} ${pct}%\n\n${pct >= 80 ? '🧠 Genius level!' : pct >= 60 ? '📚 Quite intelligent!' : pct >= 40 ? '💡 Average smart!' : '😅 Room for growth!'}`,
+      text: `🧠 *Smart Check for ${name}*\n\n${getBar(pct)} ${pct}%\n\n${pct >= 80 ? 'Genius level!' : pct >= 60 ? 'Quite intelligent!' : pct >= 40 ? 'Average smart!' : 'Room for growth!'}`,
     });
   },
 
@@ -209,7 +205,7 @@ const funCommands = {
     const name = args.join(' ') || msg.pushName || 'You';
     const pct = getPercent(name + 'cool');
     await sock.sendMessage(jid, {
-      text: `😎 *Cool Check for ${name}*\n\n${getBar(pct)} ${pct}%\n\n${pct >= 80 ? '😎 Ice cold, too cool for school!' : pct >= 60 ? '🤙 Pretty cool dude!' : pct >= 40 ? '🙂 Sorta cool!' : '🥱 Needs a vibe upgrade!'}`,
+      text: `😎 *Cool Check for ${name}*\n\n${getBar(pct)} ${pct}%\n\n${pct >= 80 ? 'Ice cold, too cool for school!' : pct >= 60 ? 'Pretty cool dude!' : pct >= 40 ? 'Sorta cool!' : 'Needs a vibe upgrade!'}`,
     });
   },
 
@@ -218,7 +214,7 @@ const funCommands = {
     const name = args.join(' ') || msg.pushName || 'You';
     const pct = getPercent(name + 'love');
     await sock.sendMessage(jid, {
-      text: `❤️ *Love Check for ${name}*\n\n${getBar(pct)} ${pct}%\n\n${pct >= 80 ? '💘 Overflowing with love!' : pct >= 60 ? '💖 Very loveable!' : pct >= 40 ? '💛 Warmhearted!' : '🥶 Needs to open up!'}`,
+      text: `❤️ *Love Check for ${name}*\n\n${getBar(pct)} ${pct}%\n\n${pct >= 80 ? 'Overflowing with love!' : pct >= 60 ? 'Very loveable!' : pct >= 40 ? 'Warmhearted!' : 'Needs to open up!'}`,
     });
   },
 };

@@ -6,9 +6,12 @@ const config = {
   version: '5.0.0',
   prefix: '.',
   mode: 'public',
-  engine: 'Cortex AI',
+  engine: 'Groq & Canopy AI', // Updated Engine
 
   ownerJid: '14378898269@s.whatsapp.net',
+
+  // ----- API KEYS (Replace these with your actual keys) -----
+  groqApiKey: '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',
 
   pollinationsText: 'https://text.pollinations.ai/',
   pollinationsImage: 'https://image.pollinations.ai/prompt/',

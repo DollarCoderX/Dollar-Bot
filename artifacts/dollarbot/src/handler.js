@@ -39,8 +39,7 @@ function extractSender(msg, isGroup) {
 
 function isOwnerJid(sender) {
   if (!sender) return false;
-  const bare = sender.split('@')[0].split(':')[0];
-  return bare === config.ownerNumber || sender === config.ownerJid;
+  return sender.includes(config.ownerNumber);
 }
 
 async function isBotAdmin(sock, jid) {
@@ -239,9 +238,10 @@ async function handleMessage(sock, msg) {
 
     const [rawCmd, ...args] = body.slice(config.prefix.length).trim().split(/\s+/);
     const cmd = rawCmd.toLowerCase();
-    const isAdmin = isGroup ? await isBotAdmin(sock, jid) : false;
+    const getIsAdmin = async () => isGroup ? await isBotAdmin(sock, jid) : false;
 
     try { await sock.readMessages([msg.key]); } catch (_) {}
+    try { await sock.sendPresenceUpdate('composing', jid); } catch (_) {}
 
     // Measure speed for menu
     const cmdStart = Date.now();
@@ -251,9 +251,7 @@ async function handleMessage(sock, msg) {
         const pingMsg = await sock.sendMessage(jid, { text: '⏳ Loading menu...' });
         const speed = Date.now() - cmdStart;
         await sendMenu(sock, jid, speed);
-        // delete the loading message
-        try { await sock.sendMessage(jid, { delete: pingMsg.key }); } catch (_) {}
-        break;
+       
       }
 
       // ── User ──────────────────────────────────────────────────────────────
@@ -330,15 +328,15 @@ async function handleMessage(sock, msg) {
       case 'tictactoe': await gameCommands.tictactoe(sock, msg, args); break;
 
       // ── Group ─────────────────────────────────────────────────────────────
-      case 'kick':      await groupCommands.kick(sock, msg, args, isAdmin); break;
-      case 'promote':   await groupCommands.promote(sock, msg, args, isAdmin); break;
-      case 'demote':    await groupCommands.demote(sock, msg, args, isAdmin); break;
-      case 'mute':      await groupCommands.mute(sock, msg, isAdmin); break;
-      case 'unmute':    await groupCommands.unmute(sock, msg, isAdmin); break;
+      case 'kick':      await groupCommands.kick(sock, msg, args, await getIsAdmin()); break;
+      case 'promote':   await groupCommands.promote(sock, msg, args, await getIsAdmin()); break;
+      case 'demote':    await groupCommands.demote(sock, msg, args, await getIsAdmin()); break;
+      case 'mute':      await groupCommands.mute(sock, msg, await getIsAdmin()); break;
+      case 'unmute':    await groupCommands.unmute(sock, msg, await getIsAdmin()); break;
       case 'tagall':    await groupCommands.tagall(sock, msg); break;
       case 'everyone':  await groupCommands.everyone(sock, msg, args); break;
       case 'hidetag':   await groupCommands.hidetag(sock, msg, args); break;
-      case 'grouplink': await groupCommands.grouplink(sock, msg, isAdmin); break;
+      case 'grouplink': await groupCommands.grouplink(sock, msg, await getIsAdmin()); break;
       case 'groupinfo': await groupCommands.groupinfo(sock, msg); break;
       case 'antilink':  await groupCommands.antilink(sock, msg, args); break;
       case 'welcome':   await groupCommands.welcome(sock, msg, args); break;
