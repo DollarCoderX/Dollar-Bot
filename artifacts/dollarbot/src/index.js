@@ -11,6 +11,7 @@ const readline = require('readline');
 const path = require('path');
 const fs = require('fs');
 const pino = require('pino');
+const http = require('http');
 
 const { handleMessage, handleGroupParticipants } = require('./handler');
 const config = require('./config');
@@ -20,6 +21,16 @@ const DATA_DIR = path.join(__dirname, '../data');
 [AUTH_DIR, DATA_DIR].forEach(d => { if (!fs.existsSync(d)) fs.mkdirSync(d, { recursive: true }); });
 
 const logger = pino({ level: 'silent' });
+
+// ── Dummy HTTP Server for Render Web Service ─────────────────────────────
+const PORT = process.env.PORT || 3000;
+const server = http.createServer((req, res) => {
+  res.writeHead(200, { 'Content-Type': 'text/plain' });
+  res.end('DollarBot V5 is Alive & Running!');
+});
+server.listen(PORT, () => {
+  console.log(`\x1b[32m🌐 Dummy HTTP server running on port ${PORT} (Required for Render Web Service)\x1b[0m`);
+});
 
 function ask(prompt) {
   const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
