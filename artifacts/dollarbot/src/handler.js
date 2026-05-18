@@ -32,10 +32,16 @@ function extractBody(msg) {
 }
 
 function extractSender(msg, isGroup) {
-  if (msg.key.fromMe) return config.ownerNumbers[0] + '@s.whatsapp.net';
-  return isGroup
-    ? (msg.key.participant || msg.key.remoteJid)
-    : msg.key.remoteJid;
+  if (isGroup) {
+    // In groups, participant is the actual sender. fromMe means the bot itself sent it.
+    return msg.key.participant || msg.key.remoteJid;
+  }
+  // In DMs: fromMe = owner sent from their own linked number
+  if (msg.key.fromMe) {
+    // Find owner number from the actual bot user JID
+    return config.ownerNumbers[0] + '@s.whatsapp.net';
+  }
+  return msg.key.remoteJid;
 }
 
 function isOwnerJid(sender) {

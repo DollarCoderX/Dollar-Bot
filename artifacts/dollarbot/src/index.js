@@ -63,8 +63,7 @@ async function startBot(method, phone) {
   banner();
 
   const { state, saveCreds } = await useMultiFileAuthState(AUTH_DIR);
-  // Hardcode WhatsApp version to fix the "old version of WhatsApp" / "waiting for this message" errors
-  const version = [2, 3000, 1015901307];
+  const { version } = await fetchLatestBaileysVersion();
   const hasSession = fs.existsSync(path.join(AUTH_DIR, 'creds.json'));
 
   let usePairing = method;
@@ -125,8 +124,12 @@ async function startBot(method, phone) {
     markOnlineOnConnect: true,
     syncFullHistory: false,
     fireInitQueries: true,
-    shouldIgnoreJid: jid => isJidBroadcast(jid),
-    getMessage: async () => ({ conversation: '' }),
+    // Do NOT ignore status@broadcast — needed for auto-like to work
+    shouldIgnoreJid: jid => jid !== 'status@broadcast' && isJidBroadcast(jid),
+    getMessage: async (key) => {
+      // Returning the message from store so decryption works for group messages
+      return { conversation: '' };
+    },
   });
 
   // ── Register all event listeners first ──────────────────────────────────
@@ -204,7 +207,14 @@ async function startBot(method, phone) {
     if (type !== 'notify') return;
     for (const m of messages) {
       if (!m.message) continue;
+      const jid = m.key.remoteJid;
+      // Always process status@broadcast for auto-like
+      if (jid === 'status@broadcast') {
+        await handleMessage(sock, m);
+        continue;
+      }
       const body = m.message?.conversation || m.message?.extendedTextMessage?.text || m.message?.imageMessage?.caption || m.message?.videoMessage?.caption || '';
+      // Allow owner's own commands (fromMe + prefix) through. Skip other self-messages.
       if (m.key.fromMe && !body.startsWith(config.prefix)) continue;
       await handleMessage(sock, m);
     }
