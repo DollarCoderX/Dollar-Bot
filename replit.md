@@ -1,44 +1,66 @@
-# [Project name]
+# DollarBot V5
 
-_Replace the heading above with the project's name, and this line with one sentence describing what this app does for users._
+A powerful WhatsApp bot with AI chat, group management, games, fun commands, and utilities. Built with Baileys and Pollinations AI.
 
 ## Run & Operate
 
-- `pnpm --filter @workspace/api-server run dev` — run the API server (port 5000)
-- `pnpm run typecheck` — full typecheck across all packages
-- `pnpm run build` — typecheck + build all packages
-- `pnpm --filter @workspace/api-spec run codegen` — regenerate API hooks and Zod schemas from the OpenAPI spec
-- `pnpm --filter @workspace/db run push` — push DB schema changes (dev only)
-- Required env: `DATABASE_URL` — Postgres connection string
+- `pnpm --filter @workspace/dollarbot run dev` — start the bot (via "DollarBot V5" workflow)
+- On first run, choose login method in the terminal: QR code or pairing code
+- Owner number: +14378898269
 
 ## Stack
 
-- pnpm workspaces, Node.js 24, TypeScript 5.9
-- API: Express 5
-- DB: PostgreSQL + Drizzle ORM
-- Validation: Zod (`zod/v4`), `drizzle-zod`
-- API codegen: Orval (from OpenAPI spec)
-- Build: esbuild (CJS bundle)
+- pnpm workspaces, Node.js 24, JavaScript
+- WhatsApp: @whiskeysockets/baileys
+- AI: Pollinations (text + image generation)
+- Session storage: `artifacts/dollarbot/auth_info_baileys/`
+- Settings storage: `artifacts/dollarbot/data/store.json`
 
 ## Where things live
 
-_Populate as you build — short repo map plus pointers to the source-of-truth file for DB schema, API contracts, theme files, etc._
+- `artifacts/dollarbot/src/index.js` — main entry, connection & auth logic
+- `artifacts/dollarbot/src/handler.js` — message router & menu
+- `artifacts/dollarbot/src/config.js` — owner info, AI system prompts
+- `artifacts/dollarbot/src/commands/` — one file per command category
+- `artifacts/dollarbot/src/lib/pollinations.js` — Pollinations AI wrapper
+- `artifacts/dollarbot/src/lib/store.js` — persistent key/value store
+
+## Commands
+
+- **User:** .ping .alive .owner .stats .info .details .time .jid .runtime .uptime
+- **Owner only:** .say .sendto .react .delete .autoreply .vv .broadcast .shutdown
+- **AI:** .cortex .mera .codeai .roast .complimentai .weather .imagine .translate
+- **Fun:** .joke .dadjoke .fact .advice .compliment .8ball .truth .dare .reverse .hotcheck .smartcheck .brainlevel .coolcheck .lovecheck
+- **Utility:** .calculate .genpass .encode .decode .qr .tinyurl .pingweb
+- **Games:** .coin .dice .rps .math .guess .slot .tictactoe
+- **Group:** .kick .promote .demote .mute .unmute .tagall .everyone .hidetag .grouplink .groupinfo .antilink .welcome
 
 ## Architecture decisions
 
-_Populate as you build — non-obvious choices a reader couldn't infer from the code (3-5 bullets)._
+- JavaScript (not TypeScript) for the bot — avoids Baileys compilation complexity
+- Pollinations AI for zero-cost AI — text generation (Cortex & Mera) + image generation
+- `useMultiFileAuthState` from Baileys — session saved to disk so login persists
+- Pairing code + QR code both supported at startup
+- Game state is in-memory (per chat JID), settings persisted to `data/store.json`
 
 ## Product
 
-_Describe the high-level user-facing capabilities of this app once they exist._
+DollarBot V5 is a full-featured public WhatsApp bot that runs 24/7. Users interact with it by sending commands prefixed with `.` in any chat or group where the bot is active.
 
 ## User preferences
 
-_Populate as you build — explicit user instructions worth remembering across sessions._
+- Owner: Dollar, Canada 🇨🇦, +14378898269
+- Prefix: `.`
+- Mode: Public
+- Engine branding: Cortex AI + Mera AI (Powered by Pollinations)
+- Version: 5.0.0
 
 ## Gotchas
 
-_Populate as you build — sharp edges, "always run X before Y" rules._
+- Run `pnpm approve-builds` if protobufjs build is blocked after a fresh install
+- `auth_info_baileys/` holds session — delete this folder to log out and re-scan
+- Bot sends an online notification to owner's WhatsApp every time it (re)connects
+- Auto-reconnect is built in — it will automatically reconnect if disconnected
 
 ## Pointers
 
