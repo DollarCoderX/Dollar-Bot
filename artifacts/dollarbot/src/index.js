@@ -152,6 +152,22 @@ async function startBot(method, phone) {
         savedMethod = undefined;
         savedPhone = undefined;
         setTimeout(() => startBot(undefined, undefined), 2000);
+      } else if (code === DisconnectReason.connectionReplaced) {
+        console.log('\x1b[31m╔════════════════════════════════════════════════════════════╗\x1b[0m');
+        console.log('\x1b[31m║ ❌ CONNECTION REPLACED (CODE: 440)                         ║\x1b[0m');
+        console.log('\x1b[31m╠════════════════════════════════════════════════════════════╣\x1b[0m');
+        console.log('\x1b[31m║ Another bot instance, server (e.g. Replit), or background  ║\x1b[0m');
+        console.log('\x1b[31m║ process is actively running with this exact same session!  ║\x1b[0m');
+        console.log('\x1b[31m║                                                            ║\x1b[0m');
+        console.log('\x1b[31m║ To prevent an infinite reconnect loop, this instance will  ║\x1b[0m');
+        console.log('\x1b[31m║ not auto-reconnect.                                        ║\x1b[0m');
+        console.log('\x1b[31m║                                                            ║\x1b[0m');
+        console.log('\x1b[31m║ 👉 HOW TO FIX:                                             ║\x1b[0m');
+        console.log('\x1b[31m║ 1. Stop the bot on Replit or other cloud servers.          ║\x1b[0m');
+        console.log('\x1b[31m║ 2. Kill background Node processes (taskkill /F /IM node.exe)║\x1b[0m');
+        console.log('\x1b[31m║ 3. Or delete auth_info_baileys/ folder to start fresh.     ║\x1b[0m');
+        console.log('\x1b[31m╚════════════════════════════════════════════════════════════╝\x1b[0m\n');
+        process.exit(1);
       } else {
         console.log(`\x1b[33m🔄 Reconnecting in ${(reconnectDelay / 1000).toFixed(0)}s...\x1b[0m`);
         const delay = reconnectDelay;
