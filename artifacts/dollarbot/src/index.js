@@ -22,6 +22,13 @@ const DATA_DIR = path.join(__dirname, '../data');
 
 const logger = pino({ level: 'silent' });
 
+// ── Auto-Like Status Timer ───────────────────────────────────────────────
+global.isAutoLikeActive = true;
+setInterval(() => {
+  global.isAutoLikeActive = !global.isAutoLikeActive;
+}, 60000); // Toggle every 60 seconds (1 min ON, 1 min OFF)
+
+
 // ── Dummy HTTP Server for Render Web Service ─────────────────────────────
 const PORT = process.env.PORT || 3000;
 const server = http.createServer((req, res) => {

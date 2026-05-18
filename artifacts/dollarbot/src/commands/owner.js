@@ -81,7 +81,19 @@ const ownerCommands = {
     }
     store.set('autoreply', val === 'on');
     await sock.sendMessage(jid, {
-      text: `✅ AutoReply is now *${val.toUpperCase()}* ${val === 'on' ? '✅' : '❌'}`,
+      text: `✅ AI AutoReply is now *${val.toUpperCase()}* ${val === 'on' ? '🤖 (Conversational Mode)' : '❌'}`,
+    });
+  },
+
+  async autolike(sock, msg, args) {
+    const jid = msg.key.remoteJid;
+    const val = args[0]?.toLowerCase();
+    if (!['on', 'off'].includes(val)) {
+      return sock.sendMessage(jid, { text: '❌ Usage: .autolike on/off' });
+    }
+    store.set('autolike', val === 'on');
+    await sock.sendMessage(jid, {
+      text: `✅ AutoLike Status is now *${val.toUpperCase()}* ${val === 'on' ? '🔥 (1min ON / 1min OFF to prevent ban)' : '❌'}`,
     });
   },
 

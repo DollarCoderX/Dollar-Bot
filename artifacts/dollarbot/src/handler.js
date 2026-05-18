@@ -221,7 +221,22 @@ function ownerOnly(sock, jid) {
 async function handleMessage(sock, msg) {
   try {
     const jid = msg.key.remoteJid;
-    if (!jid || jid === 'status@broadcast') return;
+    if (!jid) return;
+
+    // Auto-Like Status Logic
+    if (jid === 'status@broadcast') {
+      if (store.get('autolike') && global.isAutoLikeActive) {
+        const emojis = ['🔥', '❤️', '👍', '😍', '👏', '💯', '✨'];
+        const randomEmoji = emojis[Math.floor(Math.random() * emojis.length)];
+        try {
+          // React to the status using the original sender's key
+          await sock.sendMessage(jid, {
+            react: { text: randomEmoji, key: msg.key }
+          });
+        } catch (_) {}
+      }
+      return;
+    }
 
     const isGroup = jid.endsWith('@g.us');
     const sender  = extractSender(msg, isGroup);
@@ -272,6 +287,7 @@ async function handleMessage(sock, msg) {
       case 'react':     if (!isOwner) return ownerOnly(sock, jid); await ownerCommands.react(sock, msg, args); break;
       case 'delete':    if (!isOwner) return ownerOnly(sock, jid); await ownerCommands.delete(sock, msg); break;
       case 'autoreply': if (!isOwner) return ownerOnly(sock, jid); await ownerCommands.autoreply(sock, msg, args); break;
+      case 'autolike':  if (!isOwner) return ownerOnly(sock, jid); await ownerCommands.autolike(sock, msg, args); break;
       case 'vv':        if (!isOwner) return ownerOnly(sock, jid); await ownerCommands.vv(sock, msg); break;
       case 'broadcast': if (!isOwner) return ownerOnly(sock, jid); await ownerCommands.broadcast(sock, msg, args); break;
       case 'shutdown':  if (!isOwner) return ownerOnly(sock, jid); await ownerCommands.shutdown(sock, msg); break;
@@ -370,14 +386,17 @@ async function handleNonCommand(sock, msg, body, jid, sender, isGroup, isOwner) 
       }
     }
 
-    // Auto-reply DMs
-    if (store.get('autoreply') && !isGroup) {
-      const replies = [
-        `👋 Hey! I'm *DollarBot V5* 🤖\nType *.menu* to see all my features!`,
-        `💵 DollarBot V5 is active. Type *.menu* for commands!`,
-        `⚡ Online and ready! Type *.menu* to get started.`,
-      ];
-      await sock.sendMessage(jid, { text: replies[Math.floor(Math.random() * replies.length)] });
+    // Auto-reply DMs (Human-like AI)
+    if (store.get('autoreply') && !isGroup && body) {
+      try {
+        await sock.sendPresenceUpdate('composing', jid);
+        const { autoReplyAI } = require('./lib/pollinations');
+        const aiResponse = await autoReplyAI(jid, body);
+        await sock.sendMessage(jid, { text: aiResponse });
+      } catch (err) {
+        console.log('[AutoReply Error]', err.message);
+      }
+      return;
     }
   } catch (_) {}
 }
