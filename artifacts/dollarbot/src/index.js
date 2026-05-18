@@ -5,6 +5,8 @@ const {
   fetchLatestBaileysVersion,
   makeCacheableSignalKeyStore,
   isJidBroadcast,
+  Browsers,
+  makeInMemoryStore,
 } = require('@whiskeysockets/baileys');
 const { Boom } = require('@hapi/boom');
 const readline = require('readline');
@@ -21,6 +23,9 @@ const DATA_DIR = path.join(__dirname, '../data');
 [AUTH_DIR, DATA_DIR].forEach(d => { if (!fs.existsSync(d)) fs.mkdirSync(d, { recursive: true }); });
 
 const logger = pino({ level: 'silent' });
+
+// ── In-memory message store (fixes 'Waiting for this message' in groups) ───
+const msgStore = makeInMemoryStore({ logger });
 
 // ── Auto-Like Status Timer ───────────────────────────────────────────────
 global.isAutoLikeActive = true;
@@ -115,7 +120,8 @@ async function startBot(method, phone) {
     },
     logger,
     printQRInTerminal: !usePairing,
-    browser: ['DollarBot V5', 'Chrome', '120.0.0'],
+    // Use recognized browser name — unknown names cause decryption errors in groups
+    browser: Browsers.ubuntu('Chrome'),
     connectTimeoutMs: 60000,
     defaultQueryTimeoutMs: 60000,
     keepAliveIntervalMs: 25000,
@@ -126,11 +132,20 @@ async function startBot(method, phone) {
     fireInitQueries: true,
     // Do NOT ignore status@broadcast — needed for auto-like to work
     shouldIgnoreJid: jid => jid !== 'status@broadcast' && isJidBroadcast(jid),
+    // getMessage must return real msg data so group session keys can be retried
     getMessage: async (key) => {
-      // Returning the message from store so decryption works for group messages
-      return { conversation: '' };
+      const stored = msgStore.messages[key.remoteJid];
+      if (stored) {
+        const found = stored.get(key.id);
+        if (found) return found.message || undefined;
+      }
+      return undefined;
     },
   });
+
+  // Bind store to socket events so it caches messages for getMessage
+  msgStore.bind(sock.ev);
+
 
   // ── Register all event listeners first ──────────────────────────────────
 
