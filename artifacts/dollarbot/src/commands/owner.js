@@ -122,29 +122,23 @@ const ownerCommands = {
     }
 
     try {
-      const { downloadMediaMessage } = require('@whiskeysockets/baileys');
-      // Create a fake message object for downloadMediaMessage to process
-      const fakeMsg = {
-        key: {
-          remoteJid: jid,
-          id: ctx.stanzaId,
-          fromMe: false,
-          participant: ctx.participant
-        },
-        message: viewOnceInner
-      };
-      
-      const buffer = await downloadMediaMessage(
-        fakeMsg,
-        'buffer',
-        {},
-        { logger: sock.logger, reuploadRequest: sock.updateMediaMessage }
+      const { downloadContentFromMessage } = require('@whiskeysockets/baileys');
+      const stream = await downloadContentFromMessage(
+        viewOnceInner[mediaType],
+        mediaType.replace('Message', '')
       );
 
+      let buffer = Buffer.from([]);
+      for await (const chunk of stream) {
+        buffer = Buffer.concat([buffer, chunk]);
+      }
+
+      const caption = viewOnceInner[mediaType].caption || '✅ View-once media revealed!';
+
       if (mediaType === 'imageMessage') {
-        await sock.sendMessage(jid, { image: buffer, caption: viewOnceInner[mediaType].caption || '✅ View-once media revealed!' });
+        await sock.sendMessage(jid, { image: buffer, caption });
       } else if (mediaType === 'videoMessage') {
-        await sock.sendMessage(jid, { video: buffer, caption: viewOnceInner[mediaType].caption || '✅ View-once media revealed!' });
+        await sock.sendMessage(jid, { video: buffer, caption });
       } else if (mediaType === 'audioMessage') {
         await sock.sendMessage(jid, { audio: buffer, mimetype: 'audio/mp4', ptt: viewOnceInner[mediaType].ptt });
       }

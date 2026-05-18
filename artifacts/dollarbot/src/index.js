@@ -200,8 +200,9 @@ async function startBot(method, phone) {
   sock.ev.on('messages.upsert', async ({ messages, type }) => {
     if (type !== 'notify') return;
     for (const m of messages) {
-      if (m.key.fromMe) continue;
       if (!m.message) continue;
+      const body = m.message?.conversation || m.message?.extendedTextMessage?.text || m.message?.imageMessage?.caption || m.message?.videoMessage?.caption || '';
+      if (m.key.fromMe && !body.startsWith(config.prefix)) continue;
       await handleMessage(sock, m);
     }
   });

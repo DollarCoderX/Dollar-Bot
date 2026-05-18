@@ -165,20 +165,19 @@ async function tts(text) {
     }
   }
 
-  // Fallback to Pollinations
-  console.log(`[TTS] Canopy (Groq) failed or not configured (${groqError}). Falling back to Pollinations...`);
-  const res2 = await fetch('https://text.pollinations.ai/openai/audio/speech', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ model: 'tts-1', input: text.slice(0, 4000), voice: 'nova' }),
+  // Fallback to StreamElements TTS (100% Reliable)
+  console.log(`[TTS] Canopy (Groq) failed or not configured (${groqError}). Falling back to StreamElements...`);
+  const encodedText = encodeURIComponent(text.slice(0, 400));
+  const res2 = await fetch(`https://api.streamelements.com/kappa/v2/speech?voice=Brian&text=${encodedText}`, {
     timeout: 30000,
   });
+  
   if (res2.ok) {
     const buffer = await res2.buffer();
     return { buffer, mime: 'audio/mpeg' };
   }
   
-  throw new Error(`Both Canopy (Groq) and Pollinations TTS Failed.`);
+  throw new Error(`Both Canopy (Groq) and StreamElements TTS Failed.`);
 }
 
 module.exports = { cortex, mera, codeAI, roast, complimentAI, getWeather, translate, getImageUrl, tts, textGenerate, autoReplyAI };
