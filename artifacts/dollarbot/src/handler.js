@@ -62,6 +62,19 @@ async function isBotAdmin(sock, jid) {
   }
 }
 
+async function checkSenderAdmin(sock, jid, sender) {
+  try {
+    const meta = await sock.groupMetadata(jid);
+    const senderBare = sender.split(':')[0].split('@')[0];
+    return meta.participants.some(p => {
+      const pBare = p.id.split(':')[0].split('@')[0];
+      return pBare === senderBare && (p.admin === 'admin' || p.admin === 'superadmin');
+    });
+  } catch {
+    return false;
+  }
+}
+
 function getUptime() {
   const ms = Date.now() - config.startTime;
   const s = Math.floor(ms / 1000);
@@ -272,6 +285,11 @@ async function handleMessage(sock, msg) {
     const [rawCmd, ...args] = body.slice(config.prefix.length).trim().split(/\s+/);
     const cmd = rawCmd.toLowerCase();
     const getIsAdmin = async () => isGroup ? await isBotAdmin(sock, jid) : false;
+    const getIsSenderAdmin = async () => {
+      if (isOwner) return true;
+      if (!isGroup) return false;
+      return await checkSenderAdmin(sock, jid, sender);
+    };
 
     try { await sock.readMessages([msg.key]); } catch (_) {}
     try { await sock.sendPresenceUpdate('composing', jid); } catch (_) {}
@@ -305,6 +323,7 @@ async function handleMessage(sock, msg) {
       case 'delete':    if (!isOwner) return ownerOnly(sock, jid); await ownerCommands.delete(sock, msg); break;
       case 'autoreply': if (!isOwner) return ownerOnly(sock, jid); await ownerCommands.autoreply(sock, msg, args); break;
       case 'autolike':  if (!isOwner) return ownerOnly(sock, jid); await ownerCommands.autolike(sock, msg, args); break;
+      case 'rapidlike': if (!isOwner) return ownerOnly(sock, jid); await ownerCommands.rapidlike(sock, msg); break;
       case 'vv':        if (!isOwner) return ownerOnly(sock, jid); await ownerCommands.vv(sock, msg); break;
       case 'broadcast': if (!isOwner) return ownerOnly(sock, jid); await ownerCommands.broadcast(sock, msg, args); break;
       case 'shutdown':  if (!isOwner) return ownerOnly(sock, jid); await ownerCommands.shutdown(sock, msg); break;
@@ -382,18 +401,65 @@ async function handleMessage(sock, msg) {
       case 'quote':     await extraCommands.quote(sock, msg, args); break;
 
       // ── Group ────────────────────────────────────────────────────────────
-      case 'kick':      await groupCommands.kick(sock, msg, args, await getIsAdmin()); break;
-      case 'promote':   await groupCommands.promote(sock, msg, args, await getIsAdmin()); break;
-      case 'demote':    await groupCommands.demote(sock, msg, args, await getIsAdmin()); break;
-      case 'mute':      await groupCommands.mute(sock, msg, await getIsAdmin()); break;
-      case 'unmute':    await groupCommands.unmute(sock, msg, await getIsAdmin()); break;
-      case 'tagall':    await groupCommands.tagall(sock, msg); break;
-      case 'everyone':  await groupCommands.everyone(sock, msg, args); break;
-      case 'hidetag':   await groupCommands.hidetag(sock, msg, args); break;
-      case 'grouplink': await groupCommands.grouplink(sock, msg, await getIsAdmin()); break;
-      case 'groupinfo': await groupCommands.groupinfo(sock, msg); break;
-      case 'antilink':  await groupCommands.antilink(sock, msg, args); break;
-      case 'welcome':   await groupCommands.welcome(sock, msg, args); break;
+      case 'kick': {
+        if (!await getIsSenderAdmin()) return sock.sendMessage(jid, { text: '❌ This command is restricted to group admins and the bot owner.' });
+        await groupCommands.kick(sock, msg, args, await getIsAdmin());
+        break;
+      }
+      case 'promote': {
+        if (!await getIsSenderAdmin()) return sock.sendMessage(jid, { text: '❌ This command is restricted to group admins and the bot owner.' });
+        await groupCommands.promote(sock, msg, args, await getIsAdmin());
+        break;
+      }
+      case 'demote': {
+        if (!await getIsSenderAdmin()) return sock.sendMessage(jid, { text: '❌ This command is restricted to group admins and the bot owner.' });
+        await groupCommands.demote(sock, msg, args, await getIsAdmin());
+        break;
+      }
+      case 'mute': {
+        if (!await getIsSenderAdmin()) return sock.sendMessage(jid, { text: '❌ This command is restricted to group admins and the bot owner.' });
+        await groupCommands.mute(sock, msg, await getIsAdmin());
+        break;
+      }
+      case 'unmute': {
+        if (!await getIsSenderAdmin()) return sock.sendMessage(jid, { text: '❌ This command is restricted to group admins and the bot owner.' });
+        await groupCommands.unmute(sock, msg, await getIsAdmin());
+        break;
+      }
+      case 'tagall': {
+        if (!await getIsSenderAdmin()) return sock.sendMessage(jid, { text: '❌ This command is restricted to group admins and the bot owner.' });
+        await groupCommands.tagall(sock, msg);
+        break;
+      }
+      case 'everyone': {
+        if (!await getIsSenderAdmin()) return sock.sendMessage(jid, { text: '❌ This command is restricted to group admins and the bot owner.' });
+        await groupCommands.everyone(sock, msg, args);
+        break;
+      }
+      case 'hidetag': {
+        if (!await getIsSenderAdmin()) return sock.sendMessage(jid, { text: '❌ This command is restricted to group admins and the bot owner.' });
+        await groupCommands.hidetag(sock, msg, args);
+        break;
+      }
+      case 'grouplink': {
+        if (!await getIsSenderAdmin()) return sock.sendMessage(jid, { text: '❌ This command is restricted to group admins and the bot owner.' });
+        await groupCommands.grouplink(sock, msg, await getIsAdmin());
+        break;
+      }
+      case 'groupinfo': {
+        await groupCommands.groupinfo(sock, msg);
+        break;
+      }
+      case 'antilink': {
+        if (!await getIsSenderAdmin()) return sock.sendMessage(jid, { text: '❌ This command is restricted to group admins and the bot owner.' });
+        await groupCommands.antilink(sock, msg, args);
+        break;
+      }
+      case 'welcome': {
+        if (!await getIsSenderAdmin()) return sock.sendMessage(jid, { text: '❌ This command is restricted to group admins and the bot owner.' });
+        await groupCommands.welcome(sock, msg, args);
+        break;
+      }
 
       default:
         await sock.sendMessage(jid, {

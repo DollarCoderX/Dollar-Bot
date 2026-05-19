@@ -47,6 +47,7 @@ console.log = function (...args) {
 
 // ── In-memory message store (fixes 'Waiting for this message' in groups) ───
 const msgStore = makeInMemoryStore({ logger });
+global.msgStore = msgStore;
 
 // ── Auto-Like Status Timer ───────────────────────────────────────────────
 global.isAutoLikeActive = true;
@@ -134,13 +135,10 @@ async function startBot(method, phone) {
 
   const sock = makeWASocket({
     version,
-    auth: {
-      creds: state.creds,
-      keys: makeCacheableSignalKeyStore(state.keys, logger),
-    },
+    auth: state,
     logger,
     printQRInTerminal: !usePairing,
-    browser: Browsers.ubuntu('Chrome'),
+    browser: ['Windows', 'Chrome', '125.0.6422.112'],
     connectTimeoutMs: 60000,
     defaultQueryTimeoutMs: 60000,
     keepAliveIntervalMs: 25000,
@@ -149,8 +147,6 @@ async function startBot(method, phone) {
     markOnlineOnConnect: true,
     syncFullHistory: false,
     fireInitQueries: true,
-    // Only skip non-status broadcast JIDs (newsletters, etc.) — NOT groups
-    shouldIgnoreJid: jid => isJidBroadcast(jid) && jid !== 'status@broadcast',
     getMessage: async (key) => {
       const stored = msgStore.messages[key.remoteJid];
       if (stored) {

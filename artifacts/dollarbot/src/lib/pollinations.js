@@ -2,25 +2,42 @@ const fetch = require('node-fetch');
 const config = require('../config');
 const memory = require('./memory');
 
+// Groq API keys rotation
+const groqKeys = [
+  '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', // Ejiro (api2)
+  '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'  // Blessing (api3)
+];
+let currentKeyIndex = 0;
+
+function getNextGroqKey() {
+  const key = groqKeys[currentKeyIndex];
+  currentKeyIndex = (currentKeyIndex + 1) % groqKeys.length;
+  return key;
+}
+
 // ── Core text generation (Groq → Pollinations fallback) ───────────────────
 async function textGenerate(messages, model = 'openai') {
   let groqError;
-  if (config.groqApiKey && !config.groqApiKey.includes('YOUR_GROQ')) {
+
+  // Try each API key in rotation
+  for (let i = 0; i < groqKeys.length; i++) {
+    const apiKey = getNextGroqKey();
     try {
       const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${config.groqApiKey}`,
+          'Authorization': `Bearer ${apiKey}`,
         },
-        body: JSON.stringify({ messages, model: 'llama3-8b-8192' }),
+        body: JSON.stringify({ messages, model: 'llama-3.1-8b-instant' }),
         timeout: 45000,
       });
       if (res.ok) {
         const data = await res.json();
         return data.choices[0].message.content.trim();
       } else {
-        groqError = `Groq HTTP ${res.status}`;
+        const errText = await res.text();
+        groqError = `Groq HTTP ${res.status}: ${errText}`;
       }
     } catch (e) {
       groqError = e.message;
@@ -146,12 +163,44 @@ async function searchWithAI(query) {
 }
 
 // ── TTS (Text-to-Speech) ──────────────────────────────────────────────────
-// Primary: ResponsiveVoice open endpoint
-// Fallback: Google Translate TTS
+// Primary: Groq Orpheus TTS (using Ejiro API key and austin voice)
+// Fallback 1: ResponsiveVoice open endpoint
+// Fallback 2: Google Translate TTS
 async function tts(text) {
   const clean = text.slice(0, 300).replace(/[*_~`]/g, ''); // strip WA markdown
 
-  // Primary: ResponsiveVoice (free, no key, reliable)
+  // Primary: Groq Orpheus TTS
+  try {
+    const ejiroKey = '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';
+    const response = await fetch('https://api.groq.com/openai/v1/audio/speech', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${ejiroKey}`,
+      },
+      body: JSON.stringify({
+        model: 'canopylabs/orpheus-v1-english',
+        input: clean.slice(0, 200),
+        voice: 'austin',
+        response_format: 'wav',
+      }),
+      timeout: 25000,
+    });
+
+    if (response.ok) {
+      const buffer = await response.buffer();
+      if (buffer.length > 500) {
+        return { buffer, mime: 'audio/wav' };
+      }
+    } else {
+      const errText = await response.text();
+      console.log('[TTS] Groq Orpheus failed HTTP:', response.status, errText);
+    }
+  } catch (err) {
+    console.log('[TTS] Groq Orpheus failed:', err.message);
+  }
+
+  // Fallback 1: ResponsiveVoice (free, no key, reliable)
   try {
     const encoded = encodeURIComponent(clean);
     const url = `https://responsivevoice.org/responsivevoice/getvoice.php?tl=en-US&t=${encoded}&sv=g1&vn=&pitch=0.5&rate=0.5&vol=1&f=8khz_8bit_mono&c=ogg`;

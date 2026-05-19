@@ -97,6 +97,38 @@ const ownerCommands = {
     });
   },
 
+  async rapidlike(sock, msg) {
+    const jid = msg.key.remoteJid;
+    const msgStore = global.msgStore;
+    if (!msgStore) {
+      return sock.sendMessage(jid, { text: '❌ Message store is not initialized yet. Please wait a moment.' });
+    }
+
+    const statusMsgs = msgStore.messages['status@broadcast']?.array || [];
+    if (!statusMsgs.length) {
+      return sock.sendMessage(jid, { text: 'ℹ️ No status updates found in the store to like.' });
+    }
+
+    await sock.sendMessage(jid, { text: `⚡ *Rapid-Like Status:* Found ${statusMsgs.length} status updates. Starting rapid-liking...` });
+
+    const emojis = ['🔥', '❤️', '👍', '😍', '👏', '💯', '✨'];
+    let count = 0;
+
+    for (const m of statusMsgs) {
+      const randomEmoji = emojis[Math.floor(Math.random() * emojis.length)];
+      try {
+        await sock.sendMessage(m.key.participant || m.key.remoteJid, {
+          react: { text: randomEmoji, key: m.key },
+        });
+        count++;
+        // Controlled 500ms delay to keep account safe
+        await new Promise(r => setTimeout(r, 500));
+      } catch (_) {}
+    }
+
+    await sock.sendMessage(jid, { text: `✅ *Rapid-Like Complete!* Successfully liked ${count}/${statusMsgs.length} status updates.` });
+  },
+
   async vv(sock, msg) {
     const jid = msg.key.remoteJid;
     const ctx = getQuoted(msg);

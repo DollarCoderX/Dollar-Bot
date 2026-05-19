@@ -6,10 +6,17 @@ const groupCommands = {
     if (!jid.endsWith('@g.us')) return sock.sendMessage(jid, { text: '❌ This command works only in groups.' });
     if (!isAdmin) return sock.sendMessage(jid, { text: '❌ Bot must be an admin to kick members.' });
 
-    const mentioned = msg.message?.extendedTextMessage?.contextInfo?.mentionedJid ||
+    let mentioned = msg.message?.extendedTextMessage?.contextInfo?.mentionedJid ||
       msg.message?.buttonsResponseMessage?.contextInfo?.mentionedJid || [];
 
-    if (!mentioned.length) return sock.sendMessage(jid, { text: '❌ Usage: .kick @user\nExample: .kick @user' });
+    const quotedParticipant = msg.message?.extendedTextMessage?.contextInfo?.participant || 
+                             msg.message?.imageMessage?.contextInfo?.participant ||
+                             msg.message?.videoMessage?.contextInfo?.participant;
+    if (!mentioned.length && quotedParticipant) {
+      mentioned = [quotedParticipant];
+    }
+
+    if (!mentioned.length) return sock.sendMessage(jid, { text: '❌ Usage: .kick @user (or reply to their message)' });
 
     for (const user of mentioned) {
       try {
@@ -26,8 +33,15 @@ const groupCommands = {
     if (!jid.endsWith('@g.us')) return sock.sendMessage(jid, { text: '❌ Groups only.' });
     if (!isAdmin) return sock.sendMessage(jid, { text: '❌ Bot must be an admin.' });
 
-    const mentioned = msg.message?.extendedTextMessage?.contextInfo?.mentionedJid || [];
-    if (!mentioned.length) return sock.sendMessage(jid, { text: '❌ Usage: .promote @user' });
+    let mentioned = msg.message?.extendedTextMessage?.contextInfo?.mentionedJid || [];
+    const quotedParticipant = msg.message?.extendedTextMessage?.contextInfo?.participant || 
+                             msg.message?.imageMessage?.contextInfo?.participant ||
+                             msg.message?.videoMessage?.contextInfo?.participant;
+    if (!mentioned.length && quotedParticipant) {
+      mentioned = [quotedParticipant];
+    }
+
+    if (!mentioned.length) return sock.sendMessage(jid, { text: '❌ Usage: .promote @user (or reply to their message)' });
 
     for (const user of mentioned) {
       try {
@@ -44,8 +58,15 @@ const groupCommands = {
     if (!jid.endsWith('@g.us')) return sock.sendMessage(jid, { text: '❌ Groups only.' });
     if (!isAdmin) return sock.sendMessage(jid, { text: '❌ Bot must be an admin.' });
 
-    const mentioned = msg.message?.extendedTextMessage?.contextInfo?.mentionedJid || [];
-    if (!mentioned.length) return sock.sendMessage(jid, { text: '❌ Usage: .demote @user' });
+    let mentioned = msg.message?.extendedTextMessage?.contextInfo?.mentionedJid || [];
+    const quotedParticipant = msg.message?.extendedTextMessage?.contextInfo?.participant || 
+                             msg.message?.imageMessage?.contextInfo?.participant ||
+                             msg.message?.videoMessage?.contextInfo?.participant;
+    if (!mentioned.length && quotedParticipant) {
+      mentioned = [quotedParticipant];
+    }
+
+    if (!mentioned.length) return sock.sendMessage(jid, { text: '❌ Usage: .demote @user (or reply to their message)' });
 
     for (const user of mentioned) {
       try {
