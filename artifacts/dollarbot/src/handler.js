@@ -36,18 +36,19 @@ function extractBody(msg) {
 }
 
 function extractSender(msg, isGroup) {
-  if (isGroup) {
-    return msg.key.participant || msg.key.remoteJid;
-  }
   if (msg.key.fromMe) {
     return config.ownerNumbers[0] + '@s.whatsapp.net';
   }
-  return msg.key.remoteJid;
+  if (isGroup) {
+    return msg.key.participant || msg.participant || msg.key.remoteJid || '';
+  }
+  return msg.key.remoteJid || '';
 }
 
 function isOwnerJid(sender) {
   if (!sender) return false;
-  return config.ownerNumbers.some(num => sender.includes(num));
+  const cleanSender = sender.split(':')[0].split('@')[0];
+  return config.ownerNumbers.some(num => cleanSender === num || sender.includes(num));
 }
 
 async function isBotAdmin(sock, jid) {
@@ -98,7 +99,7 @@ function getRamInfo() {
 }
 
 // ── Rotating menu sender ───────────────────────────────────────────────────
-async function sendMenu(sock, jid, speedMs) {
+async function sendMenu(sock, jid, speedMs, msg) {
   const ram = getRamInfo();
   const uptime = getUptime();
   const autoReply = store.get('autoreply') ? 'ON' : 'OFF';
@@ -217,6 +218,11 @@ async function sendMenu(sock, jid, speedMs) {
     `╰━━━━━━━━━━━━━━━━━━⬣\n\n` +
 
     `╭━━━〔 💎 PREMIUM COMMANDS 〕━━━⬣\n` +
+    `┃ ◇ .song <query> 🎵\n` +
+    `┃ ◇ .video <query> 🎥\n` +
+    `┃ ◇ .searchgoogle <query> 🔍\n` +
+    `┃ ◇ .searchimage <query> 🖼️\n` +
+    `┃ ◇ .gnews <query> 📰\n` +
     `┃ ◇ .enhance <prompt>\n` +
     `┃ ◇ .ship <name1> | <name2>\n` +
     `┃ ◇ .waifu\n` +
@@ -264,7 +270,7 @@ async function sendMenu(sock, jid, speedMs) {
   try {
     if (fs.existsSync(imgPath)) {
       const img = fs.readFileSync(imgPath);
-      const sendPromise = sock.sendMessage(jid, { image: img, caption });
+      const sendPromise = sock.sendMessage(jid, { image: img, caption }, { quoted: msg });
       const timeoutPromise = new Promise((_, reject) =>
         setTimeout(() => reject(new Error('Media timeout')), 8000)
       );
@@ -274,7 +280,7 @@ async function sendMenu(sock, jid, speedMs) {
   } catch (err) {
     console.log('[Menu] Image send failed, falling back to text:', err.message);
   }
-  await sock.sendMessage(jid, { text: caption });
+  await sock.sendMessage(jid, { text: caption }, { quoted: msg });
 }
 
 function ownerOnly(sock, jid) {
@@ -333,7 +339,7 @@ async function handleMessage(sock, msg) {
       // ── Menu ────────────────────────────────────────────────────────────
       case 'menu': case 'help': case 'start': {
         const speed = Date.now() - cmdStart;
-        await sendMenu(sock, jid, speed);
+        await sendMenu(sock, jid, speed, msg);
         break;
       }
 
@@ -454,6 +460,11 @@ async function handleMessage(sock, msg) {
       case 'detect':       await premiumCommands.detect(sock, msg, args); break;
       case 'summarizeweb': await premiumCommands.summarizeweb(sock, msg, args); break;
       case 'fancy':        await premiumCommands.fancy(sock, msg, args); break;
+      case 'song':         await premiumCommands.song(sock, msg, args); break;
+      case 'video':        await premiumCommands.video(sock, msg, args); break;
+      case 'searchgoogle': await premiumCommands.searchgoogle(sock, msg, args); break;
+      case 'searchimage':  await premiumCommands.searchimage(sock, msg, args); break;
+      case 'gnews':        await premiumCommands.gnews(sock, msg, args); break;
 
       // ── Group ────────────────────────────────────────────────────────────
       case 'kick': {

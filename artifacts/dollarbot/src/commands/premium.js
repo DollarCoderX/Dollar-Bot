@@ -463,6 +463,157 @@ const premiumCommands = {
         `⒝ *Script Font:* ${script}\n` +
         `⒞ *Gothic Font:* ${gothic}`
     });
+  },
+
+  // ── 21. .song <query> ─────────────────────────────────────────────────
+  async song(sock, msg, args) {
+    const jid = msg.key.remoteJid;
+    if (!args.length) return sock.sendMessage(jid, { text: 'Usage: .song <song title or search query>\nExample: .song Faded Alan Walker' });
+    const query = args.join(' ');
+    await sock.sendMessage(jid, { text: `🎵 *Searching YouTube for:* "${query}"...` });
+    try {
+      // 1. Search YouTube v3 Data API
+      const searchRes = await fetch(`https://www.googleapis.com/youtube/v3/search?part=snippet&q=${encodeURIComponent(query)}&type=video&key=${config.googleApiKey}&maxResults=1`);
+      if (!searchRes.ok) throw new Error('YouTube Search API quota reached or error.');
+      const searchData = await searchRes.json();
+      const item = searchData.items?.[0];
+      if (!item) return sock.sendMessage(jid, { text: '❌ No songs found on YouTube for that search query.' });
+      
+      const videoId = item.id.videoId;
+      const title = item.snippet.title;
+      const videoUrl = `https://www.youtube.com/watch?v=${videoId}`;
+
+      await sock.sendMessage(jid, { text: `📥 *Downloading audio stream for:* \n"${title}"...\n\n_Please wait, resolving direct download links..._` });
+
+      // 2. Resolve via btch-downloader
+      const btch = require('btch-downloader');
+      const media = await btch.youtube(videoUrl);
+      if (!media || !media.mp3) throw new Error('Could not extract direct MP3 stream.');
+
+      // 3. Send audio message to WhatsApp
+      await sock.sendMessage(jid, {
+        audio: { url: media.mp3 },
+        mimetype: 'audio/mp4',
+        fileName: `${title}.mp3`
+      });
+    } catch (e) {
+      await sock.sendMessage(jid, { text: `❌ Song Downloader Error: ${e.message}` });
+    }
+  },
+
+  // ── 22. .video <query> ────────────────────────────────────────────────
+  async video(sock, msg, args) {
+    const jid = msg.key.remoteJid;
+    if (!args.length) return sock.sendMessage(jid, { text: 'Usage: .video <video title or search query>\nExample: .video Alan Walker Faded' });
+    const query = args.join(' ');
+    await sock.sendMessage(jid, { text: `🎥 *Searching YouTube for:* "${query}"...` });
+    try {
+      // 1. Search YouTube v3 Data API
+      const searchRes = await fetch(`https://www.googleapis.com/youtube/v3/search?part=snippet&q=${encodeURIComponent(query)}&type=video&key=${config.googleApiKey}&maxResults=1`);
+      if (!searchRes.ok) throw new Error('YouTube Search API quota reached or error.');
+      const searchData = await searchRes.json();
+      const item = searchData.items?.[0];
+      if (!item) return sock.sendMessage(jid, { text: '❌ No videos found on YouTube for that search query.' });
+      
+      const videoId = item.id.videoId;
+      const title = item.snippet.title;
+      const videoUrl = `https://www.youtube.com/watch?v=${videoId}`;
+
+      await sock.sendMessage(jid, { text: `📥 *Downloading video stream for:* \n"${title}"...\n\n_Please wait, preparing MP4 file..._` });
+
+      // 2. Resolve via btch-downloader
+      const btch = require('btch-downloader');
+      const media = await btch.youtube(videoUrl);
+      if (!media || !media.mp4) throw new Error('Could not extract direct MP4 stream.');
+
+      // 3. Send video message to WhatsApp
+      await sock.sendMessage(jid, {
+        video: { url: media.mp4 },
+        caption: `🎥 *DollarBot YouTube Video Downloader*\n\n📌 *Title:* ${title}\n🔗 *Watch:* ${videoUrl}`
+      });
+    } catch (e) {
+      await sock.sendMessage(jid, { text: `❌ Video Downloader Error: ${e.message}` });
+    }
+  },
+
+  // ── 23. .searchgoogle <query> ──────────────────────────────────────────
+  async searchgoogle(sock, msg, args) {
+    const jid = msg.key.remoteJid;
+    if (!args.length) return sock.sendMessage(jid, { text: 'Usage: .searchgoogle <query>\nExample: .searchgoogle space exploration' });
+    const query = args.join(' ');
+    await sock.sendMessage(jid, { text: `🔍 *Searching Google for:* "${query}"...` });
+    try {
+      const res = await fetch('https://google.serper.dev/search', {
+        method: 'POST',
+        headers: {
+          'X-API-KEY': config.serperApiKey,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ q: query })
+      });
+      if (!res.ok) throw new Error('Serper API response error.');
+      const d = await res.json();
+      if (!d.organic || !d.organic.length) return sock.sendMessage(jid, { text: '❌ No search results found.' });
+
+      let text = `🔍 *DOLLAR BOT GOOGLE SEARCH* 🔍\n\nQuery: _"${query}"_\n\n`;
+      d.organic.slice(0, 5).forEach((item, i) => {
+        text += `${i + 1}. *${item.title}*\n🔗 ${item.link}\n📝 _${item.snippet}_\n\n`;
+      });
+      await sock.sendMessage(jid, { text });
+    } catch (e) {
+      await sock.sendMessage(jid, { text: `❌ Google Search Error: ${e.message}` });
+    }
+  },
+
+  // ── 24. .searchimage <query> ──────────────────────────────────────────
+  async searchimage(sock, msg, args) {
+    const jid = msg.key.remoteJid;
+    if (!args.length) return sock.sendMessage(jid, { text: 'Usage: .searchimage <query>\nExample: .searchimage ferrari sf90' });
+    const query = args.join(' ');
+    await sock.sendMessage(jid, { text: `🖼️ *Searching Google Images for:* "${query}"...` });
+    try {
+      const res = await fetch('https://google.serper.dev/images', {
+        method: 'POST',
+        headers: {
+          'X-API-KEY': config.serperApiKey,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ q: query })
+      });
+      if (!res.ok) throw new Error('Serper API response error.');
+      const d = await res.json();
+      const img = d.images?.[0];
+      if (!img) return sock.sendMessage(jid, { text: '❌ No images found for that search query.' });
+
+      await sock.sendMessage(jid, {
+        image: { url: img.imageUrl },
+        caption: `🖼️ *Image search result for:* "${query}"\n\n📌 *Source:* ${img.title || 'Google Images'}`
+      });
+    } catch (e) {
+      await sock.sendMessage(jid, { text: `❌ Image Search Error: ${e.message}` });
+    }
+  },
+
+  // ── 25. .gnews <query> ────────────────────────────────────────────────
+  async gnews(sock, msg, args) {
+    const jid = msg.key.remoteJid;
+    if (!args.length) return sock.sendMessage(jid, { text: 'Usage: .gnews <query>\nExample: .gnews artificial intelligence' });
+    const query = args.join(' ');
+    await sock.sendMessage(jid, { text: `📰 *Fetching latest news for:* "${query}"...` });
+    try {
+      const res = await fetch(`https://newsapi.org/v2/everything?q=${encodeURIComponent(query)}&apiKey=${config.newsApiKey}&pageSize=5`);
+      if (!res.ok) throw new Error('News API response error.');
+      const d = await res.json();
+      if (!d.articles || !d.articles.length) return sock.sendMessage(jid, { text: '❌ No news articles found.' });
+
+      let text = `📰 *DOLLAR BOT GLOBAL NEWS* 📰\n\nTopic: _"${query}"_\n\n`;
+      d.articles.forEach((art, i) => {
+        text += `${i + 1}. *${art.title}*\n🌐 *Source:* ${art.source?.name || 'News'}\n🔗 ${art.url}\n📝 _${art.description || 'No summary available.'}_\n\n`;
+      });
+      await sock.sendMessage(jid, { text });
+    } catch (e) {
+      await sock.sendMessage(jid, { text: `❌ News Fetching Error: ${e.message}` });
+    }
   }
 };
 

@@ -40,6 +40,12 @@ const config = {
     path.join(__dirname, '../assets/menu4.jpg'),
   ],
 
+  // ── Search & YouTube API Credentials ──────────────────────────────────
+  googleApiKey: 'AIzaSyDGwYt0-4oSwma9e_COZroM3njxjXe1yow',
+  googleCseId: '57a3d0370a5894de3',
+  serperApiKey: '2fd99d47900a62609e9e6e838be1e99bc0869797',
+  newsApiKey: 'c2bef1be2acb42a7bac5dac4aad585be',
+
   startTime: Date.now(),
 };
 

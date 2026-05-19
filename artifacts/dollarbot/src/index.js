@@ -135,7 +135,10 @@ async function startBot(method, phone) {
 
   const sock = makeWASocket({
     version,
-    auth: state,
+    auth: {
+      creds: state.creds,
+      keys: makeCacheableSignalKeyStore(state.keys, logger),
+    },
     logger,
     printQRInTerminal: !usePairing,
     browser: ['Windows', 'Chrome', '125.0.6422.112'],
