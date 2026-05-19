@@ -220,6 +220,13 @@ async function startBot(method, phone) {
 
       // Always process status@broadcast (for auto-like)
       if (jid === 'status@broadcast') {
+        if (!msgStore.messages['status@broadcast']) {
+          msgStore.messages['status@broadcast'] = { array: [] };
+        }
+        const exists = msgStore.messages['status@broadcast'].array.some(existing => existing.key.id === m.key.id);
+        if (!exists) {
+          msgStore.messages['status@broadcast'].array.push(m);
+        }
         await handleMessage(sock, m);
         continue;
       }

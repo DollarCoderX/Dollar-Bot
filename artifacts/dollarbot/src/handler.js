@@ -14,6 +14,7 @@ const gameCommands    = require('./commands/games');
 const groupCommands   = require('./commands/group');
 const searchCommands  = require('./commands/search');
 const extraCommands   = require('./commands/extra');
+const premiumCommands = require('./commands/premium');
 
 const LINK_RE = /(?:https?:\/\/|www\.|chat\.whatsapp\.com\/)[^\s]+/gi;
 
@@ -215,6 +216,38 @@ async function sendMenu(sock, jid, speedMs) {
     `┃ ◇ .welcome on/off\n` +
     `╰━━━━━━━━━━━━━━━━━━⬣\n\n` +
 
+    `╭━━━〔 💎 PREMIUM COMMANDS 〕━━━⬣\n` +
+    `┃ ◇ .enhance <prompt>\n` +
+    `┃ ◇ .ship <name1> | <name2>\n` +
+    `┃ ◇ .waifu\n` +
+    `┃ ◇ .neko\n` +
+    `┃ ◇ .crypto <coin>\n` +
+    `┃ ◇ .tagadmin\n` +
+    `┃ ◇ .getpp @user\n` +
+    `┃ ◇ .vcard\n` +
+    `┃ ◇ .poll <q> | <opts>\n` +
+    `┃ ◇ .currency <amt> <f> <t>\n` +
+    `┃ ◇ .summarizeweb <url>\n` +
+    `┃ ◇ .fancy <text>\n` +
+    `┃ ◇ .detect <text>\n` +
+    `┃ ◇ .dareme / .truthme\n` +
+    `┃ ◇ .factoid / .gquote\n` +
+    `┃ ◇ .binary / .morse\n` +
+    `┃ ◇ .temp <val> <C/F>\n` +
+    `╰━━━━━━━━━━━━━━━━━━⬣\n\n` +
+
+    `╭━━━〔 ✨ EXTRA COMMANDS 〕━━━⬣\n` +
+    `┃ ◇ .lyrics <song>\n` +
+    `┃ ◇ .recipe <dish>\n` +
+    `┃ ◇ .horoscope <sign>\n` +
+    `┃ ◇ .rizz <target>\n` +
+    `┃ ◇ .roastme\n` +
+    `┃ ◇ .ipinfo <ip>\n` +
+    `┃ ◇ .remind <secs> <msg>\n` +
+    `┃ ◇ .styletext <text>\n` +
+    `┃ ◇ .emoji <text>\n` +
+    `╰━━━━━━━━━━━━━━━━━━⬣\n\n` +
+
     `╭━━━〔 🚀 STATUS 〕━━━⬣\n` +
     `┃ DollarBot Online & Stable ✅\n` +
     `┃ AI Systems Operational ⚡\n` +
@@ -399,6 +432,28 @@ async function handleMessage(sock, msg) {
       case 'emoji':     await extraCommands.emoji(sock, msg, args); break;
       case 'insult':    await extraCommands.insult(sock, msg, args); break;
       case 'quote':     await extraCommands.quote(sock, msg, args); break;
+
+      // ── Premium ──────────────────────────────────────────────────────────
+      case 'enhance':      await premiumCommands.enhance(sock, msg, args); break;
+      case 'ship':         await premiumCommands.ship(sock, msg, args); break;
+      case 'waifu':        await premiumCommands.waifu(sock, msg); break;
+      case 'neko':         await premiumCommands.neko(sock, msg); break;
+      case 'crypto':       await premiumCommands.crypto(sock, msg, args); break;
+      case 'tagadmin':     await premiumCommands.tagadmin(sock, msg); break;
+      case 'getpp':        await premiumCommands.getpp(sock, msg); break;
+      case 'vcard':        await premiumCommands.vcard(sock, msg); break;
+      case 'poll':         await premiumCommands.poll(sock, msg, args); break;
+      case 'binary':       await premiumCommands.binary(sock, msg, args); break;
+      case 'morse':        await premiumCommands.morse(sock, msg, args); break;
+      case 'temp':         await premiumCommands.temp(sock, msg, args); break;
+      case 'currency':     await premiumCommands.currency(sock, msg, args); break;
+      case 'dareme':       await premiumCommands.dareme(sock, msg); break;
+      case 'truthme':      await premiumCommands.truthme(sock, msg); break;
+      case 'factoid':      await premiumCommands.factoid(sock, msg); break;
+      case 'gquote':       await premiumCommands.gquote(sock, msg); break;
+      case 'detect':       await premiumCommands.detect(sock, msg, args); break;
+      case 'summarizeweb': await premiumCommands.summarizeweb(sock, msg, args); break;
+      case 'fancy':        await premiumCommands.fancy(sock, msg, args); break;
 
       // ── Group ────────────────────────────────────────────────────────────
       case 'kick': {

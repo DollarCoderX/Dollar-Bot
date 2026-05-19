@@ -190,7 +190,7 @@ async function tts(text) {
     if (response.ok) {
       const buffer = await response.buffer();
       if (buffer.length > 500) {
-        return { buffer, mime: 'audio/wav' };
+        return { buffer, mime: 'audio/mp4' };
       }
     } else {
       const errText = await response.text();
