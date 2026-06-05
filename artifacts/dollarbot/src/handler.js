@@ -1,9 +1,11 @@
-const fs = require('fs');
-const path = require('path');
-const os = require('os');
+'use strict';
 
-const config = require('./config');
-const store = require('./lib/store');
+const fs   = require('fs');
+const path = require('path');
+const os   = require('os');
+
+const config        = require('./config');
+const store         = require('./lib/store');
 
 const userCommands    = require('./commands/user');
 const ownerCommands   = require('./commands/owner');
@@ -21,102 +23,256 @@ const mediaCommands   = require('./commands/media');
 const devCommands     = require('./commands/dev');
 const moreFun         = require('./commands/morefun');
 const { bypassCommands, checkBypassIntercept } = require('./commands/bypass');
-const { extractBody, getMentionedJids } = require('./lib/messages');
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  Message parsing — proper Baileys proto.IWebMessageInfo patterns
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Unwrap wrapper message types (ephemeral, viewOnce, documentWithCaption, etc.)
+ * so we always work with the innermost real message content.
+ */
+function unwrapContent(raw) {
+  let c = raw || {};
+  for (let i = 0; i < 8; i++) {
+    const next =
+      c.ephemeralMessage?.message ||
+      c.viewOnceMessage?.message ||
+      c.viewOnceMessageV2?.message ||
+      c.viewOnceMessageV2Extension?.message ||
+      c.documentWithCaptionMessage?.message ||
+      c.protocolMessage?.editedMessage ||
+      c.editedMessage?.message;
+    if (!next || next === c) break;
+    c = next;
+  }
+  return c;
+}
+
+/**
+ * Extract the text body from any message type.
+ * Handles: text, extendedText, image/video/document captions,
+ *          button/list/template replies, interactive flows.
+ */
+function extractBody(msg) {
+  if (msg?._body !== undefined) return msg._body;           // cache hit
+  const c = unwrapContent(msg?.message);
+  const body =
+    c.conversation ||
+    c.extendedTextMessage?.text ||
+    c.imageMessage?.caption ||
+    c.videoMessage?.caption ||
+    c.documentMessage?.caption ||
+    c.buttonsResponseMessage?.selectedButtonId ||
+    c.listResponseMessage?.singleSelectReply?.selectedRowId ||
+    c.templateButtonReplyMessage?.selectedId ||
+    (() => {
+      const raw = c.interactiveResponseMessage?.nativeFlowResponseMessage?.paramsJson;
+      if (!raw) return '';
+      try { const p = JSON.parse(raw); return p.id || p.title || p.name || raw; } catch { return raw; }
+    })() ||
+    '';
+  if (msg && typeof msg === 'object') msg._body = body;    // cache result
+  return body;
+}
+
+/**
+ * Get the contextInfo block from any message type.
+ * This contains: quoted message, mentionedJid, participant, etc.
+ */
+function getContextInfo(msg) {
+  const c = unwrapContent(msg?.message);
+  return (
+    c.extendedTextMessage?.contextInfo ||
+    c.imageMessage?.contextInfo ||
+    c.videoMessage?.contextInfo ||
+    c.documentMessage?.contextInfo ||
+    c.audioMessage?.contextInfo ||
+    c.stickerMessage?.contextInfo ||
+    c.buttonsResponseMessage?.contextInfo ||
+    c.listResponseMessage?.contextInfo ||
+    c.templateButtonReplyMessage?.contextInfo ||
+    c.interactiveResponseMessage?.contextInfo ||
+    null
+  );
+}
+
+/** Returns the JID of the person whose message was quoted/replied to */
+function getQuotedParticipant(msg) {
+  return getContextInfo(msg)?.participant ?? null;
+}
+
+/** Returns array of @mentioned JIDs */
+function getMentionedJids(msg) {
+  const m = getContextInfo(msg)?.mentionedJid;
+  return Array.isArray(m) ? m : [];
+}
+
+/**
+ * Resolve the sender of a message.
+ * In groups the real sender is msg.key.participant, not remoteJid.
+ * fromMe DMs resolve to owner's own JID.
+ */
+function resolveSender(msg) {
+  const { remoteJid, participant, fromMe } = msg.key;
+  if (remoteJid?.endsWith('@g.us')) return participant || remoteJid;
+  if (fromMe) return config.ownerNumbers[0] + '@s.whatsapp.net';
+  return remoteJid;
+}
+
+/** Strip :device suffix from Baileys JIDs for bare-number comparison */
+function bareJid(jid) {
+  return (jid || '').replace(/:.*@/, '@');
+}
+
+function isOwnerJid(jid) {
+  const num = bareJid(jid).split('@')[0];
+  return config.ownerNumbers.some(o => o === num || jid?.includes(o));
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  Group admin helpers
+// ─────────────────────────────────────────────────────────────────────────────
+
+async function getBotAdmin(sock, jid) {
+  try {
+    const meta = await sock.groupMetadata(jid);
+    const botNum = bareJid(sock.user?.id || '').split('@')[0];
+    return meta.participants.find(p => {
+      const pNum = bareJid(p.id).split('@')[0];
+      return pNum === botNum && (p.admin === 'admin' || p.admin === 'superadmin');
+    }) || null;
+  } catch { return null; }
+}
+
+async function isBotAdmin(sock, jid) {
+  return !!(await getBotAdmin(sock, jid));
+}
+
+async function isSenderAdmin(sock, jid, senderJid) {
+  try {
+    const meta = await sock.groupMetadata(jid);
+    const sNum = bareJid(senderJid).split('@')[0];
+    return meta.participants.some(p => {
+      const pNum = bareJid(p.id).split('@')[0];
+      return pNum === sNum && (p.admin === 'admin' || p.admin === 'superadmin');
+    });
+  } catch { return false; }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  Misc helpers
+// ─────────────────────────────────────────────────────────────────────────────
 
 const LINK_RE = /(?:https?:\/\/|www\.|chat\.whatsapp\.com\/)[^\s]+/gi;
 
 let menuImageIndex = 0;
 
-// ── Helpers ────────────────────────────────────────────────────────────────
-
-function extractSender(msg, isGroup) {
-  if (isGroup) return msg.key.participant || msg.key.remoteJid;
-  if (msg.key.fromMe) return config.ownerNumbers[0] + '@s.whatsapp.net';
-  return msg.key.remoteJid;
-}
-
-function isOwnerJid(sender) {
-  if (!sender) return false;
-  return config.ownerNumbers.some(num => sender.includes(num));
-}
-
-async function isBotAdmin(sock, jid) {
-  try {
-    const meta = await sock.groupMetadata(jid);
-    const botBare = (sock.user?.id || '').split(':')[0].split('@')[0];
-    return meta.participants.some(p => {
-      const pBare = p.id.split(':')[0].split('@')[0];
-      return pBare === botBare && !!p.admin;
-    });
-  } catch { return false; }
-}
-
-async function checkSenderAdmin(sock, jid, sender) {
-  try {
-    const meta = await sock.groupMetadata(jid);
-    const senderBare = sender.split(':')[0].split('@')[0];
-    return meta.participants.some(p => {
-      const pBare = p.id.split(':')[0].split('@')[0];
-      return pBare === senderBare && (p.admin === 'admin' || p.admin === 'superadmin');
-    });
-  } catch { return false; }
-}
-
 function getUptime() {
   const ms = Date.now() - config.startTime;
-  const s = Math.floor(ms / 1000);
-  const h = Math.floor(s / 3600);
-  const m = Math.floor((s % 3600) / 60);
-  const sec = s % 60;
-  return `${h}h ${m}m ${sec}s`;
+  const s  = Math.floor(ms / 1000);
+  return `${Math.floor(s / 3600)}h ${Math.floor((s % 3600) / 60)}m ${s % 60}s`;
 }
 
 function getRamInfo() {
+  const used  = os.totalmem() - os.freemem();
   const total = os.totalmem();
-  const free = os.freemem();
-  const used = total - free;
-  const pct = Math.round((used / total) * 100);
-  const bars = Math.floor(pct / 20);
-  const bar = '▰'.repeat(bars) + '▱'.repeat(5 - bars);
-  const usedGB = (used / 1e9).toFixed(1);
-  const totalGB = (total / 1e9).toFixed(1);
-  return { pct, bar, usedGB, totalGB };
+  const pct   = Math.round((used / total) * 100);
+  const bars  = Math.floor(pct / 20);
+  return {
+    pct, usedGB: (used / 1e9).toFixed(1), totalGB: (total / 1e9).toFixed(1),
+    bar: '▰'.repeat(bars) + '▱'.repeat(5 - bars),
+  };
 }
 
-async function safeSendMessage(sock, jid, payload, msgObj = null) {
+/** Send a message, stripping unsupported fields if WhatsApp rejects it */
+async function safeSend(sock, jid, payload, quotedMsg = null) {
+  const opts = quotedMsg ? { quoted: quotedMsg } : {};
   try {
-    if (msgObj && jid.endsWith('@g.us')) {
-      return await sock.sendMessage(jid, payload, { quoted: msgObj });
-    }
-    return await sock.sendMessage(jid, payload);
+    return await sock.sendMessage(jid, payload, opts);
   } catch (err) {
-    const msg = err?.message || String(err);
-    if (!/not-acceptable/i.test(msg)) throw err;
-    try {
-      const sanitized = { ...payload };
-      if (sanitized.mentions) delete sanitized.mentions;
-      if (sanitized.image || sanitized.video || sanitized.document || sanitized.sticker) {
-        const text = sanitized.caption ?? sanitized.text ?? '';
-        if (msgObj && jid.endsWith('@g.us')) return await sock.sendMessage(jid, { text }, { quoted: msgObj });
-        return await sock.sendMessage(jid, { text });
-      }
-      const text = sanitized.text ?? '';
-      if (payload.text || payload.caption || text) {
-        if (msgObj && jid.endsWith('@g.us')) return await sock.sendMessage(jid, { text: payload.text ?? payload.caption ?? '' }, { quoted: msgObj });
-        return await sock.sendMessage(jid, { text: payload.text ?? payload.caption ?? '' });
-      }
-      if (msgObj && jid.endsWith('@g.us')) return await sock.sendMessage(jid, { text: ' ' }, { quoted: msgObj });
-      return await sock.sendMessage(jid, { text: ' ' });
-    } catch (err2) { throw err2; }
+    if (!/not-acceptable/i.test(err?.message || '')) throw err;
+    // Strip mentions / media and retry with plain text
+    const text = payload.caption ?? payload.text ?? '';
+    return await sock.sendMessage(jid, { text: text || ' ' }, opts);
   }
 }
 
-// ── Menu ───────────────────────────────────────────────────────────────────
-async function sendMenu(sock, jid, speedMs) {
-  const ram = getRamInfo();
-  const uptime = getUptime();
-  const autoReply = (await store.get('autoreply')) ? 'ON' : 'OFF';
-  const speed = speedMs !== undefined ? `${speedMs}ms` : '-';
+// ─────────────────────────────────────────────────────────────────────────────
+//  Emoji reaction map (fires before every command reply)
+// ─────────────────────────────────────────────────────────────────────────────
+
+const CMD_EMOJIS = {
+  // Menu
+  menu:'💵', help:'💵', start:'💵',
+  // User
+  ping:'🏓', alive:'✅', owner:'👑', stats:'📊', info:'ℹ️', details:'📋',
+  time:'🕐', jid:'🆔', runtime:'⏱️', uptime:'⏰',
+  // Owner
+  say:'📢', sendto:'📨', react:'👍', autoreply:'🤖',
+  autolike:'❤️', rapidlike:'💨', vv:'👁️', broadcast:'📡', shutdown:'🔴',
+  bypass:'🔓',
+  // AI
+  cortex:'🧠', mera:'💖', ask:'💬', codeai:'💻', roast:'🔥',
+  complimentai:'🌸', weather:'🌤️', imagine:'🎨', translate:'🌍',
+  story:'📖', poem:'🎭', motivate:'💪', summarize:'📊', summary:'📊',
+  clear:'🧹', vision:'👁️', manhwa:'📚',
+  // Search
+  search:'🔍', wiki:'📚', define:'📖',
+  // Fun
+  joke:'😂', dadjoke:'😄', fact:'💡', advice:'🤝', compliment:'🌺',
+  '8ball':'🎱', truth:'😬', dare:'😈', reverse:'🔄', hotcheck:'🌡️',
+  smartcheck:'🧠', brainlevel:'🧪', coolcheck:'😎', lovecheck:'💕',
+  wouldyourather:'🤔', wyr:'🤔', neverhavei:'🙈', nhi:'🙈',
+  paranoia:'👀', sus:'🕵️', iq:'🧠', cringe:'😬', simp:'💘',
+  rizzmeter:'💅', rizzcheck:'💅', slay:'💃', bully:'😤',
+  thisorthat:'⚖️', tot:'⚖️', bodycount:'💀', conspiracy:'🕵️',
+  superpower:'🦸', typingtest:'⌨️', pickup:'😏', prank:'😂',
+  fortune:'🥠', rap:'🎤', genz:'💅', villain:'🦹', hero:'🦸',
+  emojify:'✨', lovecalc:'💘', twotruth:'🎭', darkhumor:'💀',
+  advice2:'💬', roastbattle:'🔥', friendlevel:'👥', wotd:'📚',
+  personality:'🧠', challenge:'🎯', rate:'📊', namemeaning:'📖',
+  tonguetwister:'👅', roastself:'🔥', mission:'🎯', yesorno:'🔮', factcat:'💡',
+  // AI Extras
+  debate:'⚔️', quiz:'❓', bedtime:'🌙', eli5:'👶', acronym:'🔤',
+  haiku:'🌸', caption:'📸', mythology:'⚡', element:'🔬',
+  zodiac2:'♈', numerology:'🔢', dreaminterp:'💭', flag:'🏳️', timezone:'🕐', bio:'✨',
+  // Games
+  coin:'🪙', dice:'🎲', rps:'✂️', math:'➕', guess:'🎯',
+  slot:'🎰', tictactoe:'❌', trivia:'❓', hangman:'🪓',
+  hguess:'🔤', scramble:'🔀', highlow:'📈', hl:'📈',
+  spinwheel:'🎡', lottery:'🎟️', roulette:'🎡',
+  // Utility
+  calculate:'🔢', genpass:'🔑', encode:'🔒', decode:'🔓',
+  qr:'📱', tinyurl:'🔗', pingweb:'📡', tts:'🔊',
+  roman:'🏛️', palindrome:'🔄', bmi:'⚖️', tip:'💰',
+  worldclock:'🌍', daysuntil:'📅', wordcount:'📝', lorem:'📄',
+  mocktext:'😜', shuffle:'🔀', age:'🎂',
+  // Group
+  kick:'👢', add:'➕', promote:'⬆️', demote:'⬇️', mute:'🔇', unmute:'🔊',
+  open:'🔓', close:'🔒', tagall:'📢', everyone:'📢', hidetag:'👻',
+  grouplink:'🔗', revoke:'🔄', groupinfo:'📋', admins:'👑',
+  setname:'✏️', setdesc:'📝', antilink:'🚫', welcome:'👋', delete:'🗑️',
+  // Premium / Extra
+  song:'🎵', video:'🎥', enhance:'✨', ship:'💞', waifu:'🌸', neko:'🐱', crypto:'💰',
+};
+
+function reactToCmd(sock, msg, cmd) {
+  const emoji = CMD_EMOJIS[cmd] ?? '💵';
+  sock.sendMessage(msg.key.remoteJid, {
+    react: { text: emoji, key: msg.key },
+  }).catch(() => {});
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  Menu
+// ─────────────────────────────────────────────────────────────────────────────
+
+async function sendMenu(sock, jid, speedMs, quotedMsg) {
+  const ram     = getRamInfo();
+  const uptime  = getUptime();
+  const autoRep = (await store.get('autoreply')) ? 'ON' : 'OFF';
+  const speed   = speedMs !== undefined ? `${speedMs}ms` : '–';
 
   const caption =
     `╭━━━〔 💵 𝐃𝐎𝐋𝐋𝐀𝐑𝐁𝐎𝐓 𝐕5 〕━━━⬣\n` +
@@ -129,7 +285,7 @@ async function sendMenu(sock, jid, speedMs) {
     `┃ ✦ Uptime  : ${uptime}\n` +
     `┃ ✦ Version : ${config.version}\n` +
     `┃ ✦ RAM     : ${ram.bar} ${ram.pct}%\n` +
-    `┃ ✦ AutoReply: ${autoReply}\n` +
+    `┃ ✦ AutoReply: ${autoRep}\n` +
     `╰━━━━━━━━━━━━━━━━━━⬣\n\n` +
     `«⚡ Developed By Dollar\n⚡ Powered By Cortex & Mera AI»\n\n` +
 
@@ -148,7 +304,7 @@ async function sendMenu(sock, jid, speedMs) {
     `┃ .roast .complimentai .weather\n` +
     `┃ .imagine .translate .story .poem\n` +
     `┃ .motivate .summarize .clear\n` +
-    `┃ .summary .vision .manhwa\n` +
+    `┃ .vision .manhwa\n` +
     `╰━━━━━━━━━━━━━━━━━━⬣\n\n` +
 
     `╭━━━〔 🔍 SEARCH 〕━━━⬣\n` +
@@ -176,7 +332,7 @@ async function sendMenu(sock, jid, speedMs) {
     `╭━━━〔 🎮 GAMES 〕━━━⬣\n` +
     `┃ .coin .dice .rps .math .guess\n` +
     `┃ .slot .tictactoe .trivia .hangman\n` +
-    `┃ .guess (hangman letter)\n` +
+    `┃ .hguess (hangman letter)\n` +
     `┃ .scramble .highlow .hl <num>\n` +
     `┃ .spinwheel .lottery .roulette\n` +
     `╰━━━━━━━━━━━━━━━━━━⬣\n\n` +
@@ -189,29 +345,26 @@ async function sendMenu(sock, jid, speedMs) {
     `┃ .lorem .mocktext .shuffle .age\n` +
     `╰━━━━━━━━━━━━━━━━━━⬣\n\n` +
 
-    `╭━━━〔 👥 GROUP 〕━━━⬣\n` +
-    `┃ .kick .promote .demote .mute\n` +
-    `┃ .unmute .tagall .everyone .hidetag\n` +
-    `┃ .grouplink .groupinfo .antilink\n` +
-    `┃ .welcome\n` +
+    `╭━━━〔 👥 GROUP (admin) 〕━━━⬣\n` +
+    `┃ .kick .add .promote .demote\n` +
+    `┃ .mute .unmute .open .close\n` +
+    `┃ .tagall .everyone .hidetag\n` +
+    `┃ .grouplink .revoke .setname .setdesc\n` +
+    `┃ .groupinfo .admins .antilink .welcome\n` +
+    `┃ .delete\n` +
     `╰━━━━━━━━━━━━━━━━━━⬣\n\n` +
 
     `╭━━━〔 🔓 BYPASS (Owner) 〕━━━⬣\n` +
-    `┃ .bypass admin @user\n` +
-    `┃ .bypass silence @user\n` +
-    `┃ .bypass unsilence @user\n` +
-    `┃ .bypass nosticker on/off\n` +
-    `┃ .bypass nosave on/off\n` +
-    `┃ .bypass status\n` +
+    `┃ .bypass admin/silence/unsilence\n` +
+    `┃ .bypass nosticker/nosave/status\n` +
     `╰━━━━━━━━━━━━━━━━━━⬣\n\n` +
 
     `╭━━━〔 🧩 AI EXTRAS 〕━━━⬣\n` +
-    `┃ .debate .quiz .pickup .bedtime\n` +
-    `┃ .eli5 .acronym .haiku .caption\n` +
-    `┃ .prank .mythology .element\n` +
-    `┃ .zodiac2 .numerology .dreaminterp\n` +
-    `┃ .flag .timezone .bio\n` +
-    `┃ .typingtest\n` +
+    `┃ .debate .quiz .bedtime .eli5\n` +
+    `┃ .acronym .haiku .caption .prank\n` +
+    `┃ .mythology .element .zodiac2\n` +
+    `┃ .numerology .dreaminterp .flag\n` +
+    `┃ .timezone .bio .typingtest\n` +
     `╰━━━━━━━━━━━━━━━━━━⬣\n\n` +
 
     `╭━━━〔 💎 PREMIUM 〕━━━⬣\n` +
@@ -239,160 +392,93 @@ async function sendMenu(sock, jid, speedMs) {
 
     `«💵 DollarBot V5 — Smart • Fast • Limitless»`;
 
-  const images = config.menuImages;
-  const imgPath = images[menuImageIndex % images.length];
-  menuImageIndex++;
-
+  const imgPath = config.menuImages[menuImageIndex++ % config.menuImages.length];
   try {
     if (fs.existsSync(imgPath)) {
-      const img = fs.readFileSync(imgPath);
-      const sendPromise = safeSendMessage(sock, jid, { image: img, caption });
-      const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error('Media timeout')), 8000));
-      await Promise.race([sendPromise, timeoutPromise]);
+      await Promise.race([
+        safeSend(sock, jid, { image: fs.readFileSync(imgPath), caption }, quotedMsg),
+        new Promise((_, r) => setTimeout(() => r(new Error('timeout')), 8000)),
+      ]);
       return;
     }
-  } catch (err) {
-    console.log('[Menu] Image send failed, falling back to text:', err.message);
-  }
-  await safeSendMessage(sock, jid, { text: caption });
-}
-
-function ownerOnly(sock, jid) {
-  return safeSendMessage(sock, jid, { text: '🔐 This command is restricted to the bot owner.' });
-}
-
-// ── Per-command emoji map (defaults to 💵) ──────────────────────────────────
-const CMD_EMOJIS = {
-  // Menu
-  menu:'💵', help:'💵', start:'💵',
-  // User
-  ping:'🏓', alive:'✅', owner:'👑', stats:'📊', info:'ℹ️', details:'📋',
-  time:'🕐', jid:'🆔', runtime:'⏱️', uptime:'⏰',
-  // Owner
-  say:'📢', sendto:'📨', react:'👍', delete:'🗑️', autoreply:'🤖',
-  autolike:'❤️', rapidlike:'💨', vv:'👁️', broadcast:'📡', shutdown:'🔴',
-  // Bypass
-  bypass:'🔓',
-  // AI
-  cortex:'🧠', mera:'💖', ask:'💬', codeai:'💻', roast:'🔥',
-  complimentai:'🌸', weather:'🌤️', imagine:'🎨', translate:'🌍',
-  story:'📖', poem:'🎭', motivate:'💪', summarize:'📊', summary:'📊',
-  clear:'🧹', vision:'👁️', manhwa:'📚',
-  // Search
-  search:'🔍', wiki:'📚', define:'📖',
-  // Fun
-  joke:'😂', dadjoke:'😄', fact:'💡', advice:'🤝', compliment:'🌺',
-  '8ball':'🎱', truth:'😬', dare:'😈', reverse:'🔄', hotcheck:'🌡️',
-  smartcheck:'🧠', brainlevel:'🧪', coolcheck:'😎', lovecheck:'💕',
-  wouldyourather:'🤔', wyr:'🤔', neverhavei:'🙈', nhi:'🙈',
-  paranoia:'👀', sus:'🕵️', iq:'🧠', cringe:'😬', simp:'💘',
-  rizzmeter:'💅', rizzcheck:'💅', slay:'💃', bully:'😤',
-  thisorthat:'⚖️', tot:'⚖️', bodycount:'💀', conspiracy:'🕵️',
-  superpower:'🦸', typingtest:'⌨️', pickup:'😏', prank:'😂',
-  fortune:'🥠', rap:'🎤', genz:'💅', villain:'🦹', hero:'🦸',
-  emojify:'✨', lovecalc:'💘', twotruth:'🎭', darkhumor:'💀',
-  advice2:'💬', roastbattle:'🔥', friendlevel:'👥', wotd:'📚',
-  personality:'🧠', challenge:'🎯', rate:'📊', namemeaning:'📖',
-  tonguetwister:'👅', roastself:'🔥', mission:'🎯',
-  yesorno:'🔮', factcat:'💡',
-  // AI Extras
-  debate:'⚔️', quiz:'❓', bedtime:'🌙', eli5:'👶', acronym:'🔤',
-  haiku:'🌸', caption:'📸', mythology:'⚡', element:'🔬',
-  zodiac2:'♈', numerology:'🔢', dreaminterp:'💭', flag:'🏳️',
-  timezone:'🕐', bio:'✨',
-  // Games
-  coin:'🪙', dice:'🎲', rps:'✂️', math:'➕', guess:'🎯',
-  slot:'🎰', tictactoe:'❌', trivia:'❓', hangman:'🪓',
-  hguess:'🔤', scramble:'🔀', highlow:'📈', hl:'📈',
-  spinwheel:'🎡', lottery:'🎟️', roulette:'🎡',
-  // Utility
-  calculate:'🔢', genpass:'🔑', encode:'🔒', decode:'🔓',
-  qr:'📱', tinyurl:'🔗', pingweb:'📡', tts:'🔊',
-  roman:'🏛️', palindrome:'🔄', bmi:'⚖️', tip:'💰',
-  worldclock:'🌍', daysuntil:'📅', wordcount:'📝',
-  lorem:'📄', mocktext:'😜', shuffle:'🔀', age:'🎂',
-  // Group
-  kick:'👢', promote:'⬆️', demote:'⬇️', mute:'🔇', unmute:'🔊',
-  tagall:'📢', everyone:'📢', hidetag:'👻', grouplink:'🔗',
-  groupinfo:'📋', antilink:'🚫', welcome:'👋',
-  // Premium / Extra
-  song:'🎵', video:'🎥', enhance:'✨', ship:'💞',
-  waifu:'🌸', neko:'🐱', crypto:'💰',
-};
-
-async function reactToCmd(sock, msg, cmd) {
-  try {
-    const emoji = CMD_EMOJIS[cmd] ?? '💵';
-    await sock.sendMessage(msg.key.remoteJid, {
-      react: { text: emoji, key: msg.key },
-    });
   } catch (_) {}
+  await safeSend(sock, jid, { text: caption }, quotedMsg);
 }
 
-// ── Main message handler ────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────────────────────
+//  Main message handler
+// ─────────────────────────────────────────────────────────────────────────────
+
 async function handleMessage(sock, msg) {
   try {
-    const jid = msg.key.remoteJid;
+    // ── Basic guards ────────────────────────────────────────────────────────
+    const jid = msg.key?.remoteJid;
     if (!jid) return;
 
-    // ── Auto-Like Status ─────────────────────────────────────────────────
+    // ── Status broadcast: only auto-like ────────────────────────────────────
     if (jid === 'status@broadcast') {
       if ((await store.get('autolike')) && global.isAutoLikeActive) {
         const emojis = ['🔥', '❤️', '👍', '😍', '👏', '💯', '✨'];
-        try {
-          await sock.sendMessage(msg.key.participant || msg.key.remoteJid, {
-            react: { text: emojis[Math.floor(Math.random() * emojis.length)], key: msg.key },
-          });
-        } catch (_) {}
+        sock.sendMessage(msg.key.participant || jid, {
+          react: { text: emojis[Math.floor(Math.random() * emojis.length)], key: msg.key },
+        }).catch(() => {});
       }
       return;
     }
 
     const isGroup = jid.endsWith('@g.us');
-    const sender  = extractSender(msg, isGroup);
+    const sender  = resolveSender(msg);
     const isOwner = isOwnerJid(sender);
 
-    // ── Bypass intercept (group-level message policing) ──────────────────
+    // ── Bypass intercept (silenced users, anti-sticker, no-save) ───────────
     if (isGroup && !isOwner) {
-      const intercepted = await checkBypassIntercept(sock, msg, jid);
-      if (intercepted) return;
+      const blocked = await checkBypassIntercept(sock, msg, jid);
+      if (blocked) return;
     }
 
-    const bodyRaw = extractBody(msg);
-    const body = bodyRaw?.trim();
+    // ── Attach helpers onto msg ─────────────────────────────────────────────
+    //    msg.reply(text, options) — always quotes the triggering message
+    msg.reply = (text, opts = {}) =>
+      safeSend(sock, jid, { text, ...opts }, msg);
 
-    // ── Non-command messages ─────────────────────────────────────────────
+    // ── Extract body ────────────────────────────────────────────────────────
+    const body = (extractBody(msg) || '').trim();
+
+    // ── Non-command path ────────────────────────────────────────────────────
     if (!body || !body.startsWith(config.prefix)) {
-      await handleNonCommand(sock, msg, body || '', jid, sender, isGroup, isOwner);
-      return;
+      return handleNonCommand(sock, msg, body, jid, sender, isGroup, isOwner);
     }
 
+    // ── Parse command ───────────────────────────────────────────────────────
     const [rawCmd, ...args] = body.slice(config.prefix.length).trim().split(/\s+/);
+    if (!rawCmd) return;
     const cmd = rawCmd.toLowerCase();
-    const getIsAdmin = async () => isGroup ? await isBotAdmin(sock, jid) : false;
-    const getIsSenderAdmin = async () => {
+
+    // ── Side-effects before dispatch ────────────────────────────────────────
+    sock.readMessages([msg.key]).catch(() => {});
+    sock.sendPresenceUpdate('composing', jid).catch(() => {});
+    reactToCmd(sock, msg, cmd);       // non-blocking emoji reaction
+
+    // ── Sender-admin check (lazy, cached per call) ──────────────────────────
+    let _senderAdmin = null;
+    const senderIsAdmin = async () => {
       if (isOwner) return true;
       if (!isGroup) return false;
-      return await checkSenderAdmin(sock, jid, sender);
+      if (_senderAdmin === null) _senderAdmin = await isSenderAdmin(sock, jid, sender);
+      return _senderAdmin;
     };
 
-    try { await sock.readMessages([msg.key]); } catch (_) {}
-    try { await sock.sendPresenceUpdate('composing', jid); } catch (_) {}
+    const t0 = Date.now();
 
-    // React with emoji before processing the command
-    reactToCmd(sock, msg, cmd);
-
-    const cmdStart = Date.now();
-
+    // ────────────────────────────────────────────────────────────────────────
     switch (cmd) {
-      // ── Menu ────────────────────────────────────────────────────────────
-      case 'menu': case 'help': case 'start': {
-        const speed = Date.now() - cmdStart;
-        await sendMenu(sock, jid, speed);
-        break;
-      }
 
-      // ── User ────────────────────────────────────────────────────────────
+      // ── Menu ──────────────────────────────────────────────────────────────
+      case 'menu': case 'help': case 'start':
+        await sendMenu(sock, jid, Date.now() - t0, msg);
+        break;
+
+      // ── User ──────────────────────────────────────────────────────────────
       case 'ping':    await userCommands.ping(sock, msg); break;
       case 'alive':   await userCommands.alive(sock, msg); break;
       case 'owner':   await userCommands.owner(sock, msg); break;
@@ -404,24 +490,30 @@ async function handleMessage(sock, msg) {
       case 'runtime': await userCommands.runtime(sock, msg); break;
       case 'uptime':  await userCommands.uptime(sock, msg); break;
 
-      // ── Owner ────────────────────────────────────────────────────────────
-      case 'say':       if (!isOwner) return ownerOnly(sock, jid); await ownerCommands.say(sock, msg, args); break;
-      case 'sendto':    if (!isOwner) return ownerOnly(sock, jid); await ownerCommands.sendto(sock, msg, args); break;
-      case 'react':     if (!isOwner) return ownerOnly(sock, jid); await ownerCommands.react(sock, msg, args); break;
-      case 'delete':    if (!isOwner) return ownerOnly(sock, jid); await ownerCommands.delete(sock, msg); break;
-      case 'autoreply': if (!isOwner) return ownerOnly(sock, jid); await ownerCommands.autoreply(sock, msg, args); break;
-      case 'autolike':  if (!isOwner) return ownerOnly(sock, jid); await ownerCommands.autolike(sock, msg, args); break;
-      case 'rapidlike': if (!isOwner) return ownerOnly(sock, jid); await ownerCommands.rapidlike(sock, msg); break;
-      case 'vv':        if (!isOwner) return ownerOnly(sock, jid); await ownerCommands.vv(sock, msg); break;
-      case 'broadcast': if (!isOwner) return ownerOnly(sock, jid); await ownerCommands.broadcast(sock, msg, args); break;
-      case 'shutdown':  if (!isOwner) return ownerOnly(sock, jid); await ownerCommands.shutdown(sock, msg); break;
+      // ── Owner ─────────────────────────────────────────────────────────────
+      case 'say':       if (!isOwner) return msg.reply('🔐 Owner only.'); await ownerCommands.say(sock, msg, args); break;
+      case 'sendto':    if (!isOwner) return msg.reply('🔐 Owner only.'); await ownerCommands.sendto(sock, msg, args); break;
+      case 'react':     if (!isOwner) return msg.reply('🔐 Owner only.'); await ownerCommands.react(sock, msg, args); break;
+      case 'autoreply': if (!isOwner) return msg.reply('🔐 Owner only.'); await ownerCommands.autoreply(sock, msg, args); break;
+      case 'autolike':  if (!isOwner) return msg.reply('🔐 Owner only.'); await ownerCommands.autolike(sock, msg, args); break;
+      case 'rapidlike': if (!isOwner) return msg.reply('🔐 Owner only.'); await ownerCommands.rapidlike(sock, msg); break;
+      case 'vv':        if (!isOwner) return msg.reply('🔐 Owner only.'); await ownerCommands.vv(sock, msg); break;
+      case 'broadcast': if (!isOwner) return msg.reply('🔐 Owner only.'); await ownerCommands.broadcast(sock, msg, args); break;
+      case 'shutdown':  if (!isOwner) return msg.reply('🔐 Owner only.'); await ownerCommands.shutdown(sock, msg); break;
 
-      // ── Bypass (Owner-only, groups) ──────────────────────────────────────
+      // ── Delete — owner can delete from DM context, admins in groups ───────
+      case 'delete': {
+        if (isOwner) { await ownerCommands.delete(sock, msg); break; }
+        if (isGroup && await senderIsAdmin()) { await groupCommands.delete(sock, msg); break; }
+        return msg.reply('🔐 Only the owner or group admins can delete messages.');
+      }
+
+      // ── Bypass ────────────────────────────────────────────────────────────
       case 'bypass':
         await bypassCommands.bypass(sock, msg, args, isOwner);
         break;
 
-      // ── AI ───────────────────────────────────────────────────────────────
+      // ── AI ────────────────────────────────────────────────────────────────
       case 'cortex':       await aiCommands.cortex(sock, msg, args, jid); break;
       case 'mera':         await aiCommands.mera(sock, msg, args, jid); break;
       case 'ask':          await aiCommands.ask(sock, msg, args, jid); break;
@@ -441,12 +533,12 @@ async function handleMessage(sock, msg) {
       case 'manhwa':
       case 'manga2':       await aiCommands.manhwa(sock, msg, args, jid); break;
 
-      // ── Search ───────────────────────────────────────────────────────────
+      // ── Search ────────────────────────────────────────────────────────────
       case 'search': await searchCommands.search(sock, msg, args); break;
       case 'wiki':   await searchCommands.wiki(sock, msg, args); break;
       case 'define': await searchCommands.define(sock, msg, args); break;
 
-      // ── Fun ──────────────────────────────────────────────────────────────
+      // ── Fun ───────────────────────────────────────────────────────────────
       case 'joke':         await funCommands.joke(sock, msg); break;
       case 'dadjoke':      await funCommands.dadjoke(sock, msg); break;
       case 'fact':         await funCommands.fact(sock, msg); break;
@@ -462,7 +554,7 @@ async function handleMessage(sock, msg) {
       case 'coolcheck':    await funCommands.coolcheck(sock, msg, args); break;
       case 'lovecheck':    await funCommands.lovecheck(sock, msg, args); break;
 
-      // ── More Fun ─────────────────────────────────────────────────────────
+      // ── More Fun ──────────────────────────────────────────────────────────
       case 'wouldyourather':
       case 'wyr':          await moreFun.wouldyourather(sock, msg); break;
       case 'neverhavei':
@@ -508,23 +600,23 @@ async function handleMessage(sock, msg) {
       case 'factcat':      await moreFun.factcat(sock, msg, args); break;
 
       // ── AI Extras ─────────────────────────────────────────────────────────
-      case 'debate':       await moreFun.debate(sock, msg, args); break;
-      case 'quiz':         await moreFun.quiz(sock, msg, args); break;
-      case 'bedtime':      await moreFun.bedtime(sock, msg, args); break;
-      case 'eli5':         await moreFun.eli5(sock, msg, args); break;
-      case 'acronym':      await moreFun.acronym(sock, msg, args); break;
-      case 'haiku':        await moreFun.haiku(sock, msg, args); break;
-      case 'caption':      await moreFun.caption(sock, msg, args); break;
-      case 'mythology':    await moreFun.mythology(sock, msg, args); break;
-      case 'element':      await moreFun.element(sock, msg, args); break;
-      case 'zodiac2':      await moreFun.zodiacread(sock, msg, args); break;
-      case 'numerology':   await moreFun.numerology(sock, msg, args); break;
-      case 'dreaminterp':  await moreFun.dreaminterp(sock, msg, args); break;
-      case 'flag':         await moreFun.flag(sock, msg, args); break;
-      case 'timezone':     await moreFun.timezone(sock, msg, args); break;
-      case 'bio':          await moreFun.bio(sock, msg, args); break;
+      case 'debate':      await moreFun.debate(sock, msg, args); break;
+      case 'quiz':        await moreFun.quiz(sock, msg, args); break;
+      case 'bedtime':     await moreFun.bedtime(sock, msg, args); break;
+      case 'eli5':        await moreFun.eli5(sock, msg, args); break;
+      case 'acronym':     await moreFun.acronym(sock, msg, args); break;
+      case 'haiku':       await moreFun.haiku(sock, msg, args); break;
+      case 'caption':     await moreFun.caption(sock, msg, args); break;
+      case 'mythology':   await moreFun.mythology(sock, msg, args); break;
+      case 'element':     await moreFun.element(sock, msg, args); break;
+      case 'zodiac2':     await moreFun.zodiacread(sock, msg, args); break;
+      case 'numerology':  await moreFun.numerology(sock, msg, args); break;
+      case 'dreaminterp': await moreFun.dreaminterp(sock, msg, args); break;
+      case 'flag':        await moreFun.flag(sock, msg, args); break;
+      case 'timezone':    await moreFun.timezone(sock, msg, args); break;
+      case 'bio':         await moreFun.bio(sock, msg, args); break;
 
-      // ── Games ────────────────────────────────────────────────────────────
+      // ── Games ─────────────────────────────────────────────────────────────
       case 'coin':      await gameCommands.coin(sock, msg); break;
       case 'dice':      await gameCommands.dice(sock, msg, args); break;
       case 'rps':       await gameCommands.rps(sock, msg, args); break;
@@ -533,7 +625,7 @@ async function handleMessage(sock, msg) {
       case 'slot':      await gameCommands.slot(sock, msg); break;
       case 'tictactoe': await gameCommands.tictactoe(sock, msg, args); break;
 
-      // ── More Games ───────────────────────────────────────────────────────
+      // ── More Games ────────────────────────────────────────────────────────
       case 'trivia':    await moreFun.trivia(sock, msg); break;
       case 'hangman':   await moreFun.hangman(sock, msg); break;
       case 'hguess':    await moreFun.hangmanguess(sock, msg, args); break;
@@ -544,7 +636,7 @@ async function handleMessage(sock, msg) {
       case 'lottery':   await moreFun.lottery(sock, msg); break;
       case 'roulette':  await moreFun.roulette(sock, msg); break;
 
-      // ── Utility ──────────────────────────────────────────────────────────
+      // ── Utility ───────────────────────────────────────────────────────────
       case 'calculate': await utilityCommands.calculate(sock, msg, args); break;
       case 'genpass':   await utilityCommands.genpass(sock, msg, args); break;
       case 'encode':    await utilityCommands.encode(sock, msg, args); break;
@@ -554,20 +646,20 @@ async function handleMessage(sock, msg) {
       case 'pingweb':   await utilityCommands.pingweb(sock, msg, args); break;
       case 'tts':       await utilityCommands.tts(sock, msg, args); break;
 
-      // ── More Utility ─────────────────────────────────────────────────────
-      case 'roman':     await moreFun.roman(sock, msg, args); break;
+      // ── More Utility ──────────────────────────────────────────────────────
+      case 'roman':      await moreFun.roman(sock, msg, args); break;
       case 'palindrome': await moreFun.palindrome(sock, msg, args); break;
-      case 'bmi':       await moreFun.bmi(sock, msg, args); break;
-      case 'tip':       await moreFun.tip(sock, msg, args); break;
+      case 'bmi':        await moreFun.bmi(sock, msg, args); break;
+      case 'tip':        await moreFun.tip(sock, msg, args); break;
       case 'worldclock': await moreFun.worldclock(sock, msg); break;
-      case 'daysuntil': await moreFun.daysuntil(sock, msg, args); break;
-      case 'wordcount': await moreFun.wordcount(sock, msg, args); break;
-      case 'lorem':     await moreFun.lorem(sock, msg, args); break;
-      case 'mocktext':  await moreFun.mocktext(sock, msg, args); break;
-      case 'shuffle':   await moreFun.shuffle(sock, msg, args); break;
-      case 'age':       await moreFun.age(sock, msg, args); break;
+      case 'daysuntil':  await moreFun.daysuntil(sock, msg, args); break;
+      case 'wordcount':  await moreFun.wordcount(sock, msg, args); break;
+      case 'lorem':      await moreFun.lorem(sock, msg, args); break;
+      case 'mocktext':   await moreFun.mocktext(sock, msg, args); break;
+      case 'shuffle':    await moreFun.shuffle(sock, msg, args); break;
+      case 'age':        await moreFun.age(sock, msg, args); break;
 
-      // ── Extra ────────────────────────────────────────────────────────────
+      // ── Extra ─────────────────────────────────────────────────────────────
       case 'lyrics':    await extraCommands.lyrics(sock, msg, args); break;
       case 'recipe':    await extraCommands.recipe(sock, msg, args); break;
       case 'horoscope': await extraCommands.horoscope(sock, msg, args); break;
@@ -583,7 +675,7 @@ async function handleMessage(sock, msg) {
       case 'insult':    await extraCommands.insult(sock, msg, args); break;
       case 'quote':     await extraCommands.quote(sock, msg, args); break;
 
-      // ── Premium ──────────────────────────────────────────────────────────
+      // ── Premium ───────────────────────────────────────────────────────────
       case 'enhance':      await premiumCommands.enhance(sock, msg, args); break;
       case 'ship':         await premiumCommands.ship(sock, msg, args); break;
       case 'waifu':        await premiumCommands.waifu(sock, msg); break;
@@ -609,7 +701,7 @@ async function handleMessage(sock, msg) {
       case 'searchimage':  await premiumCommands.searchimage(sock, msg, args); break;
       case 'gnews':        await premiumCommands.gnews(sock, msg, args); break;
 
-      // ── Group (admin-only commands) ──────────────────────────────────────
+      // ── Group — admin-restricted ───────────────────────────────────────────
       case 'kick':
       case 'add':
       case 'promote':
@@ -627,30 +719,25 @@ async function handleMessage(sock, msg) {
       case 'setdesc':
       case 'antilink':
       case 'welcome': {
-        if (!jid.endsWith('@g.us')) return msg.reply('❌ This command only works in groups.');
-        if (!await getIsSenderAdmin()) return msg.reply('❌ Only group admins can use this command.');
+        if (!isGroup) return msg.reply('❌ This command only works in groups.');
+        if (!await senderIsAdmin()) return msg.reply('❌ Only group admins can use this command.');
         await groupCommands[cmd](sock, msg, args);
         break;
       }
-      // Group info commands (anyone can use)
+
+      // ── Group — open to all members ────────────────────────────────────────
       case 'groupinfo': {
-        if (!jid.endsWith('@g.us')) return msg.reply('❌ This command only works in groups.');
+        if (!isGroup) return msg.reply('❌ This command only works in groups.');
         await groupCommands.groupinfo(sock, msg);
         break;
       }
       case 'admins': {
-        if (!jid.endsWith('@g.us')) return msg.reply('❌ This command only works in groups.');
+        if (!isGroup) return msg.reply('❌ This command only works in groups.');
         await groupCommands.admins(sock, msg);
         break;
       }
-      case 'delete': {
-        if (!jid.endsWith('@g.us') && !await getIsSenderAdmin())
-          return msg.reply('❌ Only admins can delete messages.');
-        await groupCommands.delete(sock, msg);
-        break;
-      }
 
-      // ── Tools ────────────────────────────────────────────────────────────
+      // ── Tools ─────────────────────────────────────────────────────────────
       case 'hash':          await toolsCommands.hash(sock, msg, args); break;
       case 'uuid':          await toolsCommands.uuid(sock, msg); break;
       case 'jsonformat':    await toolsCommands.jsonformat(sock, msg, args); break;
@@ -664,7 +751,7 @@ async function handleMessage(sock, msg) {
       case 'animalfact':    await toolsCommands.animalfact(sock, msg); break;
       case 'passcheck':     await toolsCommands.passcheck(sock, msg, args); break;
 
-      // ── API ──────────────────────────────────────────────────────────────
+      // ── API ───────────────────────────────────────────────────────────────
       case 'pokemon':     await apiCommands.pokemon(sock, msg, args); break;
       case 'anime':       await apiCommands.anime(sock, msg, args); break;
       case 'manga':       await apiCommands.manga(sock, msg, args); break;
@@ -682,7 +769,7 @@ async function handleMessage(sock, msg) {
       case 'crypto':      await apiCommands.crypto(sock, msg, args); break;
       case 'urlinfo':     await apiCommands.urlinfo(sock, msg, args); break;
 
-      // ── Media ────────────────────────────────────────────────────────────
+      // ── Media ─────────────────────────────────────────────────────────────
       case 'randomcat':      await mediaCommands.randomcat(sock, msg); break;
       case 'randomdog':      await mediaCommands.randomdog(sock, msg); break;
       case 'asciiart':       await mediaCommands.asciiart(sock, msg, args); break;
@@ -698,7 +785,7 @@ async function handleMessage(sock, msg) {
       case 'map':            await mediaCommands.map(sock, msg, args); break;
       case 'gradient':       await mediaCommands.gradient(sock, msg, args); break;
 
-      // ── Dev ──────────────────────────────────────────────────────────────
+      // ── Dev ───────────────────────────────────────────────────────────────
       case 'jsonminify': await devCommands.jsonminify(sock, msg, args); break;
       case 'timestamp':  await devCommands.timestamp(sock, msg, args); break;
       case 'base32':     await devCommands.base32(sock, msg, args); break;
@@ -714,99 +801,85 @@ async function handleMessage(sock, msg) {
       case 'mdpreview':  await devCommands.mdpreview(sock, msg, args); break;
       case 'gitcommit':  await devCommands.gitcommit(sock, msg, args); break;
 
+      // ── Unknown ───────────────────────────────────────────────────────────
       default:
-        // Only send "unknown command" reply — don't throw errors for things like
-        // stickers, reactions, or media that slipped through with a body
-        if (cmd && cmd.length > 0) {
+        if (cmd) {
           await sock.sendMessage(jid, {
             text: `❓ Unknown command: *.${cmd}*\n\nType *.menu* to see all commands.`,
-          });
+          }, { quoted: msg });
         }
     }
+
   } catch (err) {
-    // Silently ignore common network errors to avoid console spam
-    const msg2 = err?.message || String(err);
-    if (!/ECONNRESET|EPIPE|not-acceptable|timed out/i.test(msg2)) {
-      console.error('[Handler Error]', msg2);
+    const m = err?.message || String(err);
+    if (!/ECONNRESET|EPIPE|not-acceptable|timed out|rate-overlimit/i.test(m)) {
+      console.error('[Handler]', m);
     }
   }
 }
 
-// ── Non-command handler (fixed: anti-link works in groups, no auto-reply in groups) ──
+// ─────────────────────────────────────────────────────────────────────────────
+//  Non-command path (games, anti-link, auto-reply)
+// ─────────────────────────────────────────────────────────────────────────────
+
 async function handleNonCommand(sock, msg, body, jid, sender, isGroup, isOwner) {
   try {
-    // ── Active math game check (works everywhere) ──────────────────────
-    if (body) {
-      const mathDone = await gameCommands.checkMathAnswer(sock, msg, body);
-      if (mathDone) return;
+    if (!body) return;
+
+    // Active game checks (math, riddle, trivia, scramble)
+    if (await gameCommands.checkMathAnswer(sock, msg, body)) return;
+
+    const riddle = extraCommands.checkRiddle?.(jid, body);
+    if (riddle?.correct) {
+      await sock.sendMessage(jid, { text: `✅ Correct! The answer was *${riddle.answer}* 🎉` });
+      return;
     }
 
-    // ── Active riddle check ────────────────────────────────────────────
-    if (body) {
-      const riddleResult = extraCommands.checkRiddle(jid, body);
-      if (riddleResult && riddleResult.correct !== undefined) {
-        if (riddleResult.correct) {
-          await sock.sendMessage(jid, { text: `✅ Correct! The answer was *${riddleResult.answer}*. Well done! 🎉` });
-        }
-        if (riddleResult.correct) return;
-      }
-    }
-
-    // ── Trivia answer check ───────────────────────────────────────────
-    if (body) {
-      const triviaResult = require('./commands/morefun').checkTrivia(jid, body);
-      if (triviaResult) {
-        if (triviaResult.expired) {
-          await sock.sendMessage(jid, { text: `⏰ Trivia time is up! The game has expired. Start a new one with *.trivia*` });
-        } else if (triviaResult.correct) {
-          await sock.sendMessage(jid, { text: `🎉 *Correct!* Well done! The answer was *${triviaResult.answer}*!` });
-        }
-        if (triviaResult.correct) return;
-      }
-    }
-
-    // ── Scramble answer check ─────────────────────────────────────────
-    if (body) {
-      const scrambleResult = require('./commands/morefun').checkScramble(jid, body);
-      if (scrambleResult) {
-        if (scrambleResult.correct) {
-          await sock.sendMessage(jid, { text: `🎉 *Correct!* The word was *${scrambleResult.answer.toUpperCase()}*! You unscrambled it!` });
-        }
-        if (scrambleResult.correct) return;
-      }
-    }
-
-    // ── Anti-link in groups ──────────────────────────────────────────────
-    if (isGroup && !isOwner && body) {
-      const antilinkGroups = (await store.get('antilinkGroups')) || {};
-      if (antilinkGroups[jid] && LINK_RE.test(body)) {
-        try { await sock.sendMessage(jid, { delete: msg.key }); } catch (_) {}
-        await safeSendMessage(sock, jid, {
-          text: `⛔ @${sender?.split('@')[0]} links are not allowed in this group.`,
-          mentions: [sender],
-        }, msg);
+    const trivia = moreFun.checkTrivia?.(jid, body);
+    if (trivia) {
+      if (trivia.expired) {
+        await sock.sendMessage(jid, { text: `⏰ Time's up! Start a new one with *.trivia*` });
+      } else if (trivia.correct) {
+        await sock.sendMessage(jid, { text: `🎉 *Correct!* The answer was *${trivia.answer}*!` });
         return;
       }
     }
 
-    // ── Auto-reply: ONLY in DMs, never in groups ─────────────────────────
-    if (isGroup) return;
+    const scramble = moreFun.checkScramble?.(jid, body);
+    if (scramble?.correct) {
+      await sock.sendMessage(jid, { text: `🎉 *Correct!* The word was *${scramble.answer.toUpperCase()}*!` });
+      return;
+    }
 
-    if (await store.get('autoreply')) {
-      try {
-        await sock.sendPresenceUpdate('composing', jid);
-        const { autoReplyAI } = require('./lib/pollinations');
-        const cleanBody = body.trim() || 'Hello';
-        const aiResponse = await autoReplyAI(jid, cleanBody);
-        await safeSendMessage(sock, jid, { text: aiResponse });
-      } catch (err) {
-        console.log('[AutoReply Error]', err.message);
+    // Anti-link (groups only, non-owner)
+    if (isGroup && !isOwner) {
+      const antilinkGroups = (await store.get('antilinkGroups')) || {};
+      if (antilinkGroups[jid] && LINK_RE.test(body)) {
+        try { await sock.sendMessage(jid, { delete: msg.key }); } catch (_) {}
+        const senderNum = bareJid(sender).split('@')[0];
+        await sock.sendMessage(jid, {
+          text: `⛔ @${senderNum} — links are not allowed in this group!`,
+          mentions: [sender],
+        });
+        return;
       }
+    }
+
+    // Auto-reply: DMs only, never groups
+    if (isGroup) return;
+    if (await store.get('autoreply')) {
+      sock.sendPresenceUpdate('composing', jid).catch(() => {});
+      const { autoReplyAI } = require('./lib/pollinations');
+      const reply = await autoReplyAI(jid, body || 'Hello');
+      await safeSend(sock, jid, { text: reply });
     }
   } catch (_) {}
 }
 
-// ── Group participant events ───────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────────────────────
+//  Group participant events (welcome / leave messages)
+// ─────────────────────────────────────────────────────────────────────────────
+
 async function handleGroupParticipants(sock, update) {
   try {
     const { id, participants, action } = update;
