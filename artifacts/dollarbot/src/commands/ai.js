@@ -219,11 +219,93 @@ const aiCommands = {
   },
 
   async summarize(sock, msg, args, jid) {
-    if (!args.length) return msg.reply('Usage: .summarize <text>');
+    const isGroup = jid.endsWith('@g.us');
+
+    // ── No args in a group → summarize last 20 group messages ──────────────
+    if (!args.length) {
+      if (!isGroup) {
+        return msg.reply(
+          '📝 *Usage:*\n\n' +
+          '• In a *group*: just send *.summarize* — I\'ll summarize the last 20 messages\n' +
+          '• Anywhere: *.summarize <text>* — I\'ll summarize what you paste\n\n' +
+          '_Tip: Use *.summarize* in a group chat for instant group recap!_'
+        );
+      }
+
+      await msg.reply('_📊 Reading the last 20 messages and summarizing..._');
+
+      try {
+        const stored = global.msgStore?.messages?.[jid];
+        const rawMsgs = stored?.array || [];
+
+        if (!rawMsgs.length) {
+          return msg.reply(
+            '❌ No messages cached yet.\n\n' +
+            '_Messages are cached after the bot connects. Wait for some activity, then try again._'
+          );
+        }
+
+        const sorted = [...rawMsgs]
+          .filter(m => m.message && !m.messageStubType)
+          .sort((a, b) => (a.messageTimestamp || 0) - (b.messageTimestamp || 0))
+          .slice(-20);
+
+        if (!sorted.length) return msg.reply('❌ No readable messages found in cache.');
+
+        const lines = sorted.map((m, i) => {
+          const sender = (m.key.participant || m.key.remoteJid || 'Unknown')
+            .split('@')[0].split(':')[0];
+          const c = m.message || {};
+          let text = '';
+          if (c.conversation)                       text = c.conversation;
+          else if (c.extendedTextMessage?.text)     text = c.extendedTextMessage.text;
+          else if (c.imageMessage)                  text = c.imageMessage.caption ? `[image: ${c.imageMessage.caption}]` : '[sent an image]';
+          else if (c.videoMessage)                  text = c.videoMessage.caption ? `[video: ${c.videoMessage.caption}]` : '[sent a video]';
+          else if (c.audioMessage)                  text = '[sent a voice note]';
+          else if (c.stickerMessage)                text = '[sent a sticker]';
+          else if (c.documentMessage)               text = `[file: ${c.documentMessage.fileName || 'document'}]`;
+          else if (c.reactionMessage)               text = `[reacted ${c.reactionMessage.text || '👍'}]`;
+          else                                      text = '[other media]';
+          return `${i + 1}. @${sender}: ${text}`;
+        });
+
+        const conversation = lines.join('\n');
+
+        const summaryText = await groqRequest({
+          model: 'llama-3.1-8b-instant',
+          messages: [
+            {
+              role: 'system',
+              content:
+                'You are an expert group chat summarizer. Create a detailed summary of the conversation. ' +
+                'Mention: who talked about what (use @username), main topics, notable moments, media shared, and the overall vibe. ' +
+                'Format with WhatsApp markdown: *bold* for names/topics, numbered list for main points. No HTML.',
+            },
+            {
+              role: 'user',
+              content: `Summarize these ${lines.length} group messages:\n\n${conversation}`,
+            },
+          ],
+        });
+
+        await msg.reply(
+          `╭━━━〔 📊 GROUP SUMMARY 〕━━━⬣\n` +
+          `┃ Last *${lines.length} messages* analyzed\n` +
+          `╰━━━━━━━━━━━━━━━━━━⬣\n\n` +
+          `${summaryText}\n\n` +
+          `_⚡ Powered by Groq AI_`
+        );
+      } catch (e) {
+        await msg.reply(`❌ Summary failed: ${e.message}`);
+      }
+      return;
+    }
+
+    // ── Has args → summarize the provided text ───────────────────────────────
     await msg.reply('_Summarizing..._');
     try {
       const response = await pollinations.textGenerate([
-        { role: 'system', content: 'You are an expert summarizer. Provide a clear concise summary using bullet points (- item). Use *bold* for key points. WhatsApp formatting only.' },
+        { role: 'system', content: 'You are an expert summarizer. Give a clear concise summary using bullet points (- item). Use *bold* for key points. WhatsApp formatting only.' },
         { role: 'user', content: `Summarize this:\n${args.join(' ')}` },
       ]);
       await msg.reply(`*Summary*\n\n${response}\n\n_Powered by Dollar AI_`);

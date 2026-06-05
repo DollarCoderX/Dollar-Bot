@@ -150,11 +150,15 @@ async function startBot(method, phone) {
       try {
         const stored = msgStore.messages[key.remoteJid];
         if (stored) {
-          const found = stored.get(key.id);
-          if (found) return found.message || undefined;
+          // Try .get() (OrderedDictionary) first, then fallback to array scan
+          const found = stored.get?.(key.id) ||
+                        stored.array?.find(m => m.key.id === key.id);
+          if (found?.message) return found.message;
         }
       } catch (_) {}
-      return undefined;
+      // Return empty message instead of undefined — prevents WhatsApp from
+      // showing "Waiting for this message. This may take a while." to users.
+      return { conversation: '' };
     },
   });
 
@@ -217,6 +221,9 @@ async function startBot(method, phone) {
     if (type !== 'notify') return;
     for (const m of messages) {
       if (!m.message) continue;
+      // Skip WhatsApp protocol/system stub messages (these cause "Waiting for
+      // this message. This may take a while." if processed incorrectly)
+      if (m.messageStubType) continue;
       const jid = m.key.remoteJid;
 
       // Always process status@broadcast (for auto-like)

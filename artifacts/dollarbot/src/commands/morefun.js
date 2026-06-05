@@ -814,6 +814,391 @@ const morefun = {
       await msg.reply(`Error: ${e.message}`);
     }
   },
+
+  // ── Fortune Cookie ────────────────────────────────────────────────────────
+  async fortune(sock, msg) {
+    const fortunes = [
+      'Your kindness will be rewarded when you least expect it.',
+      'The answer you seek is closer than you think.',
+      'Today is a great day to try something new.',
+      'A surprise is waiting just around the corner.',
+      'Your hard work will soon pay off in unexpected ways.',
+      'The best is yet to come — keep going.',
+      'Someone is thinking about you right now.',
+      'A small act of courage will change everything.',
+      'You will find what you are looking for.',
+      'Good things are already on their way to you.',
+    ];
+    const lucky = Array.from({length:6}, () => Math.floor(Math.random()*49)+1).join(' · ');
+    const fortune = fortunes[Math.floor(Math.random() * fortunes.length)];
+    await msg.reply(
+      `🥠 *FORTUNE COOKIE*\n\n_"${fortune}"_\n\n🍀 *Lucky numbers:* ${lucky}\n🌟 *Lucky color:* ${['Gold','Blue','Red','Green','Purple','Silver'][Math.floor(Math.random()*6)]}`
+    );
+  },
+
+  // ── Rap Generator ─────────────────────────────────────────────────────────
+  async rap(sock, msg, args) {
+    if (!args.length) return msg.reply('Usage: .rap <topic or name>\nExample: .rap my life');
+    const topic = args.join(' ');
+    await msg.reply('_🎤 Spitting bars..._');
+    try {
+      const result = await textGenerate([
+        { role: 'system', content: 'You are a rap lyricist. Write a short rap verse (8 lines, must rhyme AABB or ABAB). Keep it clean, fun, and creative. WhatsApp formatting: *bold* the rhyming words. No explicit content.' },
+        { role: 'user', content: `Write a rap about: ${topic}` },
+      ]);
+      await msg.reply(`🎤 *RAP: ${topic.toUpperCase()}*\n\n${result}\n\n_🎵 Bars by Dollar AI_`);
+    } catch (e) {
+      await msg.reply(`❌ Error: ${e.message}`);
+    }
+  },
+
+  // ── Gen Z Translator ──────────────────────────────────────────────────────
+  async genz(sock, msg, args) {
+    if (!args.length) return msg.reply('Usage: .genz <text to translate>\nExample: .genz I am very happy today');
+    const text = args.join(' ');
+    await msg.reply('_no cap translating fr fr..._');
+    try {
+      const result = await textGenerate([
+        { role: 'system', content: 'Translate the given text into Gen Z slang. Use terms like: no cap, fr fr, bussin, slay, lowkey, highkey, vibe, sheesh, periodt, snatched, rent free, understood the assignment, ate that, main character, it\'s giving, bestie, ngl. Keep it fun. WhatsApp formatting only.' },
+        { role: 'user', content: `Translate to Gen Z: ${text}` },
+      ]);
+      await msg.reply(`💅 *GEN Z TRANSLATION*\n\n*Original:* ${text}\n\n*Gen Z:* ${result}`);
+    } catch (e) {
+      await msg.reply(`❌ Error: ${e.message}`);
+    }
+  },
+
+  // ── Villain Backstory ─────────────────────────────────────────────────────
+  async villain(sock, msg, args) {
+    const name = args.join(' ') || 'the mysterious one';
+    await msg.reply('_🦹 Crafting a dark origin story..._');
+    try {
+      const result = await textGenerate([
+        { role: 'system', content: 'Write a dramatic, theatrical villain origin story in 4-5 sentences. Make it over-the-top dramatic, funny, and epic. Use *bold* for dramatic moments. WhatsApp formatting only.' },
+        { role: 'user', content: `Write a villain backstory for: ${name}` },
+      ]);
+      await msg.reply(`🦹 *VILLAIN ORIGIN: ${name.toUpperCase()}*\n\n${result}\n\n_Muhahaha! 😈_`);
+    } catch (e) {
+      await msg.reply(`❌ Error: ${e.message}`);
+    }
+  },
+
+  // ── Hero Backstory ────────────────────────────────────────────────────────
+  async hero(sock, msg, args) {
+    const name = args.join(' ') || 'the chosen one';
+    await msg.reply('_🦸 Writing your epic origin..._');
+    try {
+      const result = await textGenerate([
+        { role: 'system', content: 'Write a dramatic, inspiring hero origin story in 4-5 sentences. Make it epic, motivating, and exciting. Use *bold* for heroic moments. WhatsApp formatting only.' },
+        { role: 'user', content: `Write a hero backstory for: ${name}` },
+      ]);
+      await msg.reply(`🦸 *HERO ORIGIN: ${name.toUpperCase()}*\n\n${result}\n\n_Rise up, hero! ⚡_`);
+    } catch (e) {
+      await msg.reply(`❌ Error: ${e.message}`);
+    }
+  },
+
+  // ── Emojify Text ──────────────────────────────────────────────────────────
+  async emojify(sock, msg, args) {
+    if (!args.length) return msg.reply('Usage: .emojify <text>\nExample: .emojify I love pizza and music');
+    const text = args.join(' ');
+    try {
+      const result = await textGenerate([
+        { role: 'system', content: 'Add relevant emojis after key words in the text to make it more expressive. Keep the original words, just add emojis. Do not change the sentence structure.' },
+        { role: 'user', content: `Emojify this text: ${text}` },
+      ]);
+      await msg.reply(`✨ *EMOJIFIED*\n\n${result}`);
+    } catch (e) {
+      await msg.reply(`❌ Error: ${e.message}`);
+    }
+  },
+
+  // ── Love Calculator ───────────────────────────────────────────────────────
+  async lovecalc(sock, msg, args) {
+    if (args.length < 2) return msg.reply('Usage: .lovecalc <name1> and <name2>\nExample: .lovecalc John and Jane');
+    const full = args.join(' ');
+    const andIdx = args.findIndex(a => a.toLowerCase() === 'and');
+    const name1 = andIdx > 0 ? args.slice(0, andIdx).join(' ') : args[0];
+    const name2 = andIdx > 0 ? args.slice(andIdx + 1).join(' ') : args.slice(1).join(' ');
+    const score = Math.floor(Math.random() * 51) + 50;
+    const hearts = '❤️'.repeat(Math.floor(score / 20)) + '🖤'.repeat(5 - Math.floor(score / 20));
+    const levels = [
+      [50, 60, 'Acquaintances 🤝', 'Not much chemistry yet, but who knows!'],
+      [60, 75, 'Good Friends 💛', 'A solid foundation — friendship is love too!'],
+      [75, 88, 'Potential 💕', 'Something special is brewing between you two!'],
+      [88, 96, 'Soulmates 💖', 'You two are made for each other!'],
+      [96, 101, 'Twin Flames 🔥💞', 'Legendary love — the universe shipped this!'],
+    ];
+    const [, , label, desc] = levels.find(([lo, hi]) => score >= lo && score < hi) || levels[0];
+    await msg.reply(
+      `💘 *LOVE CALCULATOR*\n\n` +
+      `*${name1}* ❤️ *${name2}*\n\n` +
+      `${hearts}\n\n` +
+      `💯 *Score:* ${score}%\n` +
+      `💑 *Status:* ${label}\n\n` +
+      `_${desc}_\n\n_Results purely for fun! 😄_`
+    );
+  },
+
+  // ── Two Truths One Lie ────────────────────────────────────────────────────
+  async twotruth(sock, msg, args) {
+    const topic = args.join(' ') || 'random';
+    await msg.reply('_🎭 Generating two truths and a lie..._');
+    try {
+      const result = await textGenerate([
+        { role: 'system', content: 'Generate a "Two Truths and a Lie" game. Provide exactly 3 statements (2 true, 1 false) about the given topic. Number them 1, 2, 3. Do NOT reveal which is the lie. Use *bold* for the statement numbers. The lie should be subtle and believable. WhatsApp formatting only.' },
+        { role: 'user', content: `Two truths and a lie about: ${topic}` },
+      ]);
+      await msg.reply(
+        `🎭 *TWO TRUTHS & A LIE*\n\n` +
+        `Topic: *${topic}*\n\n` +
+        `${result}\n\n` +
+        `_Which one is the lie? Reply with 1, 2, or 3!_`
+      );
+    } catch (e) {
+      await msg.reply(`❌ Error: ${e.message}`);
+    }
+  },
+
+  // ── Dark Humor ────────────────────────────────────────────────────────────
+  async darkhumor(sock, msg) {
+    await msg.reply('_💀 Loading dark humor..._');
+    try {
+      const result = await textGenerate([
+        { role: 'system', content: 'Tell one dark humor joke. Keep it clever, not offensive or targeting any group. More absurdist/ironic than mean. WhatsApp formatting only.' },
+        { role: 'user', content: 'Tell me a dark humor joke.' },
+      ]);
+      await msg.reply(`💀 *DARK HUMOR*\n\n${result}\n\n_😅 Too dark? My bad._`);
+    } catch (e) {
+      const fallbacks = [
+        "I told my doctor I broke my arm in two places. He told me to stop going to those places. 💀",
+        "I'm reading a book about anti-gravity. It's impossible to put down. 💀",
+        "My therapist says I have trouble accepting things I can't control. We'll see about that. 💀",
+      ];
+      await msg.reply(`💀 *DARK HUMOR*\n\n${fallbacks[Math.floor(Math.random()*fallbacks.length)]}`);
+    }
+  },
+
+  // ── Relationship Advice ───────────────────────────────────────────────────
+  async advice2(sock, msg, args) {
+    if (!args.length) return msg.reply('Usage: .advice2 <your situation>\nExample: .advice2 my crush keeps leaving me on read');
+    const situation = args.join(' ');
+    await msg.reply('_💭 Thinking about your situation..._');
+    try {
+      const result = await textGenerate([
+        { role: 'system', content: 'You are a wise, empathetic relationship/life advisor. Give genuine, thoughtful advice for the given situation. Be honest but kind, practical, and supportive. Use *bold* for key advice points. Keep it concise (3-5 points max). WhatsApp formatting only.' },
+        { role: 'user', content: `I need advice: ${situation}` },
+      ]);
+      await msg.reply(`💬 *ADVICE*\n\n${result}\n\n_💙 Wishing you the best!_`);
+    } catch (e) {
+      await msg.reply(`❌ Error: ${e.message}`);
+    }
+  },
+
+  // ── Roast Battle ──────────────────────────────────────────────────────────
+  async roastbattle(sock, msg, args) {
+    if (args.length < 2) return msg.reply('Usage: .roastbattle <name1> <name2>\nExample: .roastbattle John Jane');
+    const [name1, name2] = [args[0], args[1]];
+    await msg.reply('_🔥 Roast battle starting..._');
+    try {
+      const result = await textGenerate([
+        { role: 'system', content: 'Write a fun, playful roast battle between two people. 2 roasts each, alternating. Keep it lighthearted and funny, not mean-spirited. Use *bold* for names. WhatsApp formatting only.' },
+        { role: 'user', content: `Write a roast battle between ${name1} and ${name2}` },
+      ]);
+      await msg.reply(`🔥 *ROAST BATTLE*\n*${name1}* vs *${name2}*\n\n${result}\n\n_🏆 Crowd decides the winner!_`);
+    } catch (e) {
+      await msg.reply(`❌ Error: ${e.message}`);
+    }
+  },
+
+  // ── Friendship Level ──────────────────────────────────────────────────────
+  async friendlevel(sock, msg, args) {
+    if (args.length < 2) return msg.reply('Usage: .friendlevel <name1> <name2>\nExample: .friendlevel John Jane');
+    const [n1, n2] = [args[0], args[1]];
+    const score = Math.floor(Math.random() * 61) + 40;
+    const bars = '█'.repeat(Math.floor(score/10)) + '░'.repeat(10 - Math.floor(score/10));
+    const levels = [
+      [40, 55, 'Strangers 🚶', 'Barely know each other.'],
+      [55, 70, 'Acquaintances 🤝', 'Know each other, not close.'],
+      [70, 85, 'Good Friends 😊', 'Solid friendship!'],
+      [85, 95, 'Best Friends 💛', 'Thick as thieves!'],
+      [95, 101, 'LEGENDARY 🌟', 'Unbreakable bond — ride or die!'],
+    ];
+    const [,,label,desc] = levels.find(([lo,hi]) => score >= lo && score < hi) || levels[0];
+    await msg.reply(
+      `👥 *FRIENDSHIP METER*\n\n*${n1}* & *${n2}*\n\n[${bars}] ${score}%\n\n🏷️ *Level:* ${label}\n_${desc}_`
+    );
+  },
+
+  // ── Word of the Day ───────────────────────────────────────────────────────
+  async wotd(sock, msg) {
+    await msg.reply('_📚 Fetching word of the day..._');
+    try {
+      const result = await textGenerate([
+        { role: 'system', content: 'Give a random interesting English word. Format: *Word*, /pronunciation/, (part of speech)\nDefinition: ...\nExample: ...\nFun fact: ...\nWhatsApp formatting only.' },
+        { role: 'user', content: 'Give me an interesting word of the day.' },
+      ]);
+      await msg.reply(`📚 *WORD OF THE DAY*\n\n${result}`);
+    } catch (e) {
+      await msg.reply(`❌ Error: ${e.message}`);
+    }
+  },
+
+  // ── Personality Test ──────────────────────────────────────────────────────
+  async personality(sock, msg, args) {
+    const name = args.join(' ') || 'you';
+    const types = [
+      ['INTJ', 'The Architect 🏛️', 'Strategic, independent, and determined. You see the big picture and execute with precision.'],
+      ['ENFP', 'The Campaigner 🌈', 'Enthusiastic, creative, and free-spirited. You see life as full of possibilities.'],
+      ['ISTP', 'The Virtuoso 🔧', 'Bold, practical, and masters of tools. You love exploring with your hands and eyes.'],
+      ['ESFJ', 'The Consul 🤝', 'Caring, social, and popular. You love supporting others and making everyone feel included.'],
+      ['INFP', 'The Mediator 🌙', 'Poetic, kind, and idealistic. You believe in growth and always strive to improve.'],
+      ['ENTJ', 'The Commander ⚔️', 'Bold, imaginative, strong-willed. You always find a way — or make one.'],
+      ['ISFJ', 'The Defender 🛡️', 'Warm and dedicated protectors. You cherish safety, stability, and loyalty.'],
+      ['ENTP', 'The Debater 💡', 'Smart and curious. You love a battle of wits and won\'t back down from a challenge.'],
+    ];
+    const [mbti, title, desc] = types[Math.floor(Math.random() * types.length)];
+    await msg.reply(
+      `🧠 *PERSONALITY READING*\n\n*${name}* vibes as:\n\n*${mbti} — ${title}*\n\n${desc}\n\n_This is a fun random result!_`
+    );
+  },
+
+  // ── Random Challenge ──────────────────────────────────────────────────────
+  async challenge(sock, msg) {
+    const challenges = [
+      'Talk in rhymes for the next 5 messages 🎤',
+      'React with an emoji to every message for 10 minutes 😂',
+      'Reply to everything with only one word for 5 minutes 🤐',
+      'Compliment every person who sends a message next 🥰',
+      'Start every message with "Sire," for the next 3 messages 👑',
+      'Send a voice note instead of text for your next 3 replies 🎙️',
+      'Add "...or else 😈" to the end of your next 5 messages',
+      'Speak only in questions for the next 5 minutes ❓',
+      'Put a random emoji at the start of every message for 5 mins 🎲',
+      'Reply to everything with "That\'s what SHE said" for 3 messages 😭',
+    ];
+    const c = challenges[Math.floor(Math.random() * challenges.length)];
+    await msg.reply(`🎯 *RANDOM CHALLENGE*\n\n${c}\n\n_Who dares? 😈_`);
+  },
+
+  // ── Rate Anything ─────────────────────────────────────────────────────────
+  async rate(sock, msg, args) {
+    if (!args.length) return msg.reply('Usage: .rate <anything>\nExample: .rate pizza');
+    const thing = args.join(' ');
+    const score = (Math.random() * 4 + 6).toFixed(1);
+    const stars = '⭐'.repeat(Math.round(score/2));
+    await msg.reply('_🔍 Analyzing..._');
+    try {
+      const verdict = await textGenerate([
+        { role: 'system', content: 'Rate the given thing in 1-2 sentences, being funny and opinionated. WhatsApp formatting only.' },
+        { role: 'user', content: `Rate: ${thing}` },
+      ]);
+      await msg.reply(`📊 *RATING: ${thing.toUpperCase()}*\n\n${stars}\n*Score: ${score}/10*\n\n${verdict}`);
+    } catch (e) {
+      await msg.reply(`📊 *${thing}*: ${score}/10 ${stars}`);
+    }
+  },
+
+  // ── Name Meaning ──────────────────────────────────────────────────────────
+  async namemeaning(sock, msg, args) {
+    if (!args.length) return msg.reply('Usage: .namemeaning <name>\nExample: .namemeaning Dollar');
+    const name = args.join(' ');
+    await msg.reply('_📖 Looking up name meaning..._');
+    try {
+      const result = await textGenerate([
+        { role: 'system', content: 'Explain the meaning, origin, and personality traits associated with this name. Format: *Name*, *Origin*, *Meaning*, *Personality*, *Famous people with this name*. WhatsApp formatting only.' },
+        { role: 'user', content: `What is the meaning of the name: ${name}` },
+      ]);
+      await msg.reply(`📖 *NAME MEANING*\n\n${result}`);
+    } catch (e) {
+      await msg.reply(`❌ Error: ${e.message}`);
+    }
+  },
+
+  // ── Tongue Twister ────────────────────────────────────────────────────────
+  async tonguetwister(sock, msg) {
+    const twisters = [
+      'She sells seashells by the seashore. The shells she sells are surely seashells.',
+      'How much wood would a woodchuck chuck if a woodchuck could chuck wood?',
+      'Peter Piper picked a peck of pickled peppers. A peck of pickled peppers Peter Piper picked.',
+      'Betty Botter bought some butter, but she said the butter\'s bitter!',
+      'Red lorry, yellow lorry, red lorry, yellow lorry.',
+      'Unique New York, unique New York, you know you need unique New York.',
+      'Fuzzy Wuzzy was a bear. Fuzzy Wuzzy had no hair. Fuzzy Wuzzy wasn\'t fuzzy, was he?',
+    ];
+    const t = twisters[Math.floor(Math.random() * twisters.length)];
+    await msg.reply(`👅 *TONGUE TWISTER*\n\n_"${t}"_\n\nSay that 3 times fast! 😂`);
+  },
+
+  // ── Roast Me (self-deprecating) ───────────────────────────────────────────
+  async roastself(sock, msg, args) {
+    const name = args.join(' ') || 'yourself';
+    await msg.reply('_🔥 Preparing your personal roast..._');
+    try {
+      const result = await textGenerate([
+        { role: 'system', content: 'Write 3 funny, self-deprecating one-liners as if the person is roasting themselves. Keep it light, funny, not mean. Use *bold* for punchlines. WhatsApp formatting only.' },
+        { role: 'user', content: `Write a self-roast for: ${name}` },
+      ]);
+      await msg.reply(`🔥 *SELF-ROAST: ${name.toUpperCase()}*\n\n${result}\n\n_😂 Gotta laugh at yourself sometimes!_`);
+    } catch (e) {
+      await msg.reply(`❌ Error: ${e.message}`);
+    }
+  },
+
+  // ── Daily Mission ─────────────────────────────────────────────────────────
+  async mission(sock, msg) {
+    const missions = [
+      '💪 Do 20 push-ups right now. No excuses.',
+      '📵 Put your phone down for 1 hour. Go outside.',
+      '😊 Compliment someone sincerely today.',
+      '💧 Drink 3 glasses of water in the next hour.',
+      '📚 Read 5 pages of any book today.',
+      '🧹 Clean one area of your room you\'ve been ignoring.',
+      '📞 Call or text a friend you haven\'t spoken to in a while.',
+      '🚶 Take a 10-minute walk. Fresh air only.',
+      '✍️ Write down 3 things you\'re grateful for.',
+      '🛌 Sleep before midnight tonight. Non-negotiable.',
+      '😤 Say no to one thing today that wastes your time.',
+      '🎯 Set one small goal and complete it before bed.',
+    ];
+    const m = missions[Math.floor(Math.random() * missions.length)];
+    await msg.reply(`🎯 *YOUR DAILY MISSION*\n\n${m}\n\n_Accept the mission? 💪_`);
+  },
+
+  // ── Yes or No Oracle ──────────────────────────────────────────────────────
+  async yesorno(sock, msg, args) {
+    if (!args.length) return msg.reply('Usage: .yesorno <your question>\nExample: .yesorno will I pass my exam?');
+    const q = args.join(' ');
+    const answers = [
+      ['YES ✅', 'Absolutely — the universe agrees!'],
+      ['NO ❌', 'The signs say no — trust the process.'],
+      ['MAYBE 🤷', 'The oracle is uncertain. Flip a coin.'],
+      ['DEFINITELY YES 🔥', '100% — don\'t even question it.'],
+      ['DEFINITELY NO 💀', 'Hard no. Let it go.'],
+      ['ASK AGAIN LATER 🔮', 'The stars need more time.'],
+    ];
+    const [verdict, flavor] = answers[Math.floor(Math.random() * answers.length)];
+    await msg.reply(`🔮 *YES OR NO ORACLE*\n\n_Q: ${q}_\n\n*${verdict}*\n\n_${flavor}_`);
+  },
+
+  // ── Random Fact by Category ───────────────────────────────────────────────
+  async factcat(sock, msg, args) {
+    const cat = args[0]?.toLowerCase() || 'random';
+    const cats = ['science','history','animals','space','food','technology','psychology','geography'];
+    if (args[0] && !cats.includes(cat)) {
+      return msg.reply(`Usage: .factcat [category]\nCategories: ${cats.join(', ')}`);
+    }
+    await msg.reply(`_📚 Fetching a ${cat} fact..._`);
+    try {
+      const result = await textGenerate([
+        { role: 'system', content: 'Give one fascinating, mind-blowing fact about the given topic. Keep it short (2-3 sentences). Start with the fact, then explain why it\'s interesting. WhatsApp formatting: *bold* the key fact.' },
+        { role: 'user', content: `Give me a fascinating ${cat} fact.` },
+      ]);
+      await msg.reply(`💡 *${cat.toUpperCase()} FACT*\n\n${result}`);
+    } catch (e) {
+      await msg.reply(`❌ Error: ${e.message}`);
+    }
+  },
 };
 
 // ── Roman numeral helpers ─────────────────────────────────────────────────

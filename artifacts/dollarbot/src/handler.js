@@ -164,6 +164,13 @@ async function sendMenu(sock, jid, speedMs) {
     `┃ .paranoia .sus .iq .cringe .simp\n` +
     `┃ .rizzmeter .slay .bully .thisorthat\n` +
     `┃ .bodycount .conspiracy .superpower\n` +
+    `┃ .fortune .rap .genz .villain .hero\n` +
+    `┃ .emojify .lovecalc .twotruth\n` +
+    `┃ .darkhumor .advice2 .roastbattle\n` +
+    `┃ .friendlevel .personality .challenge\n` +
+    `┃ .rate .namemeaning .tonguetwister\n` +
+    `┃ .roastself .mission .yesorno .factcat\n` +
+    `┃ .wotd .typingtest .pickup .prank\n` +
     `╰━━━━━━━━━━━━━━━━━━⬣\n\n` +
 
     `╭━━━〔 🎮 GAMES 〕━━━⬣\n` +
@@ -406,6 +413,28 @@ async function handleMessage(sock, msg) {
       case 'typingtest':   await moreFun.typingtest(sock, msg); break;
       case 'pickup':       await moreFun.pickup(sock, msg, args); break;
       case 'prank':        await moreFun.prank(sock, msg, args); break;
+      case 'fortune':      await moreFun.fortune(sock, msg); break;
+      case 'rap':          await moreFun.rap(sock, msg, args); break;
+      case 'genz':         await moreFun.genz(sock, msg, args); break;
+      case 'villain':      await moreFun.villain(sock, msg, args); break;
+      case 'hero':         await moreFun.hero(sock, msg, args); break;
+      case 'emojify':      await moreFun.emojify(sock, msg, args); break;
+      case 'lovecalc':     await moreFun.lovecalc(sock, msg, args); break;
+      case 'twotruth':     await moreFun.twotruth(sock, msg, args); break;
+      case 'darkhumor':    await moreFun.darkhumor(sock, msg); break;
+      case 'advice2':      await moreFun.advice2(sock, msg, args); break;
+      case 'roastbattle':  await moreFun.roastbattle(sock, msg, args); break;
+      case 'friendlevel':  await moreFun.friendlevel(sock, msg, args); break;
+      case 'wotd':         await moreFun.wotd(sock, msg); break;
+      case 'personality':  await moreFun.personality(sock, msg, args); break;
+      case 'challenge':    await moreFun.challenge(sock, msg); break;
+      case 'rate':         await moreFun.rate(sock, msg, args); break;
+      case 'namemeaning':  await moreFun.namemeaning(sock, msg, args); break;
+      case 'tonguetwister':await moreFun.tonguetwister(sock, msg); break;
+      case 'roastself':    await moreFun.roastself(sock, msg, args); break;
+      case 'mission':      await moreFun.mission(sock, msg); break;
+      case 'yesorno':      await moreFun.yesorno(sock, msg, args); break;
+      case 'factcat':      await moreFun.factcat(sock, msg, args); break;
 
       // ── AI Extras ─────────────────────────────────────────────────────────
       case 'debate':       await moreFun.debate(sock, msg, args); break;
