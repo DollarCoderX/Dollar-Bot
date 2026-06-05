@@ -1,0 +1,270 @@
+import { proto } from "@whiskeysockets/baileys";
+import type { WASocket } from "@whiskeysockets/baileys";
+
+const FOOTER = "\n\n╰━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━◆\n✦ ☬ 𝐎𝐑𝐈𝐎𝐍 ☬ • View Channel:\nhttps://whatsapp.com/channel/0029VbCFyDD6LwHgiwc19C1F";
+
+function getSender(msg: proto.IWebMessageInfo): string {
+  return (msg?.key?.participant || msg?.key?.remoteJid || "") as string;
+}
+
+async function isAdmin(sock: WASocket, groupJid: string, jid: string): Promise<boolean> {
+  try {
+    const meta = await sock.groupMetadata(groupJid);
+    return meta.participants.some((p) => p.id === jid && (p.admin === "admin" || p.admin === "superadmin"));
+  } catch { return false; }
+}
+
+async function isBotAdmin(sock: WASocket, groupJid: string): Promise<boolean> {
+  try {
+    const meta = await sock.groupMetadata(groupJid);
+    const botJid = sock.user?.id?.replace(/:.*@/, "@") ?? "";
+    return meta.participants.some((p) => (p.id === botJid || p.id.startsWith(botJid.split("@")[0]!)) && (p.admin === "admin" || p.admin === "superadmin"));
+  } catch { return false; }
+}
+
+export async function handleAdd(sock: WASocket, msg: proto.IWebMessageInfo, args: string[]): Promise<void> {
+  const from = msg?.key?.remoteJid ?? "";
+  if (!from.endsWith("@g.us")) { await sock.sendMessage(from, { text: `◇ This command only works in groups.${FOOTER}` }); return; }
+  if (!args.length) { await sock.sendMessage(from, { text: `◇ Usage: .add <number>\n◇ Example: .add 14165551234${FOOTER}` }); return; }
+  const sender = getSender(msg);
+  if (!(await isAdmin(sock, from, sender))) { await sock.sendMessage(from, { text: `◇ Only admins can use this command.${FOOTER}` }); return; }
+  if (!(await isBotAdmin(sock, from))) { await sock.sendMessage(from, { text: `◇ I need to be admin to add members.${FOOTER}` }); return; }
+  const number = args[0].replace(/[^0-9]/g, "") + "@s.whatsapp.net";
+  try {
+    await sock.groupParticipantsUpdate(from, [number], "add");
+    await sock.sendMessage(from, { text: `╭─ ☬ 𝐀𝐝𝐝 ─◆\n✅ Added ${args[0]} to group.${FOOTER}` });
+  } catch {
+    await sock.sendMessage(from, { text: `◇ Could not add ${args[0]}.${FOOTER}` });
+  }
+}
+
+export async function handleKick(sock: WASocket, msg: proto.IWebMessageInfo, args: string[]): Promise<void> {
+  const from = msg?.key?.remoteJid ?? "";
+  if (!from.endsWith("@g.us")) { await sock.sendMessage(from, { text: `◇ Groups only.${FOOTER}` }); return; }
+  const sender = getSender(msg);
+  if (!(await isAdmin(sock, from, sender))) { await sock.sendMessage(from, { text: `◇ Admins only.${FOOTER}` }); return; }
+  if (!(await isBotAdmin(sock, from))) { await sock.sendMessage(from, { text: `◇ I need admin.${FOOTER}` }); return; }
+  const quoted = msg.message?.extendedTextMessage?.contextInfo?.participant;
+  const target = quoted || (args[0] ? args[0].replace(/[^0-9]/g, "") + "@s.whatsapp.net" : null);
+  if (!target) { await sock.sendMessage(from, { text: `◇ Reply to a message or provide a number.${FOOTER}` }); return; }
+  try {
+    await sock.groupParticipantsUpdate(from, [target], "remove");
+    await sock.sendMessage(from, { text: `╭─ ☬ 𝐊𝐢𝐜𝐤 ─◆\n👢 Removed from group.${FOOTER}` });
+  } catch {
+    await sock.sendMessage(from, { text: `◇ Could not kick.${FOOTER}` });
+  }
+}
+
+export async function handlePromote(sock: WASocket, msg: proto.IWebMessageInfo, args: string[]): Promise<void> {
+  const from = msg?.key?.remoteJid ?? "";
+  if (!from.endsWith("@g.us")) { await sock.sendMessage(from, { text: `◇ Groups only.${FOOTER}` }); return; }
+  const sender = getSender(msg);
+  if (!(await isAdmin(sock, from, sender))) { await sock.sendMessage(from, { text: `◇ Admins only.${FOOTER}` }); return; }
+  const quoted = msg.message?.extendedTextMessage?.contextInfo?.participant;
+  const target = quoted || (args[0] ? args[0].replace(/[^0-9]/g, "") + "@s.whatsapp.net" : null);
+  if (!target) { await sock.sendMessage(from, { text: `◇ Reply to a message or provide number.${FOOTER}` }); return; }
+  try {
+    await sock.groupParticipantsUpdate(from, [target], "promote");
+    await sock.sendMessage(from, { text: `╭─ ☬ 𝐏𝐫𝐨𝐦𝐨𝐭𝐞 ─◆\n⬆️ Promoted to admin.${FOOTER}` });
+  } catch {
+    await sock.sendMessage(from, { text: `◇ Could not promote.${FOOTER}` });
+  }
+}
+
+export async function handleDemote(sock: WASocket, msg: proto.IWebMessageInfo, args: string[]): Promise<void> {
+  const from = msg?.key?.remoteJid ?? "";
+  if (!from.endsWith("@g.us")) { await sock.sendMessage(from, { text: `◇ Groups only.${FOOTER}` }); return; }
+  const sender = getSender(msg);
+  if (!(await isAdmin(sock, from, sender))) { await sock.sendMessage(from, { text: `◇ Admins only.${FOOTER}` }); return; }
+  const quoted = msg.message?.extendedTextMessage?.contextInfo?.participant;
+  const target = quoted || (args[0] ? args[0].replace(/[^0-9]/g, "") + "@s.whatsapp.net" : null);
+  if (!target) { await sock.sendMessage(from, { text: `◇ Reply to a message or provide number.${FOOTER}` }); return; }
+  try {
+    await sock.groupParticipantsUpdate(from, [target], "demote");
+    await sock.sendMessage(from, { text: `╭─ ☬ 𝐃𝐞𝐦𝐨𝐭𝐞 ─◆\n⬇️ Demoted from admin.${FOOTER}` });
+  } catch {
+    await sock.sendMessage(from, { text: `◇ Could not demote.${FOOTER}` });
+  }
+}
+
+export async function handleTagAll(sock: WASocket, msg: proto.IWebMessageInfo, args: string[]): Promise<void> {
+  const from = msg?.key?.remoteJid ?? "";
+  if (!from.endsWith("@g.us")) { await sock.sendMessage(from, { text: `◇ Groups only.${FOOTER}` }); return; }
+  const sender = getSender(msg);
+  if (!(await isAdmin(sock, from, sender))) { await sock.sendMessage(from, { text: `◇ Admins only.${FOOTER}` }); return; }
+  try {
+    const meta = await sock.groupMetadata(from);
+    const participants = meta.participants.map((p) => p.id);
+    const message = args.join(" ") || "Attention everyone!";
+    let text = `╭─ ☬ 𝐓𝐚𝐠𝐀𝐥𝐥 ─◆\n📢 ${message}\n\n`;
+    const mentions = participants.map((p) => `@${p.split("@")[0]}`);
+    text += mentions.join(" ");
+    await sock.sendMessage(from, { text, mentions: participants });
+  } catch {
+    await sock.sendMessage(from, { text: `◇ Failed to tag all.${FOOTER}` });
+  }
+}
+
+export async function handleAntiLink(sock: WASocket, msg: proto.IWebMessageInfo, args: string[]): Promise<void> {
+  const from = msg?.key?.remoteJid ?? "";
+  if (!from.endsWith("@g.us")) { await sock.sendMessage(from, { text: `◇ Groups only.${FOOTER}` }); return; }
+  const sender = getSender(msg);
+  if (!(await isAdmin(sock, from, sender))) { await sock.sendMessage(from, { text: `◇ Admins only.${FOOTER}` }); return; }
+  const setting = args[0]?.toLowerCase() === "on" ? "on" : "off";
+  await sock.sendMessage(from, { text: `╭─ ☬ 𝐀𝐧𝐭𝐢𝐋𝐢𝐧𝐤 ─◆\n🔗 Anti-link is now *${setting.toUpperCase()}*${FOOTER}` });
+}
+
+export async function handleGroupInfo(sock: WASocket, msg: proto.IWebMessageInfo, _args: string[]): Promise<void> {
+  const from = msg?.key?.remoteJid ?? "";
+  if (!from.endsWith("@g.us")) { await sock.sendMessage(from, { text: `◇ Groups only.${FOOTER}` }); return; }
+  try {
+    const meta = await sock.groupMetadata(from);
+    const admins = meta.participants.filter((p) => p.admin).map((p) => `@${p.id.split("@")[0]}`);
+    const created = meta.creation ? new Date(meta.creation * 1000).toLocaleDateString() : "N/A";
+    await sock.sendMessage(from, {
+      text: `╭─ ☬ 𝐆𝐫𝐨𝐮𝐩 𝐈𝐧𝐟𝐨 ─◆\n\n📛 Name: ${meta.subject}\n👥 Members: ${meta.participants.length}\n👑 Admins: ${admins.join(", ") || "none"}\n📅 Created: ${created}\n📝 Desc: ${meta.desc || "No description"}${FOOTER}`,
+      mentions: meta.participants.filter((p) => p.admin).map((p) => p.id),
+    });
+  } catch {
+    await sock.sendMessage(from, { text: `◇ Could not get group info.${FOOTER}` });
+  }
+}
+
+export async function handleGroupLink(sock: WASocket, msg: proto.IWebMessageInfo, _args: string[]): Promise<void> {
+  const from = msg?.key?.remoteJid ?? "";
+  if (!from.endsWith("@g.us")) { await sock.sendMessage(from, { text: `◇ Groups only.${FOOTER}` }); return; }
+  const sender = getSender(msg);
+  if (!(await isAdmin(sock, from, sender))) { await sock.sendMessage(from, { text: `◇ Admins only.${FOOTER}` }); return; }
+  try {
+    const link = await sock.groupInviteCode(from);
+    await sock.sendMessage(from, { text: `╭─ ☬ 𝐆𝐫𝐨𝐮𝐩 𝐋𝐢𝐧𝐤 ─◆\n🔗 https://chat.whatsapp.com/${link}${FOOTER}` });
+  } catch {
+    await sock.sendMessage(from, { text: `◇ Could not get group link. Bot needs admin.${FOOTER}` });
+  }
+}
+
+export async function handleOpenGC(sock: WASocket, msg: proto.IWebMessageInfo, _args: string[]): Promise<void> {
+  const from = msg?.key?.remoteJid ?? "";
+  if (!from.endsWith("@g.us")) return;
+  const sender = getSender(msg);
+  if (!(await isAdmin(sock, from, sender))) { await sock.sendMessage(from, { text: `◇ Admins only.${FOOTER}` }); return; }
+  try {
+    await sock.groupSettingUpdate(from, "unlocked");
+    await sock.sendMessage(from, { text: `╭─ ☬ 𝐎𝐩𝐞𝐧 𝐆𝐂 ─◆\n🔓 Group is now open — all can send messages.${FOOTER}` });
+  } catch {
+    await sock.sendMessage(from, { text: `◇ Failed to open group.${FOOTER}` });
+  }
+}
+
+export async function handleCloseGC(sock: WASocket, msg: proto.IWebMessageInfo, _args: string[]): Promise<void> {
+  const from = msg?.key?.remoteJid ?? "";
+  if (!from.endsWith("@g.us")) return;
+  const sender = getSender(msg);
+  if (!(await isAdmin(sock, from, sender))) { await sock.sendMessage(from, { text: `◇ Admins only.${FOOTER}` }); return; }
+  try {
+    await sock.groupSettingUpdate(from, "announcement");
+    await sock.sendMessage(from, { text: `╭─ ☬ 𝐂𝐥𝐨𝐬𝐞 𝐆𝐂 ─◆\n🔒 Group is now closed — only admins can send messages.${FOOTER}` });
+  } catch {
+    await sock.sendMessage(from, { text: `◇ Failed to close group.${FOOTER}` });
+  }
+}
+
+export async function handleListAdmins(sock: WASocket, msg: proto.IWebMessageInfo, _args: string[]): Promise<void> {
+  const from = msg?.key?.remoteJid ?? "";
+  if (!from.endsWith("@g.us")) { await sock.sendMessage(from, { text: `◇ Groups only.${FOOTER}` }); return; }
+  try {
+    const meta = await sock.groupMetadata(from);
+    const admins = meta.participants.filter((p) => p.admin);
+    if (!admins.length) { await sock.sendMessage(from, { text: `◇ No admins found.${FOOTER}` }); return; }
+    let text = `╭─ ☬ 𝐀𝐝𝐦𝐢𝐧𝐬 ─◆\n\n👑 Group Admins (${admins.length}):\n`;
+    for (const a of admins) text += `◇ @${a.id.split("@")[0]}\n`;
+    await sock.sendMessage(from, { text: text + FOOTER, mentions: admins.map((a) => a.id) });
+  } catch {
+    await sock.sendMessage(from, { text: `◇ Failed to list admins.${FOOTER}` });
+  }
+}
+
+export async function handleMute(sock: WASocket, msg: proto.IWebMessageInfo, _args: string[]): Promise<void> {
+  const from = msg?.key?.remoteJid ?? "";
+  if (!from.endsWith("@g.us")) return;
+  const sender = getSender(msg);
+  if (!(await isAdmin(sock, from, sender))) { await sock.sendMessage(from, { text: `◇ Admins only.${FOOTER}` }); return; }
+  try {
+    await sock.groupSettingUpdate(from, "announcement");
+    await sock.sendMessage(from, { text: `╭─ ☬ 𝐌𝐮𝐭𝐞 ─◆\n🔇 Group muted — only admins can send.${FOOTER}` });
+  } catch {
+    await sock.sendMessage(from, { text: `◇ Failed.${FOOTER}` });
+  }
+}
+
+export async function handleUnmute(sock: WASocket, msg: proto.IWebMessageInfo, _args: string[]): Promise<void> {
+  const from = msg?.key?.remoteJid ?? "";
+  if (!from.endsWith("@g.us")) return;
+  const sender = getSender(msg);
+  if (!(await isAdmin(sock, from, sender))) { await sock.sendMessage(from, { text: `◇ Admins only.${FOOTER}` }); return; }
+  try {
+    await sock.groupSettingUpdate(from, "unlocked");
+    await sock.sendMessage(from, { text: `╭─ ☬ 𝐔𝐧𝐦𝐮𝐭𝐞 ─◆\n🔊 Group unmuted.${FOOTER}` });
+  } catch {
+    await sock.sendMessage(from, { text: `◇ Failed.${FOOTER}` });
+  }
+}
+
+export async function handleSetName(sock: WASocket, msg: proto.IWebMessageInfo, args: string[]): Promise<void> {
+  const from = msg?.key?.remoteJid ?? "";
+  if (!from.endsWith("@g.us")) return;
+  if (!args.length) { await sock.sendMessage(from, { text: `◇ Usage: .setname <new name>${FOOTER}` }); return; }
+  const sender = getSender(msg);
+  if (!(await isAdmin(sock, from, sender))) { await sock.sendMessage(from, { text: `◇ Admins only.${FOOTER}` }); return; }
+  const newName = args.join(" ");
+  try {
+    await sock.groupUpdateSubject(from, newName);
+    await sock.sendMessage(from, { text: `╭─ ☬ 𝐒𝐞𝐭 𝐍𝐚𝐦𝐞 ─◆\n✅ Group name changed to "${newName}"${FOOTER}` });
+  } catch {
+    await sock.sendMessage(from, { text: `◇ Failed to change name.${FOOTER}` });
+  }
+}
+
+export async function handleSetDesc(sock: WASocket, msg: proto.IWebMessageInfo, args: string[]): Promise<void> {
+  const from = msg?.key?.remoteJid ?? "";
+  if (!from.endsWith("@g.us")) return;
+  if (!args.length) { await sock.sendMessage(from, { text: `◇ Usage: .setdesc <description>${FOOTER}` }); return; }
+  const sender = getSender(msg);
+  if (!(await isAdmin(sock, from, sender))) { await sock.sendMessage(from, { text: `◇ Admins only.${FOOTER}` }); return; }
+  const desc = args.join(" ");
+  try {
+    await sock.groupUpdateDescription(from, desc);
+    await sock.sendMessage(from, { text: `╭─ ☬ 𝐒𝐞𝐭 𝐃𝐞𝐬𝐜 ─◆\n✅ Description updated.${FOOTER}` });
+  } catch {
+    await sock.sendMessage(from, { text: `◇ Failed to update description.${FOOTER}` });
+  }
+}
+
+export async function handleHidetag(sock: WASocket, msg: proto.IWebMessageInfo, args: string[]): Promise<void> {
+  const from = msg?.key?.remoteJid ?? "";
+  if (!from.endsWith("@g.us")) return;
+  const sender = getSender(msg);
+  if (!(await isAdmin(sock, from, sender))) { await sock.sendMessage(from, { text: `◇ Admins only.${FOOTER}` }); return; }
+  try {
+    const meta = await sock.groupMetadata(from);
+    const participants = meta.participants.map((p) => p.id);
+    const message = args.join(" ") || "📢";
+    await sock.sendMessage(from, { text: message, mentions: participants });
+  } catch {
+    await sock.sendMessage(from, { text: `◇ Failed.${FOOTER}` });
+  }
+}
+
+export async function handleRevoke(sock: WASocket, msg: proto.IWebMessageInfo, _args: string[]): Promise<void> {
+  const from = msg?.key?.remoteJid ?? "";
+  if (!from.endsWith("@g.us")) return;
+  const sender = getSender(msg);
+  if (!(await isAdmin(sock, from, sender))) { await sock.sendMessage(from, { text: `◇ Admins only.${FOOTER}` }); return; }
+  try {
+    await sock.groupRevokeInvite(from);
+    const newCode = await sock.groupInviteCode(from);
+    await sock.sendMessage(from, { text: `╭─ ☬ 𝐑𝐞𝐯𝐨𝐤𝐞 ─◆\n✅ Group link revoked.\n🔗 New link: https://chat.whatsapp.com/${newCode}${FOOTER}` });
+  } catch {
+    await sock.sendMessage(from, { text: `◇ Failed to revoke link.${FOOTER}` });
+  }
+}

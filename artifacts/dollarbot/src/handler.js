@@ -261,6 +261,74 @@ function ownerOnly(sock, jid) {
   return safeSendMessage(sock, jid, { text: '🔐 This command is restricted to the bot owner.' });
 }
 
+// ── Per-command emoji map (defaults to 💵) ──────────────────────────────────
+const CMD_EMOJIS = {
+  // Menu
+  menu:'💵', help:'💵', start:'💵',
+  // User
+  ping:'🏓', alive:'✅', owner:'👑', stats:'📊', info:'ℹ️', details:'📋',
+  time:'🕐', jid:'🆔', runtime:'⏱️', uptime:'⏰',
+  // Owner
+  say:'📢', sendto:'📨', react:'👍', delete:'🗑️', autoreply:'🤖',
+  autolike:'❤️', rapidlike:'💨', vv:'👁️', broadcast:'📡', shutdown:'🔴',
+  // Bypass
+  bypass:'🔓',
+  // AI
+  cortex:'🧠', mera:'💖', ask:'💬', codeai:'💻', roast:'🔥',
+  complimentai:'🌸', weather:'🌤️', imagine:'🎨', translate:'🌍',
+  story:'📖', poem:'🎭', motivate:'💪', summarize:'📊', summary:'📊',
+  clear:'🧹', vision:'👁️', manhwa:'📚',
+  // Search
+  search:'🔍', wiki:'📚', define:'📖',
+  // Fun
+  joke:'😂', dadjoke:'😄', fact:'💡', advice:'🤝', compliment:'🌺',
+  '8ball':'🎱', truth:'😬', dare:'😈', reverse:'🔄', hotcheck:'🌡️',
+  smartcheck:'🧠', brainlevel:'🧪', coolcheck:'😎', lovecheck:'💕',
+  wouldyourather:'🤔', wyr:'🤔', neverhavei:'🙈', nhi:'🙈',
+  paranoia:'👀', sus:'🕵️', iq:'🧠', cringe:'😬', simp:'💘',
+  rizzmeter:'💅', rizzcheck:'💅', slay:'💃', bully:'😤',
+  thisorthat:'⚖️', tot:'⚖️', bodycount:'💀', conspiracy:'🕵️',
+  superpower:'🦸', typingtest:'⌨️', pickup:'😏', prank:'😂',
+  fortune:'🥠', rap:'🎤', genz:'💅', villain:'🦹', hero:'🦸',
+  emojify:'✨', lovecalc:'💘', twotruth:'🎭', darkhumor:'💀',
+  advice2:'💬', roastbattle:'🔥', friendlevel:'👥', wotd:'📚',
+  personality:'🧠', challenge:'🎯', rate:'📊', namemeaning:'📖',
+  tonguetwister:'👅', roastself:'🔥', mission:'🎯',
+  yesorno:'🔮', factcat:'💡',
+  // AI Extras
+  debate:'⚔️', quiz:'❓', bedtime:'🌙', eli5:'👶', acronym:'🔤',
+  haiku:'🌸', caption:'📸', mythology:'⚡', element:'🔬',
+  zodiac2:'♈', numerology:'🔢', dreaminterp:'💭', flag:'🏳️',
+  timezone:'🕐', bio:'✨',
+  // Games
+  coin:'🪙', dice:'🎲', rps:'✂️', math:'➕', guess:'🎯',
+  slot:'🎰', tictactoe:'❌', trivia:'❓', hangman:'🪓',
+  hguess:'🔤', scramble:'🔀', highlow:'📈', hl:'📈',
+  spinwheel:'🎡', lottery:'🎟️', roulette:'🎡',
+  // Utility
+  calculate:'🔢', genpass:'🔑', encode:'🔒', decode:'🔓',
+  qr:'📱', tinyurl:'🔗', pingweb:'📡', tts:'🔊',
+  roman:'🏛️', palindrome:'🔄', bmi:'⚖️', tip:'💰',
+  worldclock:'🌍', daysuntil:'📅', wordcount:'📝',
+  lorem:'📄', mocktext:'😜', shuffle:'🔀', age:'🎂',
+  // Group
+  kick:'👢', promote:'⬆️', demote:'⬇️', mute:'🔇', unmute:'🔊',
+  tagall:'📢', everyone:'📢', hidetag:'👻', grouplink:'🔗',
+  groupinfo:'📋', antilink:'🚫', welcome:'👋',
+  // Premium / Extra
+  song:'🎵', video:'🎥', enhance:'✨', ship:'💞',
+  waifu:'🌸', neko:'🐱', crypto:'💰',
+};
+
+async function reactToCmd(sock, msg, cmd) {
+  try {
+    const emoji = CMD_EMOJIS[cmd] ?? '💵';
+    await sock.sendMessage(msg.key.remoteJid, {
+      react: { text: emoji, key: msg.key },
+    });
+  } catch (_) {}
+}
+
 // ── Main message handler ────────────────────────────────────────────────────
 async function handleMessage(sock, msg) {
   try {
@@ -310,6 +378,9 @@ async function handleMessage(sock, msg) {
 
     try { await sock.readMessages([msg.key]); } catch (_) {}
     try { await sock.sendPresenceUpdate('composing', jid); } catch (_) {}
+
+    // React with emoji before processing the command
+    reactToCmd(sock, msg, cmd);
 
     const cmdStart = Date.now();
 

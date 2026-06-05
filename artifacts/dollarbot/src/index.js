@@ -60,8 +60,16 @@ const server = http.createServer((req, res) => {
   res.writeHead(200, { 'Content-Type': 'text/plain' });
   res.end('DollarBot V5 is Alive & Running!');
 });
+server.on('error', (err) => {
+  if (err.code === 'EADDRINUSE') {
+    // Port busy — try the next one silently
+    server.listen(0); // OS picks a free port
+  }
+});
 server.listen(PORT, () => {
-  console.log(`\x1b[32m[HTTP] Keep-alive server on port ${PORT}\x1b[0m`);
+  const addr = server.address();
+  const port = addr?.port || PORT;
+  console.log(`\x1b[32m[HTTP] Keep-alive server on port ${port}\x1b[0m`);
 });
 
 function ask(prompt) {

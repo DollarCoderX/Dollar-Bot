@@ -467,36 +467,101 @@ const premiumCommands = {
   // ── 21. .song <query> ─────────────────────────────────────────────────
   async song(sock, msg, args) {
     const jid = msg.key.remoteJid;
-    if (!args.length) return sock.sendMessage(jid, { text: 'Usage: .song <song title or search query>\nExample: .song Faded Alan Walker' });
+    if (!args.length) return sock.sendMessage(jid, { text: 'Usage: .song <song name>\nExample: .song Faded Alan Walker' });
     const query = args.join(' ');
-    await sock.sendMessage(jid, { text: `🎵 *Searching YouTube for:* "${query}"...` });
+    await sock.sendMessage(jid, { text: `🎵 *Searching for:* "${query}"\n_Please wait..._` });
+
     try {
-      // 1. Search YouTube v3 Data API
-      const searchRes = await fetch(`https://www.googleapis.com/youtube/v3/search?part=snippet&q=${encodeURIComponent(query)}&type=video&key=${config.googleApiKey}&maxResults=1`);
-      if (!searchRes.ok) throw new Error('YouTube Search API quota reached or error.');
-      const searchData = await searchRes.json();
-      const item = searchData.items?.[0];
-      if (!item) return sock.sendMessage(jid, { text: '❌ No songs found on YouTube for that search query.' });
-      
-      const videoId = item.id.videoId;
-      const title = item.snippet.title;
-      const videoUrl = `https://www.youtube.com/watch?v=${videoId}`;
-
-      await sock.sendMessage(jid, { text: `📥 *Downloading audio stream for:* \n"${title}"...\n\n_Please wait, resolving direct download links..._` });
-
-      // 2. Resolve via btch-downloader
-      const btch = require('btch-downloader');
-      const media = await btch.youtube(videoUrl);
-      if (!media || !media.mp3) throw new Error('Could not extract direct MP3 stream.');
-
-      // 3. Send audio message to WhatsApp
-      await sock.sendMessage(jid, {
-        audio: { url: media.mp3 },
-        mimetype: 'audio/mp4',
-        fileName: `${title}.mp3`
+      // ── Step 1: Find YouTube video ID via YouTube oEmbed / search ──────
+      const searchUrl = `https://www.youtube.com/results?search_query=${encodeURIComponent(query)}`;
+      const searchHtml = await fetch(searchUrl, {
+        headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' },
+        timeout: 15000,
       });
+      const html = await searchHtml.text();
+      const idMatch = html.match(/"videoId":"([a-zA-Z0-9_-]{11})"/);
+      const videoId = idMatch?.[1];
+      if (!videoId) throw new Error('Could not find video on YouTube.');
+
+      const videoUrl = `https://www.youtube.com/watch?v=${videoId}`;
+      const titleMatch = html.match(/"title":\{"runs":\[{"text":"([^"]+)"/);
+      const title = titleMatch?.[1] || query;
+
+      await sock.sendMessage(jid, { text: `📥 *Found:* ${title}\n_Downloading audio..._` });
+
+      // ── Step 2: Get audio download URL via cobalt.tools (free, no key) ─
+      let audioUrl = null;
+
+      try {
+        const cobalt = await fetch('https://api.cobalt.tools/', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+            'User-Agent': 'DollarBot/5.0',
+          },
+          body: JSON.stringify({
+            url: videoUrl,
+            downloadMode: 'audio',
+            audioFormat: 'mp3',
+            audioBitrate: '128',
+          }),
+          timeout: 30000,
+        });
+        if (cobalt.ok) {
+          const cobaltData = await cobalt.json();
+          if (cobaltData.status === 'tunnel' || cobaltData.status === 'redirect' || cobaltData.status === 'stream') {
+            audioUrl = cobaltData.url;
+          }
+        }
+      } catch (_) {}
+
+      // ── Step 3: Fallback to btch-downloader ────────────────────────────
+      if (!audioUrl) {
+        try {
+          const btch = require('btch-downloader');
+          const media = await btch.youtube(videoUrl);
+          audioUrl = media?.mp3 || media?.audio || null;
+        } catch (_) {}
+      }
+
+      // ── Step 4: Second fallback — y2mate API ───────────────────────────
+      if (!audioUrl) {
+        try {
+          const y2 = await fetch(`https://yt2mp3.info/api/button/mp3?callback=&v=${videoId}`, {
+            timeout: 15000,
+          });
+          if (y2.ok) {
+            const y2data = await y2.json();
+            audioUrl = y2data?.url || y2data?.dlink || null;
+          }
+        } catch (_) {}
+      }
+
+      if (!audioUrl) throw new Error('All download sources failed. Try again later.');
+
+      // ── Step 5: Download buffer and send as WhatsApp audio ─────────────
+      const audioRes = await fetch(audioUrl, {
+        headers: { 'User-Agent': 'Mozilla/5.0' },
+        timeout: 60000,
+      });
+      if (!audioRes.ok) throw new Error(`Audio download failed: HTTP ${audioRes.status}`);
+      const audioBuffer = await audioRes.buffer();
+
+      const cleanTitle = title.replace(/[^\w\s-]/g, '').trim().slice(0, 60);
+
+      // Send as audio document (most compatible with WhatsApp)
+      await sock.sendMessage(jid, {
+        document: audioBuffer,
+        mimetype: 'audio/mpeg',
+        fileName: `${cleanTitle}.mp3`,
+        caption: `🎵 *${title}*\n\n_Downloaded by DollarBot V5_ 💵`,
+      }, { quoted: msg });
+
     } catch (e) {
-      await sock.sendMessage(jid, { text: `❌ Song Downloader Error: ${e.message}` });
+      await sock.sendMessage(jid, {
+        text: `❌ *Song Error:* ${e.message}\n\n_Tip: Try a more specific song name_`,
+      });
     }
   },
 
