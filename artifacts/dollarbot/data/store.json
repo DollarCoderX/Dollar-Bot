@@ -1,4 +1,22 @@
 {
   "autoreply": false,
-  "autolike": true
+  "autolike": true,
+  "bypassState": {
+    "120363426777925361@g.us": {
+      "noSticker": true,
+      "noSaveSticker": false,
+      "silenced": []
+    },
+    "120363405533425174@g.us": {
+      "noSticker": true,
+      "noSaveSticker": false,
+      "silenced": []
+    }
+  },
+  "antideleteGroups": {
+    "120363405533425174@g.us": true
+  },
+  "antilinkGroups": {
+    "120363405533425174@g.us": false
+  }
 }

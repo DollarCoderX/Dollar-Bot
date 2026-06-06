@@ -19,8 +19,8 @@ const config = require('./config');
 const { extractBody } = require('./lib/messages');
 const { installSafeSend } = require('./lib/safe-send');
 
-const AUTH_DIR = path.join(__dirname, '../auth_info_baileys');
-const DATA_DIR = path.join(__dirname, '../data');
+const AUTH_DIR = process.env.AUTH_DIR || path.join(__dirname, '../auth_info_baileys');
+const DATA_DIR = process.env.DATA_DIR || path.join(__dirname, '../data');
 [AUTH_DIR, DATA_DIR].forEach(d => { if (!fs.existsSync(d)) fs.mkdirSync(d, { recursive: true }); });
 
 const logger = pino({ level: 'silent' });

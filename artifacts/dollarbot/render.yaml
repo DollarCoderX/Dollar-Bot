@@ -1,0 +1,30 @@
+services:
+  - type: web
+    name: dollarbot-v5
+    runtime: node
+    plan: free            # upgrade to starter for persistent disk
+    buildCommand: npm install
+    startCommand: node src/index.js
+    envVars:
+      # ── Required ──────────────────────────────────────────────────────────
+      - key: NODE_ENV
+        value: production
+      # ── Optional: persistent paths (set these in Render dashboard) ───────
+      # AUTH_DIR → set to /data/auth  (requires persistent disk mount at /data)
+      # DATA_DIR → set to /data/store
+    healthCheckPath: /health   # See index.js keepalive server below
+    autoDeploy: true
+
+# ── Notes for Render deployment ────────────────────────────────────────────────
+# 1. Push code to GitHub.
+# 2. In Render dashboard → "New Web Service" → connect your repo.
+# 3. Build command:  npm install
+# 4. Start command:  node src/index.js
+# 5. Add a Persistent Disk (Render paid plan) mounted at /data
+#    Then set env vars:
+#      AUTH_DIR = /data/auth
+#      DATA_DIR = /data/store
+# 6. After first run, scan the QR code from Render's Logs tab.
+# 7. Add an UptimeRobot monitor pointing to your Render URL
+#    (https://your-service.onrender.com/health) every 5 minutes
+#    to keep the free tier alive.

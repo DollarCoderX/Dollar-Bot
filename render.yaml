@@ -1,0 +1,19 @@
+services:
+  - type: web
+    name: dollar-bot
+    runtime: node
+    buildCommand: pnpm install --no-frozen-lockfile
+    startCommand: pnpm --filter @workspace/dollarbot run start
+    envVars:
+      - key: PORT
+        value: 3000
+      - key: NODE_ENV
+        value: production
+      - key: AUTH_DIR
+        value: /var/data/auth_info_baileys
+      - key: DATA_DIR
+        value: /var/data/dollarbot_data
+    disk:
+      name: dollarbot-disk
+      mountPath: /var/data
+      sizeGB: 1

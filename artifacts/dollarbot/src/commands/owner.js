@@ -8,6 +8,40 @@ function getQuoted(msg) {
 }
 
 const ownerCommands = {
+
+  // ── .self — switch bot to self/owner-only mode ────────────────────────────
+  async self(sock, msg) {
+    const jid = msg.key.remoteJid;
+    await store.set('botMode', 'self');
+    await sock.sendMessage(jid, {
+      text:
+        `╭━━━〔 🔒 BOT MODE 〕━━━⬣\n` +
+        `┃ Mode: *SELF* (Owner Only)\n` +
+        `┃\n` +
+        `┃ Bot will now *only respond*\n` +
+        `┃ to the bot owner.\n` +
+        `┃ All other users are ignored.\n` +
+        `┃\n` +
+        `┃ To restore: *.public*\n` +
+        `╰━━━━━━━━━━━━━━━━━━⬣`,
+    });
+  },
+
+  // ── .public — switch bot to public mode ───────────────────────────────────
+  async public(sock, msg) {
+    const jid = msg.key.remoteJid;
+    await store.set('botMode', 'public');
+    await sock.sendMessage(jid, {
+      text:
+        `╭━━━〔 🌐 BOT MODE 〕━━━⬣\n` +
+        `┃ Mode: *PUBLIC* (Everyone)\n` +
+        `┃\n` +
+        `┃ Bot will now respond\n` +
+        `┃ to *all users*.\n` +
+        `╰━━━━━━━━━━━━━━━━━━⬣`,
+    });
+  },
+
   async say(sock, msg, args) {
     const jid = msg.key.remoteJid;
     if (!args.length) return sock.sendMessage(jid, { text: 'Usage: .say <text>' });

@@ -164,13 +164,10 @@ const aiCommands = {
       return sock.sendMessage(jid, { text: `╭━━━〔 🎨 IMAGINE AI 〕━━━⬣\n┃ Usage: .imagine <prompt>\n┃\n┃ AI image generation from text.\n╰━━━━━━━━━━━━━━━━━━⬣\n\nExample: .imagine a cyberpunk city at night` });
     }
     const prompt = args.join(' ');
-    await sock.sendMessage(jid, { text: `_Generating image for:_ "${prompt}"\n_May take 15-30 seconds..._` });
+    await sock.sendMessage(jid, { text: `_Generating image for:_ "${prompt}"\n_Almost done..._` });
     try {
       const imageUrl = pollinations.getImageUrl(prompt);
-      const response = await fetch(imageUrl, { timeout: 60000 });
-      if (!response.ok) throw new Error('Image generation failed');
-      const buffer = await response.buffer();
-      await sock.sendMessage(jid, { image: buffer, caption: `*Generated Image*\nPrompt: ${prompt}\n\n_Powered by Dollar Engine_` });
+      await sock.sendMessage(jid, { image: { url: imageUrl }, caption: `*Generated Image*\nPrompt: ${prompt}\n\n_Powered by Dollar Engine_` });
     } catch (e) { await sock.sendMessage(jid, { text: `Image Error: ${e.message}` }); }
   },
 
@@ -463,7 +460,7 @@ const aiCommands = {
         `╭━━━〔 👁️ VISION AI 〕━━━⬣\n\n` +
         `${description}\n\n` +
         `╰━━━━━━━━━━━━━━━━━━⬣\n` +
-        `_⚡ Powered by Groq Vision_`
+        `_⚡ Powered by Dollar Vision_`
       );
     } catch (e) {
       await msg.reply(`❌ Vision error: ${e.message}`);

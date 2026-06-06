@@ -385,6 +385,117 @@ const groupCommands = {
     );
   },
 
+  // .antidelete — toggle anti-delete protection
+  async antidelete(sock, msg, args) {
+    const jid = msg.key.remoteJid;
+    const setting = args[0]?.toLowerCase();
+    if (!['on', 'off'].includes(setting))
+      return send(sock, jid, msg, '❌ Usage: .antidelete on/off');
+
+    const antideleteGroups = (await store.get('antideleteGroups')) || {};
+    antideleteGroups[jid] = setting === 'on';
+    await store.set('antideleteGroups', antideleteGroups);
+
+    await send(sock, jid, msg,
+      `🗑️ Anti-Delete is now *${setting.toUpperCase()}* ${setting === 'on' ? '✅' : '❌'}\n` +
+      (setting === 'on' ? 'Deleted messages in this group will be intercepted and resent.' : 'Anti-delete disabled.')
+    );
+  },
+
+
+  // .antibot — kick any bot (non-human) detected in the group except DollarBot
+  // Detection: checks verifiedName, known bot number patterns, and bot name keywords
+  async antibot(sock, msg, args) {
+    const jid = msg.key.remoteJid;
+    const setting = args[0]?.toLowerCase();
+    if (!['on', 'off'].includes(setting))
+      return send(sock, jid, msg, '❌ Usage: .antibot on/off');
+
+    const antibotGroups = (await store.get('antibotGroups')) || {};
+    antibotGroups[jid] = setting === 'on';
+    await store.set('antibotGroups', antibotGroups);
+
+    await send(sock, jid, msg,
+      `🤖 Anti-Bot is now *${setting.toUpperCase()}* ${setting === 'on' ? '✅' : '❌'}\n` +
+      (setting === 'on'
+        ? '_Any bot detected in this group (except DollarBot) will be kicked automatically._'
+        : 'Anti-bot disabled.')
+    );
+  },
+
+  // .cancelbot — neutralize another bot's command by sending the same command first
+  // Usage: .cancelbot .commandprefix  (e.g. .cancelbot /kick)
+  // This makes your bot respond to that command before the rival bot does,
+  // effectively cancelling it or overriding its output.
+  async cancelbot(sock, msg, args) {
+    const jid = msg.key.remoteJid;
+
+    if (!args.length) {
+      return send(sock, jid, msg,
+        `╭━━━〔 🛡️ CANCEL-BOT 〕━━━⬣\n` +
+        `┃ Block rival bot commands!\n` +
+        `┃\n` +
+        `┃ *Usage:*\n` +
+        `┃ .cancelbot on  — intercept mode\n` +
+        `┃ .cancelbot off — disable\n` +
+        `┃ .cancelbot add <prefix>\n` +
+        `┃   e.g: .cancelbot add /kick\n` +
+        `┃        .cancelbot add !\n` +
+        `┃\n` +
+        `┃ When ON, bot intercepts any\n` +
+        `┃ message starting with rival\n` +
+        `┃ prefixes and deletes it before\n` +
+        `┃ the rival bot can respond.\n` +
+        `╰━━━━━━━━━━━━━━━━━━⬣`
+      );
+    }
+
+    const subCmd = args[0].toLowerCase();
+    const cancelbotData = (await store.get('cancelbotGroups')) || {};
+
+    if (subCmd === 'on' || subCmd === 'off') {
+      if (!cancelbotData[jid]) cancelbotData[jid] = { active: false, prefixes: [] };
+      cancelbotData[jid].active = subCmd === 'on';
+      await store.set('cancelbotGroups', cancelbotData);
+      return send(sock, jid, msg,
+        `🛡️ Cancel-Bot is now *${subCmd.toUpperCase()}* ${subCmd === 'on' ? '✅' : '❌'}\n` +
+        (subCmd === 'on'
+          ? `_Rival bot commands with tracked prefixes will be auto-deleted._\n_Add prefixes: .cancelbot add /<cmd>_`
+          : 'Cancel-bot disabled.')
+      );
+    }
+
+    if (subCmd === 'add' && args[1]) {
+      if (!cancelbotData[jid]) cancelbotData[jid] = { active: false, prefixes: [] };
+      const prefix = args[1].trim();
+      if (!cancelbotData[jid].prefixes.includes(prefix)) {
+        cancelbotData[jid].prefixes.push(prefix);
+      }
+      await store.set('cancelbotGroups', cancelbotData);
+      return send(sock, jid, msg,
+        `✅ Added *${prefix}* to cancel-bot list!\n` +
+        `Current prefixes: *${cancelbotData[jid].prefixes.join(', ')}*`
+      );
+    }
+
+    if (subCmd === 'list') {
+      const data = cancelbotData[jid];
+      if (!data || !data.prefixes.length)
+        return send(sock, jid, msg, '❌ No prefixes tracked. Use: .cancelbot add /kick');
+      return send(sock, jid, msg,
+        `🛡️ *Cancel-Bot Prefixes:*\n${data.prefixes.map(p => `• ${p}`).join('\n')}\n\nStatus: ${data.active ? '✅ ON' : '❌ OFF'}`
+      );
+    }
+
+    if (subCmd === 'clear') {
+      if (cancelbotData[jid]) cancelbotData[jid].prefixes = [];
+      await store.set('cancelbotGroups', cancelbotData);
+      return send(sock, jid, msg, '🗑️ Cancel-bot prefix list cleared.');
+    }
+
+    return send(sock, jid, msg, '❌ Usage: .cancelbot on/off/add <prefix>/list/clear');
+  },
+
   // .delete — delete a replied-to message
   async delete(sock, msg) {
     const jid = msg.key.remoteJid;

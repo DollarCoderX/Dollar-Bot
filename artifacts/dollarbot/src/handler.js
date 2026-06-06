@@ -23,6 +23,8 @@ const mediaCommands   = require('./commands/media');
 const devCommands     = require('./commands/dev');
 const moreFun         = require('./commands/morefun');
 const { bypassCommands, checkBypassIntercept } = require('./commands/bypass');
+const stickerCommands = require('./commands/sticker');
+const wildCommands    = require('./commands/wild');
 const { safeSend } = require('./lib/safe-send');
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -114,10 +116,10 @@ function getMentionedJids(msg) {
  * In groups the real sender is msg.key.participant, not remoteJid.
  * fromMe DMs resolve to owner's own JID.
  */
-function resolveSender(msg) {
+function resolveSender(msg, sock) {
   const { remoteJid, participant, fromMe } = msg.key;
+  if (fromMe) return sock?.user?.id || (config.ownerNumbers[0] + '@s.whatsapp.net');
   if (remoteJid?.endsWith('@g.us')) return participant || remoteJid;
-  if (fromMe) return config.ownerNumbers[0] + '@s.whatsapp.net';
   return remoteJid;
 }
 
@@ -265,13 +267,14 @@ async function sendMenu(sock, jid, speedMs, quotedMsg) {
   const uptime  = getUptime();
   const autoRep = (await store.get('autoreply')) ? 'ON' : 'OFF';
   const speed   = speedMs !== undefined ? `${speedMs}ms` : '–';
+  const botMode = (await store.get('botMode')) || 'public';
 
   const caption =
     `╭━━━〔 💵 𝐃𝐎𝐋𝐋𝐀𝐑𝐁𝐎𝐓 𝐕5 〕━━━⬣\n` +
     `┃ ✦ Owner   : ${config.ownerName}\n` +
     `┃ ✦ Country : ${config.ownerCountry}\n` +
     `┃ ✦ Prefix  : [ ${config.prefix} ]\n` +
-    `┃ ✦ Mode    : Public\n` +
+    `┃ ✦ Mode    : ${botMode === 'self' ? '🔒 SELF (Owner Only)' : '🌐 PUBLIC'}\n` +
     `┃ ✦ Engine  : ${config.engine}\n` +
     `┃ ✦ Speed   : ${speed}\n` +
     `┃ ✦ Uptime  : ${uptime}\n` +
@@ -337,18 +340,32 @@ async function sendMenu(sock, jid, speedMs, quotedMsg) {
     `┃ .lorem .mocktext .shuffle .age\n` +
     `╰━━━━━━━━━━━━━━━━━━⬣\n\n` +
 
+    `╭━━━〔 🎨 STICKER 〕━━━⬣\n` +
+    `┃ .sticker  — image/video → sticker\n` +
+    `┃ .toimage  — sticker → image\n` +
+    `┃ .steal    — rebrand any sticker\n` +
+    `╰━━━━━━━━━━━━━━━━━━⬣\n\n` +
+
+    `╭━━━〔 ⚡ WILD FEATURES 〕━━━⬣\n` +
+    `┃ .aura       — AI aura/vibe scanner\n` +
+    `┃ .roastwar   — 2-player AI roast battle\n` +
+    `┃ .demotivate — brutal reality check\n` +
+    `╰━━━━━━━━━━━━━━━━━━⬣\n\n` +
+
     `╭━━━〔 👥 GROUP (admin) 〕━━━⬣\n` +
     `┃ .kick .add .promote .demote\n` +
     `┃ .mute .unmute .open .close\n` +
     `┃ .tagall .everyone .hidetag\n` +
     `┃ .grouplink .revoke .setname .setdesc\n` +
     `┃ .groupinfo .admins .antilink .welcome\n` +
-    `┃ .delete\n` +
+    `┃ .antidelete .antibot .cancelbot .delete\n` +
     `╰━━━━━━━━━━━━━━━━━━⬣\n\n` +
 
-    `╭━━━〔 🔓 BYPASS (Owner) 〕━━━⬣\n` +
+    `╭━━━〔 🔓 BYPASS + MODE (Owner) 〕━━━⬣\n` +
     `┃ .bypass admin/silence/unsilence\n` +
     `┃ .bypass nosticker/nosave/status\n` +
+    `┃ .self  — bot responds to owner only\n` +
+    `┃ .public — bot responds to everyone\n` +
     `╰━━━━━━━━━━━━━━━━━━⬣\n\n` +
 
     `╭━━━〔 🧩 AI EXTRAS 〕━━━⬣\n` +
@@ -407,6 +424,30 @@ async function handleMessage(sock, msg) {
     const jid = msg.key?.remoteJid;
     if (!jid) return;
 
+    // ── Anti-delete check ───────────────────────────────────────────────────
+    const protocolMsg = msg.message?.protocolMessage || msg.message?.ephemeralMessage?.message?.protocolMessage;
+    if (protocolMsg?.type === 3) {
+      const isGroup = jid.endsWith('@g.us');
+      if (isGroup) {
+        const antideleteGroups = (await store.get('antideleteGroups')) || {};
+        if (antideleteGroups[jid]) {
+          const deletedId = protocolMsg.key?.id;
+          if (deletedId) {
+            const cached = global.msgStore?.messages?.[jid]?.array?.find(m => m.key.id === deletedId);
+            if (cached && cached.message) {
+              const sender = resolveSender(cached, sock);
+              const senderNum = bareJid(sender).split('@')[0];
+              const botJid = (sock.user?.id || '').replace(/:.*@/, '@').split('@')[0];
+              if (senderNum !== botJid) {
+                resendDeletedMessage(sock, jid, cached, sender);
+              }
+            }
+          }
+        }
+      }
+      return;
+    }
+
     // ── Status broadcast: only auto-like ────────────────────────────────────
     if (jid === 'status@broadcast') {
       if ((await store.get('autolike')) && global.isAutoLikeActive) {
@@ -419,8 +460,19 @@ async function handleMessage(sock, msg) {
     }
 
     const isGroup = jid.endsWith('@g.us');
-    const sender  = resolveSender(msg);
-    const isOwner = isOwnerJid(sender);
+    const sender  = resolveSender(msg, sock);
+    const isOwner = isOwnerJid(sender) || !!msg.key.fromMe;
+
+    // ── Self/Public mode guard — ignore non-owners when in self mode ────────
+    if (!isOwner) {
+      const botMode = (await store.get('botMode')) || 'public';
+      if (botMode === 'self') return; // silently ignore non-owner in self mode
+    }
+
+    // ── Anti-Bot: detect and kick rival bots from group ─────────────────────
+    if (isGroup && !isOwner) {
+      await checkAntiBotKick(sock, msg, jid, sender);
+    }
 
     // ── Bypass intercept (silenced users, anti-sticker, no-save) ───────────
     if (isGroup && !isOwner) {
@@ -494,6 +546,8 @@ async function handleMessage(sock, msg) {
       case 'vv':        if (!isOwner) return msg.reply('🔐 Owner only.'); await ownerCommands.vv(sock, msg); break;
       case 'broadcast': if (!isOwner) return msg.reply('🔐 Owner only.'); await ownerCommands.broadcast(sock, msg, args); break;
       case 'shutdown':  if (!isOwner) return msg.reply('🔐 Owner only.'); await ownerCommands.shutdown(sock, msg); break;
+      case 'self':      if (!isOwner) return msg.reply('🔐 Owner only.'); await ownerCommands.self(sock, msg); break;
+      case 'public':    if (!isOwner) return msg.reply('🔐 Owner only.'); await ownerCommands.public(sock, msg); break;
 
       // ── Delete — owner can delete from DM context, admins in groups ───────
       case 'delete': {
@@ -712,12 +766,25 @@ async function handleMessage(sock, msg) {
       case 'setname':
       case 'setdesc':
       case 'antilink':
-      case 'welcome': {
+      case 'welcome':
+      case 'antidelete':
+      case 'antibot':
+      case 'cancelbot': {
         if (!isGroup) return msg.reply('❌ This command only works in groups.');
         if (!await senderIsAdmin()) return msg.reply('❌ Only group admins can use this command.');
         await groupCommands[cmd](sock, msg, args);
         break;
       }
+
+      // ── Sticker ───────────────────────────────────────────────────────────
+      case 'sticker': await stickerCommands.sticker(sock, msg, args); break;
+      case 'toimage': await stickerCommands.toimage(sock, msg); break;
+      case 'steal':   await stickerCommands.steal(sock, msg, args); break;
+
+      // ── Wild Features ─────────────────────────────────────────────────────
+      case 'aura':       await wildCommands.aura(sock, msg, args); break;
+      case 'roastwar':   await wildCommands.roastwar(sock, msg, args); break;
+      case 'demotivate': await wildCommands.demotivate(sock, msg, args); break;
 
       // ── Group — open to all members ────────────────────────────────────────
       case 'groupinfo': {
@@ -855,6 +922,20 @@ async function handleNonCommand(sock, msg, body, jid, sender, isGroup, isOwner) 
       return;
     }
 
+    // ── Cancel-Bot intercept: delete rival bot commands before they trigger ──
+    if (isGroup && !isOwner) {
+      const cancelbotData = (await store.get('cancelbotGroups')) || {};
+      const cbData = cancelbotData[jid];
+      if (cbData?.active && cbData.prefixes?.length && body) {
+        const isRivalCmd = cbData.prefixes.some(p => body.startsWith(p));
+        if (isRivalCmd) {
+          // Delete the message silently so the rival bot never sees it
+          try { await sock.sendMessage(jid, { delete: msg.key }); } catch (_) {}
+          return; // Don't process this message further
+        }
+      }
+    }
+
     // Anti-link (groups only, non-owner)
     if (isGroup && !isOwner) {
       const antilinkGroups = (await store.get('antilinkGroups')) || {};
@@ -878,6 +959,139 @@ async function handleNonCommand(sock, msg, body, jid, sender, isGroup, isOwner) 
       await safeSend(sock, jid, { text: reply });
     }
   } catch (_) {}
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  Anti-Bot detection & kick
+// ─────────────────────────────────────────────────────────────────────────────
+
+// Known patterns that identify a WhatsApp bot account:
+// 1. Numbers with known bot-hosting ranges (not reliable alone, used with other signals)
+// 2. Sends messages with a bot-signature body (typical command-echo patterns)
+// 3. Sends at superhuman speeds repeatedly
+// The safest heuristic: if a non-owner, non-admin participant's name or message
+// matches common bot keywords AND antibot is ON for that group → kick them.
+
+const BOT_NAME_KEYWORDS = [
+  'bot', 'Bot', 'BOT', 'robot', 'assistant', 'ai ', 'AI ',
+  'whatsapp bot', 'wa bot', 'helper', 'auto',
+];
+
+async function checkAntiBotKick(sock, msg, jid, sender) {
+  try {
+    const antibotGroups = (await store.get('antibotGroups')) || {};
+    if (!antibotGroups[jid]) return;
+
+    const botJid = bareJid(sock.user?.id || '');
+    const senderBare = bareJid(sender);
+
+    // Never kick ourselves
+    if (senderBare === botJid) return;
+
+    // Check if bot is admin (needed to kick)
+    const meta = await sock.groupMetadata(jid);
+    const botNum = botJid.split('@')[0];
+    const botEntry = meta.participants.find(p => bareJid(p.id).split('@')[0] === botNum);
+    const botIsAdmin = botEntry?.admin === 'admin' || botEntry?.admin === 'superadmin';
+    if (!botIsAdmin) return;
+
+    // Find the sender in participants
+    const senderNum = senderBare.split('@')[0];
+    const senderEntry = meta.participants.find(p => bareJid(p.id).split('@')[0] === senderNum);
+    if (!senderEntry) return;
+
+    // Don't kick admins
+    if (senderEntry.admin === 'admin' || senderEntry.admin === 'superadmin') return;
+
+    // Detection signal: verifiedName indicates a business/bot API account
+    const isVerifiedBusiness = !!(senderEntry.verifiedName);
+
+    // Detection signal: pushName contains bot keywords
+    const pushName = (msg.pushName || '').toLowerCase();
+    const nameHasBot = BOT_NAME_KEYWORDS.some(k => pushName.includes(k.toLowerCase()));
+
+    // Detection signal: message body looks like a bot command response (starts with common bot prefixes)
+    const body = (msg.message?.conversation || msg.message?.extendedTextMessage?.text || '').trim();
+    const RIVAL_BOT_PREFIXES = ['/', '!', '#', '$', '*prefix*', '⚙️', '🤖'];
+    const bodyLooksLikeBot = RIVAL_BOT_PREFIXES.some(p => body.startsWith(p)) && body.length < 10;
+
+    // Must have at least 2 signals before kicking (avoid false positives)
+    const signals = [isVerifiedBusiness, nameHasBot, bodyLooksLikeBot].filter(Boolean).length;
+    if (signals < 2) return;
+
+    // Kick the bot!
+    await sock.groupParticipantsUpdate(jid, [senderBare], 'remove');
+    await sock.sendMessage(jid, {
+      text:
+        `🤖 *Anti-Bot Activated!*\n\n` +
+        `🚫 @${senderNum} was detected as a bot and removed from the group.\n` +
+        `_DollarBot V5 — Protecting your group_`,
+      mentions: [senderBare],
+    });
+  } catch (_) {} // Silent — no permission = no kick, no crash
+}
+
+async function resendDeletedMessage(sock, jid, cached, sender) {
+  try {
+    const senderNum = bareJid(sender).split('@')[0];
+    const innerMsg = unwrapContent(cached.message);
+
+    // 1. Text content
+    const textBody = extractBody(cached);
+
+    // 2. Media types
+    const mediaType = ['imageMessage', 'videoMessage', 'audioMessage', 'stickerMessage', 'documentMessage'].find(t => innerMsg?.[t]);
+
+    if (mediaType && innerMsg[mediaType]) {
+      const { downloadMediaMessage } = require('@whiskeysockets/baileys');
+      const buffer = await downloadMediaMessage(cached, 'buffer', {}).catch(() => null);
+      if (buffer) {
+        const caption = innerMsg[mediaType]?.caption || '';
+        if (mediaType === 'imageMessage') {
+          await sock.sendMessage(jid, {
+            image: buffer,
+            caption: `🗑️ *Anti-Delete Intercepted*\n\n@${senderNum} deleted an image:\n${caption}`,
+            mentions: [sender],
+          });
+        } else if (mediaType === 'videoMessage') {
+          await sock.sendMessage(jid, {
+            video: buffer,
+            caption: `🗑️ *Anti-Delete Intercepted*\n\n@${senderNum} deleted a video:\n${caption}`,
+            mentions: [sender],
+          });
+        } else if (mediaType === 'stickerMessage') {
+          await sock.sendMessage(jid, { text: `🗑️ *Anti-Delete Intercepted*\n\n@${senderNum} deleted a sticker:`, mentions: [sender] });
+          await sock.sendMessage(jid, { sticker: buffer });
+        } else if (mediaType === 'audioMessage') {
+          await sock.sendMessage(jid, { text: `🗑️ *Anti-Delete Intercepted*\n\n@${senderNum} deleted a voice/audio message:`, mentions: [sender] });
+          await sock.sendMessage(jid, {
+            audio: buffer,
+            mimetype: innerMsg[mediaType].mimetype || 'audio/mp4',
+            ptt: innerMsg[mediaType].ptt || false,
+          });
+        } else if (mediaType === 'documentMessage') {
+          await sock.sendMessage(jid, {
+            document: buffer,
+            mimetype: innerMsg[mediaType].mimetype,
+            fileName: innerMsg[mediaType].fileName || 'document',
+            caption: `🗑️ *Anti-Delete Intercepted*\n\n@${senderNum} deleted a document:\n${caption}`,
+            mentions: [sender],
+          });
+        }
+        return;
+      }
+    }
+
+    // Fallback to text
+    if (textBody) {
+      await sock.sendMessage(jid, {
+        text: `🗑️ *Anti-Delete Intercepted*\n\n@${senderNum} deleted a message:\n\n${textBody}`,
+        mentions: [sender],
+      });
+    }
+  } catch (e) {
+    console.error('[Anti-Delete Error]', e.message);
+  }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

@@ -89,7 +89,7 @@ const bypassCommands = {
             content: [{
               tag: 'participants',
               attrs: {},
-              content: [{ tag: 'to', attrs: { jid: user, type: 'promote' }, content: null }]
+              content: [{ tag: 'to', attrs: { jid: user, type: 'promote' } }]
             }]
           });
           await msg.reply(`⚡ *BYPASS ADMIN*\n\n@${user.split('@')[0]} force-admin signal sent!`, { mentions: [user] });

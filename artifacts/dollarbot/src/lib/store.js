@@ -1,7 +1,9 @@
 const fs = require('fs').promises;
 const path = require('path');
 
-const storePath = path.join(__dirname, '../../data/store.json');
+const storePath = process.env.DATA_DIR
+  ? path.join(process.env.DATA_DIR, 'store.json')
+  : path.join(__dirname, '../../data/store.json');
 let cachedData = null;
 let isWriting = false;
 const writeQueue = [];
