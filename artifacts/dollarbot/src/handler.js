@@ -25,7 +25,9 @@ const moreFun         = require('./commands/morefun');
 const { bypassCommands, checkBypassIntercept } = require('./commands/bypass');
 const stickerCommands = require('./commands/sticker');
 const wildCommands    = require('./commands/wild');
+const geminiCommands  = require('./commands/gemini');
 const { safeSend } = require('./lib/safe-send');
+
 
 // ─────────────────────────────────────────────────────────────────────────────
 //  Message parsing — proper Baileys proto.IWebMessageInfo patterns
@@ -594,7 +596,13 @@ async function handleMessage(sock, msg) {
       case 'manhwa':
       case 'manga2':       await aiCommands.manhwa(sock, msg, args, jid); break;
 
+      // ── Gemini (image edit) ────────────────────────────────────────────────
+      case 'gemini':
+        await geminiCommands.gemini(sock, msg, args);
+        break;
+
       // ── Search ────────────────────────────────────────────────────────────
+
       case 'search': await searchCommands.search(sock, msg, args); break;
       case 'wiki':   await searchCommands.wiki(sock, msg, args); break;
       case 'define': await searchCommands.define(sock, msg, args); break;
