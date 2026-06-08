@@ -22,11 +22,12 @@ function getNextGroqKey() {
 
 // ── Core text generation (Groq → Pollinations fallback) ───────────────────
 async function textGenerate(messages, model = 'openai') {
-  let groqError;
+  // Provider order (user request):
+  // Groq (main) → Pollinations → DeepSeek → HF(gpt2) → Mistral → Together
+  // If a provider fails, we move to the next one.
+  let lastErr = null;
 
-  // If no GROQ keys provided, go straight to Pollinations
-  if (!groqKeys.length) {
-    console.log(`[AI] No GROQ_KEYS in env. Using Pollinations fallback...`);
+  const tryPollinations = async () => {
     const res = await fetch('https://text.pollinations.ai/', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -38,50 +39,149 @@ async function textGenerate(messages, model = 'openai') {
       }),
       timeout: 45000,
     });
-    if (!res.ok) throw new Error('All AI services failed. Please try again.');
+    if (!res.ok) throw new Error(`Pollinations HTTP ${res.status}`);
     return (await res.text()).trim();
-  }
+  };
 
-  // Try each API key in rotation
-  for (let i = 0; i < groqKeys.length; i++) {
-    const apiKey = getNextGroqKey();
-    try {
-      const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${apiKey}`,
-        },
-        body: JSON.stringify({ messages, model: 'llama-3.1-8b-instant' }),
-        timeout: 45000,
-      });
-      if (res.ok) {
-        const data = await res.json();
-        return data.choices[0].message.content.trim();
-      } else {
-        const errText = await res.text();
+  const tryGroq = async () => {
+    if (!groqKeys.length) throw new Error('Missing GROQ_KEYS');
+    let groqError = null;
+
+    for (let i = 0; i < groqKeys.length; i++) {
+      const apiKey = getNextGroqKey();
+      try {
+        const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${apiKey}`,
+          },
+          body: JSON.stringify({ messages, model: 'llama-3.1-8b-instant' }),
+          timeout: 45000,
+        });
+        if (res.ok) {
+          const data = await res.json();
+          return data.choices[0].message.content.trim();
+        }
+        const errText = await res.text().catch(() => '');
         groqError = `Groq HTTP ${res.status}: ${errText}`;
+      } catch (e) {
+        groqError = e.message;
       }
+    }
+    throw new Error(groqError || 'Groq failed');
+  };
+
+  const tryDeepseek = async () => {
+    // DeepSeek chat completions: https://api.deepseek.com/chat/completions
+    // Their public endpoint often still expects an API key. Per user note “No API key needed for basic requests”
+    // so we attempt without key first.
+    const res = await fetch('https://api.deepseek.com/chat/completions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'deepseek-chat',
+        messages,
+      }),
+      timeout: 45000,
+    });
+    if (!res.ok) throw new Error(`DeepSeek HTTP ${res.status}`);
+    const data = await res.json();
+    return data.choices?.[0]?.message?.content?.trim() || '';
+  };
+
+  const tryHFgpt2 = async () => {
+    // Hugging Face public inference: https://api-inference.huggingface.co/models/gpt2
+    // This endpoint expects a "prompt" rather than chat messages.
+    const prompt = messages
+      .map(m => `${m.role === 'user' ? 'User' : m.role === 'system' ? 'System' : 'Assistant'}: ${m.content}`)
+      .join('\n')
+      .slice(-1200);
+
+    const res = await fetch('https://api-inference.huggingface.co/models/gpt2', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ inputs: prompt }),
+      timeout: 45000,
+    });
+    if (!res.ok) throw new Error(`HF gpt2 HTTP ${res.status}`);
+    const data = await res.json();
+    const out = Array.isArray(data) ? data?.[0]?.generated_text : data?.generated_text;
+    if (!out) throw new Error('HF gpt2 returned empty');
+    // Return only the tail-ish to reduce repeated prompt
+    return String(out).slice(-900).trim();
+  };
+
+  const tryMistral = async () => {
+    // Mistral free tier: https://api.mistral.ai/v1/chat/completions
+    // Likely needs MISTRAL_API_KEY; we attempt with env fallback if present, else attempt without.
+    const apiKey = process.env.MISTRAL_API_KEY || '';
+    const headers = { 'Content-Type': 'application/json' };
+    if (apiKey) headers.Authorization = `Bearer ${apiKey}`;
+
+    const res = await fetch('https://api.mistral.ai/v1/chat/completions', {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({
+        model: 'mistral-small-latest',
+        messages,
+      }),
+      timeout: 45000,
+    });
+    if (!res.ok) throw new Error(`Mistral HTTP ${res.status}`);
+    const data = await res.json();
+    return data.choices?.[0]?.message?.content?.trim() || '';
+  };
+
+  const tryTogether = async () => {
+    // Together public endpoint: https://api.together.xyz/v1/completions
+    // This likely expects a key; attempt with env if present.
+    const apiKey = process.env.TOGETHER_API_KEY || '';
+    const headers = { 'Content-Type': 'application/json' };
+    if (apiKey) headers.Authorization = `Bearer ${apiKey}`;
+
+    const prompt = messages
+      .map(m => `${m.role === 'user' ? 'User' : m.role === 'system' ? 'System' : 'Assistant'}: ${m.content}`)
+      .join('\n');
+
+    const res = await fetch('https://api.together.xyz/v1/completions', {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({
+        model: 'meta-llama/Meta-Llama-3.1-8B-Instruct-Turbo',
+        prompt,
+        max_tokens: 512,
+        temperature: 0.7,
+      }),
+      timeout: 45000,
+    });
+    if (!res.ok) throw new Error(`Together HTTP ${res.status}`);
+    const data = await res.json();
+    const out = data?.choices?.[0]?.text || data?.choices?.[0]?.message?.content;
+    if (!out) throw new Error('Together returned empty');
+    return String(out).trim();
+  };
+
+  // Execute in order
+  const providers = [
+    tryGroq,
+    tryPollinations,
+    tryDeepseek,
+    tryHFgpt2,
+    tryMistral,
+    tryTogether,
+  ];
+
+  for (const provider of providers) {
+    try {
+      const out = await provider();
+      if (out && out.trim().length) return out.trim();
     } catch (e) {
-      groqError = e.message;
+      lastErr = e;
     }
   }
 
-  // Fallback to Pollinations
-  console.log(`[AI] Groq failed (${groqError}). Using Pollinations fallback...`);
-  const res = await fetch('https://text.pollinations.ai/', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      messages,
-      model: 'openai',
-      seed: Math.floor(Math.random() * 99999),
-      private: true,
-    }),
-    timeout: 45000,
-  });
-  if (!res.ok) throw new Error('All AI services failed. Please try again.');
-  return (await res.text()).trim();
+  throw new Error(`All AI services failed. ${lastErr ? lastErr.message : ''}`.trim());
 }
 
 // ── AI Personas ───────────────────────────────────────────────────────────
