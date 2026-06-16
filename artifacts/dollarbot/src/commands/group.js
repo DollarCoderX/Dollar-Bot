@@ -575,6 +575,161 @@ const groupCommands = {
     }
   },
 
+  // ── .warn / .warns / .clearwarn — member warning system ─────────────────
+
+  async warn(sock, msg, args) {
+    const jid = msg.key.remoteJid;
+    if (!await isBotGroupAdmin(sock, jid))
+      return send(sock, jid, msg, '❌ Bot must be admin to warn members.');
+    const target = resolveTarget(msg, args);
+    if (!target)
+      return send(sock, jid, msg, '❌ Usage: .warn @user [reason]');
+    const reason = args.filter(a => !a.startsWith('@')).join(' ') || 'No reason provided';
+    const warnKey = `warns_${jid}`;
+    const warns = (await store.get(warnKey)) || {};
+    const tag = target.split('@')[0].split(':')[0];
+    warns[tag] = (warns[tag] || 0) + 1;
+    await store.set(warnKey, warns);
+    const count = warns[tag];
+    const LIMIT = 3;
+    if (count >= LIMIT) {
+      try {
+        await sock.groupParticipantsUpdate(jid, [target], 'remove');
+        delete warns[tag];
+        await store.set(warnKey, warns);
+        await send(sock, jid, msg,
+          `╭━━━〔 ⚠️ FINAL WARNING 〕━━━⬣\n┃ @${tag} reached ${LIMIT}/${LIMIT} warnings.\n┃ 🦶 *KICKED* from the group.\n┃ Reason: ${reason}\n╰━━━━━━━━━━━━━━━━━━⬣`,
+          { mentions: [target] });
+      } catch (e) {
+        await send(sock, jid, msg, `⚠️ Warned @${tag} (${count}/${LIMIT}) but could not kick: ${e.message}`, { mentions: [target] });
+      }
+    } else {
+      await send(sock, jid, msg,
+        `╭━━━〔 ⚠️ WARNING 〕━━━⬣\n┃ @${tag} — Warning *${count}/${LIMIT}*\n┃ Reason: ${reason}\n┃ ${LIMIT - count} more warning(s) before kick.\n╰━━━━━━━━━━━━━━━━━━⬣`,
+        { mentions: [target] });
+    }
+  },
+
+  async warns(sock, msg, args) {
+    const jid = msg.key.remoteJid;
+    const target = resolveTarget(msg, args);
+    const warnKey = `warns_${jid}`;
+    const warns = (await store.get(warnKey)) || {};
+    if (target) {
+      const tag = target.split('@')[0].split(':')[0];
+      const count = warns[tag] || 0;
+      return send(sock, jid, msg, `⚠️ @${tag} has *${count}/3* warnings.`, { mentions: [target] });
+    }
+    const entries = Object.entries(warns);
+    if (!entries.length) return send(sock, jid, msg, '✅ No active warnings in this group.');
+    let text = `╭━━━〔 ⚠️ GROUP WARNINGS 〕━━━⬣\n`;
+    for (const [num, cnt] of entries) text += `┃ • ${num}: ${cnt}/3 warnings\n`;
+    text += `╰━━━━━━━━━━━━━━━━━━⬣`;
+    await send(sock, jid, msg, text);
+  },
+
+  async clearwarn(sock, msg, args) {
+    const jid = msg.key.remoteJid;
+    const target = resolveTarget(msg, args);
+    if (!target)
+      return send(sock, jid, msg, '❌ Usage: .clearwarn @user');
+    const warnKey = `warns_${jid}`;
+    const warns = (await store.get(warnKey)) || {};
+    const tag = target.split('@')[0].split(':')[0];
+    delete warns[tag];
+    await store.set(warnKey, warns);
+    await send(sock, jid, msg, `✅ Warnings cleared for @${tag}.`, { mentions: [target] });
+  },
+
+  // ── .lock / .unlock — lock/unlock group completely ───────────────────────
+
+  async lock(sock, msg) {
+    const jid = msg.key.remoteJid;
+    if (!await isBotGroupAdmin(sock, jid))
+      return send(sock, jid, msg, '❌ Bot must be admin to lock the group.');
+    try {
+      await sock.groupSettingUpdate(jid, 'announcement');
+      await send(sock, jid, msg, '🔒 *Group locked!* Only admins can send messages.\n\nUse *.unlock* to re-open.');
+    } catch (e) {
+      await send(sock, jid, msg, `❌ Error: ${e.message}`);
+    }
+  },
+
+  async unlock(sock, msg) {
+    const jid = msg.key.remoteJid;
+    if (!await isBotGroupAdmin(sock, jid))
+      return send(sock, jid, msg, '❌ Bot must be admin to unlock the group.');
+    try {
+      await sock.groupSettingUpdate(jid, 'not_announcement');
+      await send(sock, jid, msg, '🔓 *Group unlocked!* Everyone can send messages.');
+    } catch (e) {
+      await send(sock, jid, msg, `❌ Error: ${e.message}`);
+    }
+  },
+
+  // ── .setrules / .rules — group rules management ──────────────────────────
+
+  async setrules(sock, msg, args) {
+    const jid = msg.key.remoteJid;
+    if (!args.length)
+      return send(sock, jid, msg, '❌ Usage: .setrules <rules text>\nExample: .setrules 1. No spam. 2. Respect everyone. 3. No NSFW.');
+    const rules = args.join(' ');
+    await store.set(`rules_${jid}`, rules);
+    await send(sock, jid, msg, `📋 *Group rules updated!*\n\n${rules}\n\n_Type .rules to view anytime._`);
+  },
+
+  async rules(sock, msg) {
+    const jid = msg.key.remoteJid;
+    const rules = await store.get(`rules_${jid}`);
+    if (!rules)
+      return send(sock, jid, msg, '❌ No rules set. Admins can set rules with *.setrules <text>*');
+    await send(sock, jid, msg,
+      `╭━━━〔 📋 GROUP RULES 〕━━━⬣\n┃\n${rules.split(/[.\n]+/).filter(r => r.trim()).map(r => `┃ ${r.trim()}`).join('\n')}\n┃\n╰━━━━━━━━━━━━━━━━━━⬣`
+    );
+  },
+
+  // ── .filter — word filter management ─────────────────────────────────────
+
+  async filter(sock, msg, args) {
+    const jid = msg.key.remoteJid;
+    const sub = args[0]?.toLowerCase();
+    const filterKey = `filter_${jid}`;
+    const list = (await store.get(filterKey)) || [];
+
+    if (sub === 'add') {
+      const word = args.slice(1).join(' ').toLowerCase().trim();
+      if (!word) return send(sock, jid, msg, '❌ Usage: .filter add <word>');
+      if (list.includes(word)) return send(sock, jid, msg, `⚠️ "*${word}*" is already in the filter list.`);
+      list.push(word);
+      await store.set(filterKey, list);
+      return send(sock, jid, msg, `✅ "*${word}*" added to filter list. Messages containing it will be deleted.`);
+    }
+
+    if (sub === 'remove' || sub === 'del') {
+      const word = args.slice(1).join(' ').toLowerCase().trim();
+      if (!word) return send(sock, jid, msg, '❌ Usage: .filter remove <word>');
+      const idx = list.indexOf(word);
+      if (idx === -1) return send(sock, jid, msg, `❌ "*${word}*" is not in the filter list.`);
+      list.splice(idx, 1);
+      await store.set(filterKey, list);
+      return send(sock, jid, msg, `✅ "*${word}*" removed from filter list.`);
+    }
+
+    if (sub === 'list' || !sub) {
+      if (!list.length) return send(sock, jid, msg, '📋 Filter list is empty.\n\nAdd words with *.filter add <word>*');
+      return send(sock, jid, msg,
+        `╭━━━〔 🚫 FILTER LIST 〕━━━⬣\n${list.map((w, i) => `┃ ${i + 1}. ${w}`).join('\n')}\n╰━━━━━━━━━━━━━━━━━━⬣`
+      );
+    }
+
+    if (sub === 'clear') {
+      await store.set(filterKey, []);
+      return send(sock, jid, msg, '🗑️ Filter list cleared.');
+    }
+
+    return send(sock, jid, msg, '❌ Usage: .filter add/remove/list/clear [word]');
+  },
+
   // .save — save a status/media to gallery (forward to user)
   async save(sock, msg) {
     const jid = msg.key.remoteJid;

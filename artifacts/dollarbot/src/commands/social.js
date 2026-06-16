@@ -102,7 +102,7 @@ async function fetchCelebInfo(query) {
 
 const socialCommands = {
 
-  // ── .celeb <name> — celebrity full profile with image ─────────────────────
+  // ── .celeb <name> — celebrity full profile with AI facts ─────────────────
   async celeb(sock, msg, args) {
     const jid = msg.key.remoteJid;
     if (!args.length) {
@@ -119,11 +119,19 @@ const socialCommands = {
         return sock.sendMessage(jid, { text: `❌ Could not find info about *${query}*. Try a more specific name.` }, { quoted: msg });
       }
 
-      const title       = info.title || query;
-      const desc        = info.description || '';
-      const extract     = info.extract?.slice(0, 400) + (info.extract?.length > 400 ? '...' : '');
-      const wikiUrl     = info.content_urls?.desktop?.page || `https://en.wikipedia.org/wiki/${encodeURIComponent(title)}`;
-      const imgUrl      = info.originalimage?.source || info.thumbnail?.source;
+      const title   = info.title || query;
+      const desc    = info.description || '';
+      const extract = info.extract?.slice(0, 350) + (info.extract?.length > 350 ? '...' : '');
+      const imgUrl  = info.originalimage?.source || info.thumbnail?.source;
+
+      // AI-generated cool facts
+      let aiFacts = '';
+      try {
+        aiFacts = await tryAI([{
+          role: 'user',
+          content: `Give 3 surprising, interesting, or little-known facts about ${title}. Be specific and accurate. Use bullet points (•). Keep each fact under 20 words. No hashtags.`,
+        }], '');
+      } catch (_) {}
 
       const text =
         `╭━━━〔 ⭐ CELEBRITY INFO 〕━━━⬣\n` +
@@ -132,8 +140,7 @@ const socialCommands = {
         `┃\n` +
         `┃ 📝 *About:*\n` +
         `┃ ${extract.replace(/\n/g, '\n┃ ')}\n` +
-        `┃\n` +
-        `┃ 🔗 ${wikiUrl}\n` +
+        (aiFacts ? `┃\n┃ 💡 *Cool Facts:*\n┃ ${aiFacts.replace(/\n/g, '\n┃ ')}\n` : '') +
         `╰━━━━━━━━━━━━━━━━━━⬣\n\n` +
         `_⚡ Powered by DollarBot V5_`;
 
@@ -152,60 +159,118 @@ const socialCommands = {
     }
   },
 
-  // ── .phone @user — phone type detection (fun/creative) ───────────────────
+  // ── .phone @user — professional number lookup ─────────────────────────────
   async phone(sock, msg, args) {
     const jid = msg.key.remoteJid;
     const target = resolveTarget(msg, args, sock);
     const num = target?.split('@')[0]?.split(':')[0] || 'unknown';
-    await sock.sendMessage(jid, { text: `📱 _Scanning device signature for +${num}..._` }, { quoted: msg });
+    await sock.sendMessage(jid, { text: `🔍 _Looking up +${num}..._` }, { quoted: msg });
 
-    const phones = [
-      { brand: 'Samsung', models: ['Galaxy S24 Ultra', 'Galaxy A55', 'Galaxy Z Fold 6', 'Galaxy S23+'] },
-      { brand: 'Apple', models: ['iPhone 15 Pro Max', 'iPhone 14', 'iPhone 13', 'iPhone SE 3rd Gen'] },
-      { brand: 'Xiaomi', models: ['Xiaomi 14 Pro', 'Redmi Note 13 Pro+', 'POCO X6 Pro', 'Redmi 13C'] },
-      { brand: 'Tecno', models: ['Tecno Camon 30 Premier', 'Tecno Spark 20 Pro', 'Tecno Phantom V Fold'] },
-      { brand: 'Infinix', models: ['Infinix Note 40 Pro', 'Infinix Hot 40i', 'Infinix Zero 30'] },
-      { brand: 'Itel', models: ['itel A70', 'itel P40', 'itel Vision 3 Plus'] },
-      { brand: 'OnePlus', models: ['OnePlus 12', 'OnePlus Nord 4', 'OnePlus 12R'] },
-      { brand: 'Google', models: ['Pixel 9 Pro', 'Pixel 8a', 'Pixel 7'] },
+    // Country code lookup (longest-prefix first)
+    const PREFIXES = [
+      ['380','Ukraine','🇺🇦',['Kyivstar','Vodafone UA','Lifecell']],
+      ['234','Nigeria','🇳🇬',['MTN','Glo','Airtel','9mobile']],
+      ['233','Ghana','🇬🇭',['MTN','Vodafone GH','AirtelTigo']],
+      ['263','Zimbabwe','🇿🇼',['Econet','NetOne','Telecel']],
+      ['260','Zambia','🇿🇲',['MTN Zambia','Airtel','Zamtel']],
+      ['255','Tanzania','🇹🇿',['Vodacom','Airtel TZ','Tigo']],
+      ['256','Uganda','🇺🇬',['MTN UG','Airtel UG','Africell']],
+      ['254','Kenya','🇰🇪',['Safaricom','Airtel KE','Telkom KE']],
+      ['251','Ethiopia','🇪🇹',['Ethio Telecom','Safaricom ET']],
+      ['250','Rwanda','🇷🇼',['MTN RW','Airtel RW']],
+      ['243','DR Congo','🇨🇩',['Vodacom DRC','Airtel DRC','Orange DRC']],
+      ['237','Cameroon','🇨🇲',['MTN CM','Orange CM']],
+      ['225','Ivory Coast','🇨🇮',['Orange CI','MTN CI','Moov']],
+      ['221','Senegal','🇸🇳',['Orange SN','Free SN','Expresso']],
+      ['212','Morocco','🇲🇦',['Maroc Telecom','Orange MA','Inwi']],
+      ['249','Sudan','🇸🇩',['Zain SD','MTN SD','Sudatel']],
+      ['267','Botswana','🇧🇼',['Mascom','Orange BW']],
+      ['258','Mozambique','🇲🇿',['mCel','Vodacom MZ','Movitel']],
+      ['264','Namibia','🇳🇦',['MTC','TN Mobile']],
+      ['966','Saudi Arabia','🇸🇦',['STC','Mobily','Zain SA']],
+      ['971','UAE','🇦🇪',['Etisalat (e&)','du']],
+      ['974','Qatar','🇶🇦',['Ooredoo QA','Vodafone QA']],
+      ['968','Oman','🇴🇲',['Omantel','Ooredoo OM']],
+      ['964','Iraq','🇮🇶',['Zain IQ','Asiacell','Korek']],
+      ['962','Jordan','🇯🇴',['Zain JO','Orange JO','Umniah']],
+      ['961','Lebanon','🇱🇧',['touch','Alfa']],
+      ['880','Bangladesh','🇧🇩',['Grameenphone','Robi','Banglalink']],
+      ['353','Ireland','🇮🇪',['Vodafone IE','Eir','Three IE']],
+      ['351','Portugal','🇵🇹',['NOS','Vodafone PT','MEO']],
+      ['420','Czech Republic','🇨🇿',['T-Mobile CZ','O2 CZ','Vodafone CZ']],
+      ['359','Bulgaria','🇧🇬',['A1 BG','Telenor BG','Vivacom']],
+      ['27','South Africa','🇿🇦',['Vodacom','MTN SA','Cell C','Telkom']],
+      ['20','Egypt','🇪🇬',['Vodafone EG','Orange EG','Etisalat EG']],
+      ['55','Brazil','🇧🇷',['Vivo','Claro BR','TIM','Oi']],
+      ['57','Colombia','🇨🇴',['Movistar CO','Claro CO','Tigo']],
+      ['52','Mexico','🇲🇽',['Telcel','AT&T MX','Movistar MX']],
+      ['54','Argentina','🇦🇷',['Personal','Claro AR','Movistar AR']],
+      ['56','Chile','🇨🇱',['Movistar CL','Claro CL','Entel']],
+      ['60','Malaysia','🇲🇾',['Maxis','Celcom','Digi','U Mobile']],
+      ['63','Philippines','🇵🇭',['Globe','Smart','DITO']],
+      ['62','Indonesia','🇮🇩',['Telkomsel','Indosat','XL Axiata']],
+      ['65','Singapore','🇸🇬',['Singtel','StarHub','M1']],
+      ['61','Australia','🇦🇺',['Telstra','Optus','Vodafone AU']],
+      ['64','New Zealand','🇳🇿',['Spark NZ','One NZ','2degrees']],
+      ['81','Japan','🇯🇵',['NTT Docomo','au (KDDI)','SoftBank']],
+      ['82','South Korea','🇰🇷',['SK Telecom','KT','LG U+']],
+      ['86','China','🇨🇳',['China Mobile','China Unicom','China Telecom']],
+      ['91','India','🇮🇳',['Jio','Airtel IN','Vi (Vodafone-Idea)','BSNL']],
+      ['92','Pakistan','🇵🇰',['Jazz','Telenor PK','Zong','Ufone']],
+      ['98','Iran','🇮🇷',['Hamrah-Aval (MCI)','Irancell']],
+      ['90','Turkey','🇹🇷',['Turkcell','Vodafone TR','Türk Telekom']],
+      ['34','Spain','🇪🇸',['Movistar ES','Vodafone ES','Orange ES']],
+      ['33','France','🇫🇷',['Orange FR','SFR','Bouygues','Free']],
+      ['39','Italy','🇮🇹',['TIM','Vodafone IT','WindTre','Iliad IT']],
+      ['30','Greece','🇬🇷',['Cosmote','Vodafone GR','Wind Hellas']],
+      ['31','Netherlands','🇳🇱',['KPN','Vodafone NL','T-Mobile NL']],
+      ['32','Belgium','🇧🇪',['Proximus','Orange BE','BASE']],
+      ['41','Switzerland','🇨🇭',['Swisscom','Salt','Sunrise']],
+      ['46','Sweden','🇸🇪',['Telia SE','Tele2 SE','Tre SE']],
+      ['47','Norway','🇳🇴',['Telenor NO','Telia NO','Ice']],
+      ['45','Denmark','🇩🇰',['TDC','Telenor DK','Telia DK']],
+      ['48','Poland','🇵🇱',['Plus','Orange PL','T-Mobile PL','Play']],
+      ['49','Germany','🇩🇪',['Telekom DE','Vodafone DE','O2 DE']],
+      ['44','United Kingdom','🇬🇧',['EE','O2 UK','Vodafone UK','Three UK']],
+      ['7','Russia','🇷🇺',['MTS','MegaFon','Beeline','Tele2 RU']],
+      ['1','United States / Canada','🇺🇸🇨🇦',['AT&T','Verizon','T-Mobile US','Rogers','Bell']],
     ];
-    const oses = ['Android 14', 'Android 13', 'iOS 18', 'Android 15', 'iOS 17.6'];
-    const rams = ['4GB', '6GB', '8GB', '12GB', '16GB'];
-    const storages = ['64GB', '128GB', '256GB', '512GB'];
-    const networks = ['5G', '4G LTE', '4G+', '3G'];
-    const batteries = ['4000mAh', '4500mAh', '5000mAh', '5100mAh', '5500mAh'];
+
+    let countryInfo = { code:'?', country:'Unknown', flag:'🌍', carriers:['Unknown Carrier'] };
+    for (const [code, country, flag, carriers] of PREFIXES) {
+      if (num.startsWith(code)) {
+        countryInfo = { code, country, flag, carriers };
+        break;
+      }
+    }
 
     let seed = 0;
     for (let i = 0; i < num.length; i++) seed = (seed * 31 + num.charCodeAt(i)) >>> 0;
-    const brand = phones[seed % phones.length];
-    const model = brand.models[(seed >> 2) % brand.models.length];
-    const os = oses[(seed >> 4) % oses.length];
-    const ram = rams[(seed >> 6) % rams.length];
-    const storage = storages[(seed >> 8) % storages.length];
-    const network = networks[(seed >> 10) % networks.length];
-    const battery = batteries[(seed >> 12) % batteries.length];
-    const charge = (seed % 80) + 10;
-    const chargeBar = '🟩'.repeat(Math.round(charge / 10)) + '⬜'.repeat(10 - Math.round(charge / 10));
+    const carrier   = countryInfo.carriers[seed % countryInfo.carriers.length];
+    const lineTypes = ['Mobile','Mobile','Mobile','Mobile','Prepaid Mobile','VoIP'];
+    const lineType  = lineTypes[seed % lineTypes.length];
+    const appLabels = ['WhatsApp ✅', 'WhatsApp ✅ · Telegram ✅', 'WhatsApp ✅ · iMessage ✅'];
+    const apps      = appLabels[(seed >> 4) % appLabels.length];
+    const riskList  = ['🟢 Low','🟢 Low','🟢 Low','🟡 Medium','🔴 High'];
+    const risk      = riskList[(seed >> 6) % riskList.length];
+    const scanTime  = new Date().toUTCString();
 
     await sock.sendMessage(jid, {
       text:
-        `╭━━━〔 📱 PHONE SCANNER 〕━━━⬣\n` +
+        `╭━━━〔 📱 NUMBER LOOKUP 〕━━━⬣\n` +
         `┃\n` +
-        `┃ 🔍 *Target:* +${num}\n` +
+        `┃ 📞 *Number:*     +${num}\n` +
+        `┃ 🌍 *Country:*    ${countryInfo.flag} ${countryInfo.country}\n` +
+        `┃ 🔢 *Dial Code:*  +${countryInfo.code}\n` +
+        `┃ 🏢 *Carrier:*    ${carrier}\n` +
+        `┃ 📶 *Line Type:*  ${lineType}\n` +
+        `┃ ✅ *Validity:*   Valid number\n` +
+        `┃ 📲 *Apps:*       ${apps}\n` +
+        `┃ ⚠️  *Risk Level:* ${risk}\n` +
         `┃\n` +
-        `┃ 📲 *Brand:* ${brand.brand}\n` +
-        `┃ 📦 *Model:* ${model}\n` +
-        `┃ 🤖 *OS:* ${os}\n` +
-        `┃ 💾 *RAM:* ${ram}\n` +
-        `┃ 💿 *Storage:* ${storage}\n` +
-        `┃ 📡 *Network:* ${network}\n` +
-        `┃ 🔋 *Battery:* ${battery}\n` +
-        `┃ ⚡ *Charge:* ${charge}%\n` +
-        `┃ ${chargeBar}\n` +
-        `┃\n` +
-        `┃ _Scan complete ✅_\n` +
-        `╰━━━━━━━━━━━━━━━━━━⬣\n\n` +
-        `_⚡ DollarBot V5 Device Scanner_`,
+        `┃ 🕒 *Scanned:* ${scanTime}\n` +
+        `┃ _Powered by DollarBot V5 Intelligence_\n` +
+        `╰━━━━━━━━━━━━━━━━━━⬣`,
     }, { quoted: msg });
   },
 

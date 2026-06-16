@@ -32,29 +32,30 @@ A powerful WhatsApp bot with AI chat, group management, games, fun commands, and
 
 - **User:** .ping .alive .owner .stats .info .details .time .jid .runtime .uptime
 - **Owner only:** .say .sendto .react .delete .autoreply .vv .broadcast .shutdown
-- **AI:** .cortex .mera .ask .codeai .roast .complimentai .weather .imagine .translate .story .poem .motivate .summarize .clear
-- **AI New:** .summary (group chat summary via Groq) .vision (image analysis) .manhwa (manga/manhwa search)
-- **Fun:** .joke .dadjoke .fact .advice .compliment .8ball .truth .dare .reverse .hotcheck .smartcheck .brainlevel .coolcheck .lovecheck
-- **Fun New:** .wouldyourather .neverhavei .paranoia .sus .iq .cringe .simp .rizzmeter .slay .bully .thisorthat .bodycount .conspiracy .superpower .typingtest .pickup .prank
+- **AI:** .cortex .mera .ask .codeai .roast .complimentai .weather .imagine .translate .story .poem .motivate .summarize .clear .summary .vision .stt .manhwa
+- **Fun:** .joke .dadjoke .fact .advice .compliment .8ball .truth .dare .reverse .hotcheck .brainlevel .wouldyourather .neverhavei .paranoia .iq .cringe .simp .rizzmeter .slay .bully .pickup .rap .genz .villain .hero .emojify
+- **Shocking (New):** .aura .battle .deeproast .spy .couple .powerup .bomb .stalk .astrology .lastwords .obituary .hype .verdict .fakeid
+- **Social:** .gaycheck .lesbiancheck .chad .sigma .npc .karen .toxic .demon .angel .goat .king .queen .baddie .savage .nerd .clout .swag .drip .luck .karma .crush .stancheck .celeb .phone .video .actor
 - **AI Extras:** .debate .quiz .bedtime .eli5 .acronym .haiku .caption .mythology .element .zodiac2 .numerology .dreaminterp .flag .timezone .bio
-- **Utility:** .calculate .genpass .encode .decode .qr .tinyurl .pingweb .tts
-- **Utility New:** .roman .palindrome .bmi .tip .worldclock .daysuntil .wordcount .lorem .mocktext .shuffle .age
-- **Games:** .coin .dice .rps .math .guess .slot .tictactoe
-- **Games New:** .trivia .hangman .hguess .scramble .highlow .hl .spinwheel .lottery .roulette
-- **Group:** .kick .promote .demote .mute .unmute .tagall .everyone .hidetag .grouplink .groupinfo .antilink .welcome
+- **Utility:** .calculate .genpass .encode .decode .qr .tinyurl .pingweb .tts .roman .bmi .tip .worldclock .daysuntil .wordcount .age
+- **Games:** .coin .dice .rps .math .guess .slot .tictactoe .trivia .hangman .scramble .highlow .spinwheel .lottery .roulette
+- **Group:** .kick .add .promote .demote .mute .unmute .tagall .everyone .hidetag .grouplink .groupinfo .antilink .welcome .warn .warns .clearwarn .lock .unlock .setrules .rules .filter .antidelete .antibot
 - **Bypass (Owner):** .bypass admin/silence/unsilence/nosticker/nosave/status
 
 ## Architecture decisions
 
 - JavaScript (not TypeScript) for the bot — avoids Baileys compilation complexity
 - Pollinations AI for zero-cost AI — text generation (Cortex & Mera) + image generation
-- Groq API for fast LLM inference + vision model (llama-4-scout) + TTS (Orpheus)
+- Groq API for fast LLM inference + vision model (llama-4-scout) + TTS (Orpheus) + Whisper (.stt)
 - `useMultiFileAuthState` from Baileys — session saved to disk so login persists
 - Pairing code + QR code both supported at startup
 - Game state is in-memory (per chat JID), settings persisted to `data/store.json`
 - Auto-reply is strictly DM-only — never triggers in group chats
 - Group prefix detection: only messages starting with `.` are processed as commands in groups
 - Bypass state persisted in store.json per group JID
+- Holiday menu: `.menu christmas/halloween/eid/diwali/etc` — 23 themes with full emoji overhaul
+- Word filter: auto-deletes messages containing blocked words (per group, persisted in store)
+- Warning system: `.warn` gives 3 warnings then auto-kick (per group, persisted in store)
 
 ## Group Handler Fix
 

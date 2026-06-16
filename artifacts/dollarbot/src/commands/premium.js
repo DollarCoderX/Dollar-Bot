@@ -576,38 +576,60 @@ const premiumCommands = {
     }
   },
 
-  // ── 22. .video <query> ────────────────────────────────────────────────
+  // ── 22. .video <query> — YouTube search + AI presentation ───────────────
   async video(sock, msg, args) {
     const jid = msg.key.remoteJid;
-    if (!args.length) return sock.sendMessage(jid, { text: 'Usage: .video <video title or search query>\nExample: .video Alan Walker Faded' });
+    if (!args.length) return sock.sendMessage(jid, {
+      text: '🎬 *Usage:* .video <search query>\nExample: .video Alan Walker Faded',
+    }, { quoted: msg });
     const query = args.join(' ');
-    await sock.sendMessage(jid, { text: `🎥 *Searching YouTube for:* "${query}"...` });
+    await sock.sendMessage(jid, { text: `🎬 _Generating video for "${query}"...\n[Scanning neural database]\n[Matching visual patterns]_` }, { quoted: msg });
+
     try {
-      // 1. Search YouTube v3 Data API
-      const searchRes = await fetch(`https://www.googleapis.com/youtube/v3/search?part=snippet&q=${encodeURIComponent(query)}&type=video&key=${config.googleApiKey}&maxResults=1`);
-      if (!searchRes.ok) throw new Error('YouTube Search API quota reached or error.');
-      const searchData = await searchRes.json();
-      const item = searchData.items?.[0];
-      if (!item) return sock.sendMessage(jid, { text: '❌ No videos found on YouTube for that search query.' });
-      
-      const videoId = item.id.videoId;
-      const title = item.snippet.title;
-      const videoUrl = `https://www.youtube.com/watch?v=${videoId}`;
+      let YouTube;
+      try { YouTube = require('youtube-sr').default; } catch { YouTube = require('youtube-sr'); }
 
-      await sock.sendMessage(jid, { text: `📥 *Downloading video stream for:* \n"${title}"...\n\n_Please wait, preparing MP4 file..._` });
+      const results = await YouTube.search(query, { limit: 1, type: 'video', safeSearch: false });
+      const video = results?.[0];
 
-      // 2. Resolve via btch-downloader
-      const btch = require('btch-downloader');
-      const media = await btch.youtube(videoUrl);
-      if (!media || !media.mp4) throw new Error('Could not extract direct MP4 stream.');
+      if (!video || !video.id) {
+        return sock.sendMessage(jid, { text: `❌ No video found for *"${query}"*. Try a different search.` }, { quoted: msg });
+      }
 
-      // 3. Send video message to WhatsApp
-      await sock.sendMessage(jid, {
-        video: { url: media.mp4 },
-        caption: `🎥 *DollarBot YouTube Video Downloader*\n\n📌 *Title:* ${title}\n🔗 *Watch:* ${videoUrl}`
-      });
+      const title    = video.title || query;
+      const channel  = video.channel?.name || 'Unknown Channel';
+      const duration = video.durationFormatted || 'N/A';
+      const views    = video.views ? video.views.toLocaleString() : 'N/A';
+      const url      = `https://www.youtube.com/watch?v=${video.id}`;
+      const thumbUrl = video.thumbnail?.url || `https://img.youtube.com/vi/${video.id}/hqdefault.jpg`;
+
+      const caption =
+        `╭━━━〔 🎬 VIDEO RESULT 〕━━━⬣\n` +
+        `┃\n` +
+        `┃ 🎵 *${title}*\n` +
+        `┃\n` +
+        `┃ 📺 *Channel:* ${channel}\n` +
+        `┃ ⏱️  *Duration:* ${duration}\n` +
+        `┃ 👁️  *Views:* ${views}\n` +
+        `┃\n` +
+        `┃ 🔗 *Link:*\n` +
+        `┃ ${url}\n` +
+        `┃\n` +
+        `╰━━━━━━━━━━━━━━━━━━⬣\n\n` +
+        `_⚡ DollarBot V5 — Video Intelligence_`;
+
+      // Try to send with thumbnail image
+      try {
+        const imgRes = await fetch(thumbUrl, { timeout: 10000 });
+        if (imgRes.ok) {
+          const imgBuf = await imgRes.buffer();
+          return await sock.sendMessage(jid, { image: imgBuf, caption }, { quoted: msg });
+        }
+      } catch (_) {}
+
+      await sock.sendMessage(jid, { text: caption }, { quoted: msg });
     } catch (e) {
-      await sock.sendMessage(jid, { text: `❌ Video Downloader Error: ${e.message}` });
+      await sock.sendMessage(jid, { text: `❌ Video search error: ${e.message}` }, { quoted: msg });
     }
   },
 

@@ -6,7 +6,8 @@ const os   = require('os');
 
 const config        = require('./config');
 const store         = require('./lib/store');
-const { convertToOggOpus } = require('./lib/audio');
+const { convertToOggOpus, transcribeAudio } = require('./lib/audio');
+const shockCommands = require('./commands/shock');
 
 const userCommands    = require('./commands/user');
 const ownerCommands   = require('./commands/owner');
@@ -280,174 +281,184 @@ function reactToCmd(sock, msg, cmd) {
 //  Menu
 // ─────────────────────────────────────────────────────────────────────────────
 
-async function sendMenu(sock, jid, speedMs, quotedMsg) {
+// ── Holiday Easter-egg themes ──────────────────────────────────────────────
+const HOLIDAY_THEMES = {
+  christmas:    { e:'🎄', e2:'🎅', div:'🎄❄️🎄❄️🎄❄️🎄❄️🎄❄️🎄❄️🎄❄️🎄', title:'🎅 *𝗗𝗢𝗟𝗟𝗔𝗥𝗕𝗢𝗧 𝗩𝟱* 🎄', sub:'❄️ *Christmas Edition* 🎁',  footer:'🎄 *Merry Christmas & Happy Holidays!* 🎅' },
+  halloween:    { e:'🎃', e2:'👻', div:'🕸️👻🕸️👻🕸️👻🕸️👻🕸️👻🕸️👻🕸️👻', title:'👻 *𝗗𝗢𝗟𝗟𝗔𝗥𝗕𝗢𝗧 𝗩𝟱* 💀', sub:'🎃 *Halloween Edition* 🕸️',   footer:'🎃 *Happy Halloween! Stay spooky!* 👻' },
+  newyear:      { e:'🎆', e2:'🥂', div:'🎉🎆🎉🎆🎉🎆🎉🎆🎉🎆🎉🎆🎉🎆🎉', title:'🎆 *𝗗𝗢𝗟𝗟𝗔𝗥𝗕𝗢𝗧 𝗩𝟱* 🎉', sub:'🥂 *New Year Edition* 🎊',     footer:'🎆 *Happy New Year! New year, new era!* 🥂' },
+  valentine:    { e:'💕', e2:'💖', div:'💕💝💕💝💕💝💕💝💕💝💕💝💕💝💕', title:'💕 *𝗗𝗢𝗟𝗟𝗔𝗥𝗕𝗢𝗧 𝗩𝟱* 💖', sub:'💝 *Valentine\'s Day Edition* 💗', footer:'💕 *Happy Valentine\'s Day! Spread love!* 💖' },
+  easter:       { e:'🐰', e2:'🌸', div:'🌷🐣🌷🐣🌷🐣🌷🐣🌷🐣🌷🐣🌷🐣🌷', title:'🐰 *𝗗𝗢𝗟𝗟𝗔𝗥𝗕𝗢𝗧 𝗩𝟱* 🌸', sub:'🐣 *Easter Edition* 🥚',        footer:'🐣 *Happy Easter! Make it egg-stra special!* 🌸' },
+  thanksgiving: { e:'🦃', e2:'🍂', div:'🍁🦃🍁🦃🍁🦃🍁🦃🍁🦃🍁🦃🍁🦃🍁', title:'🦃 *𝗗𝗢𝗟𝗟𝗔𝗥𝗕𝗢𝗧 𝗩𝟱* 🍂', sub:'🍁 *Thanksgiving Edition* 🌽',  footer:'🦃 *Happy Thanksgiving! Grateful for every user!* 🍂' },
+  holi:         { e:'🌈', e2:'🎨', div:'🌈🎊🌈🎊🌈🎊🌈🎊🌈🎊🌈🎊🌈🎊🌈', title:'🌈 *𝗗𝗢𝗟𝗟𝗔𝗥𝗕𝗢𝗧 𝗩𝟱* 🎨', sub:'🎊 *Holi — Festival of Colors!* 🌺', footer:'🌈 *Happy Holi! May your life be colorful!* 🎊' },
+  diwali:       { e:'🪔', e2:'✨', div:'🪔💫🪔💫🪔💫🪔💫🪔💫🪔💫🪔💫🪔', title:'🪔 *𝗗𝗢𝗟𝗟𝗔𝗥𝗕𝗢𝗧 𝗩𝟱* ✨', sub:'💫 *Diwali — Festival of Lights!* 🌟', footer:'🪔 *Happy Diwali! May your life be bright!* ✨' },
+  eid:          { e:'🌙', e2:'⭐', div:'🌙⭐🌙⭐🌙⭐🌙⭐🌙⭐🌙⭐🌙⭐🌙', title:'🌙 *𝗗𝗢𝗟𝗟𝗔𝗥𝗕𝗢𝗧 𝗩𝟱* ⭐', sub:'☪️ *Eid Mubarak Edition* 🕌',    footer:'🌙 *Eid Mubarak! Blessings to all!* ☪️' },
+  ramadan:      { e:'🕌', e2:'📿', div:'🌙🕌🌙🕌🌙🕌🌙🕌🌙🕌🌙🕌🌙🕌🌙', title:'🌙 *𝗗𝗢𝗟𝗟𝗔𝗥𝗕𝗢𝗧 𝗩𝟱* 🕌', sub:'☪️ *Ramadan Kareem Edition* 🤲', footer:'🌙 *Ramadan Kareem! May your fast be blessed!* 🤲' },
+  birthday:     { e:'🎂', e2:'🎉', div:'🎈🎂🎈🎂🎈🎂🎈🎂🎈🎂🎈🎂🎈🎂🎈', title:'🎂 *𝗗𝗢𝗟𝗟𝗔𝗥𝗕𝗢𝗧 𝗩𝟱* 🎉', sub:'🎈 *Birthday Special Edition!* 🎁', footer:'🎂 *Happy Birthday! Make a wish!* 🎊' },
+  blackfriday:  { e:'🛍️', e2:'💰', div:'🏷️💰🏷️💰🏷️💰🏷️💰🏷️💰🏷️💰🏷️💰', title:'🛍️ *𝗗𝗢𝗟𝗟𝗔𝗥𝗕𝗢𝗧 𝗩𝟱* 💰', sub:'🏷️ *Black Friday Edition* 🔥',  footer:'🛍️ *Black Friday! All commands 100% FREE!* 💰' },
+  independence: { e:'🦅', e2:'🎆', div:'🎆🏛️🎆🏛️🎆🏛️🎆🏛️🎆🏛️🎆🏛️🎆🏛️', title:'🦅 *𝗗𝗢𝗟𝗟𝗔𝗥𝗕𝗢𝗧 𝗩𝟱* 🗽', sub:'🎆 *Independence Day Edition* 🏛️', footer:'🎆 *Happy Independence Day! Freedom to chat!* 🦅' },
+  pride:        { e:'🌈', e2:'🏳️‍🌈', div:'🌈💫🌈💫🌈💫🌈💫🌈💫🌈💫🌈💫🌈', title:'🌈 *𝗗𝗢𝗟𝗟𝗔𝗥𝗕𝗢𝗧 𝗩𝟱* 🏳️‍🌈', sub:'💫 *Pride Month Edition* ✨', footer:'🌈 *Happy Pride! Love is love!* 🏳️‍🌈' },
+  mothers:      { e:'💐', e2:'❤️', div:'💐🌹💐🌹💐🌹💐🌹💐🌹💐🌹💐🌹💐', title:'💐 *𝗗𝗢𝗟𝗟𝗔𝗥𝗕𝗢𝗧 𝗩𝟱* ❤️', sub:'🌹 *Mother\'s Day Edition* 👩',  footer:'💐 *Happy Mother\'s Day! To every incredible mum!* ❤️' },
+  fathers:      { e:'👨', e2:'🏆', div:'👨🏆👨🏆👨🏆👨🏆👨🏆👨🏆👨🏆👨', title:'👨 *𝗗𝗢𝗟𝗟𝗔𝗥𝗕𝗢𝗧 𝗩𝟱* 🏆', sub:'🎊 *Father\'s Day Edition* ⚽',  footer:'👨 *Happy Father\'s Day! To every great dad!* 🏆' },
+  summer:       { e:'☀️', e2:'🌊', div:'☀️🏖️☀️🏖️☀️🏖️☀️🏖️☀️🏖️☀️🏖️☀️🏖️', title:'☀️ *𝗗𝗢𝗟𝗟𝗔𝗥𝗕𝗢𝗧 𝗩𝟱* 🌊', sub:'🏖️ *Summer Vibes Edition* 🍹',  footer:'☀️ *Summer mode ON! Hot commands for hot days!* 🌊' },
+  winter:       { e:'❄️', e2:'⛄', div:'❄️⛄❄️⛄❄️⛄❄️⛄❄️⛄❄️⛄❄️⛄❄️', title:'❄️ *𝗗𝗢𝗟𝗟𝗔𝗥𝗕𝗢𝗧 𝗩𝟱* ⛄', sub:'🌨️ *Winter Edition* 🧊',       footer:'❄️ *Stay warm! DollarBot keeps the chat hot!* ⛄' },
+  spring:       { e:'🌸', e2:'🌻', div:'🌸🦋🌸🦋🌸🦋🌸🦋🌸🦋🌸🦋🌸🦋🌸', title:'🌸 *𝗗𝗢𝗟𝗟𝗔𝗥𝗕𝗢𝗧 𝗩𝟱* 🌻', sub:'🌱 *Spring Edition* 🦋',        footer:'🌸 *Spring is here! Fresh commands, fresh vibes!* 🌼' },
+  fall:         { e:'🍁', e2:'🍂', div:'🍁🌰🍁🌰🍁🌰🍁🌰🍁🌰🍁🌰🍁🌰🍁', title:'🍁 *𝗗𝗢𝗟𝗟𝗔𝗥𝗕𝗢𝗧 𝗩𝟱* 🍂', sub:'🌰 *Autumn / Fall Edition* 🎃',  footer:'🍁 *Fall vibes only! Leaf it to DollarBot!* 🍂' },
+  aprilfools:   { e:'🤡', e2:'😂', div:'🤡🃏🤡🃏🤡🃏🤡🃏🤡🃏🤡🃏🤡🃏🤡', title:'🤡 *𝗗𝗢𝗟𝗟𝗔𝗥𝗕𝗢𝗧 𝗩𝟱* 😂', sub:'🎭 *April Fools Edition* 🃏',   footer:'🤡 *April Fools! The real joke is how good this bot is!* 😂' },
+  lunar:        { e:'🧧', e2:'🐉', div:'🏮🧧🏮🧧🏮🧧🏮🧧🏮🧧🏮🧧🏮🧧🏮', title:'🐉 *𝗗𝗢𝗟𝗟𝗔𝗥𝗕𝗢𝗧 𝗩𝟱* 🧧', sub:'🏮 *Lunar New Year Edition* 🌕', footer:'🧧 *Gong Xi Fa Cai! Wishing you prosperity!* 🐉' },
+  minecraftday: { e:'⛏️', e2:'🌳', div:'⛏️🟫⛏️🟫⛏️🟫⛏️🟫⛏️🟫⛏️🟫⛏️🟫', title:'⛏️ *𝗗𝗢𝗟𝗟𝗔𝗥𝗕𝗢𝗧 𝗩𝟱* 🌳', sub:'🟫 *Minecraft Day Edition* 🎮',  footer:'⛏️ *Happy Minecraft Day! Mine your commands!* 🌳' },
+};
+// Aliases
+Object.assign(HOLIDAY_THEMES, {
+  autumn: HOLIDAY_THEMES.fall, xmas: HOLIDAY_THEMES.christmas, nye: HOLIDAY_THEMES.newyear,
+  newyears: HOLIDAY_THEMES.newyear, vday: HOLIDAY_THEMES.valentine, spooky: HOLIDAY_THEMES.halloween,
+  fools: HOLIDAY_THEMES.aprilfools, chinesenewyear: HOLIDAY_THEMES.lunar,
+  cny: HOLIDAY_THEMES.lunar, minecraft: HOLIDAY_THEMES.minecraftday,
+});
+
+async function sendMenu(sock, jid, speedMs, quotedMsg, holiday) {
   const ram     = getRamInfo();
   const uptime  = getUptime();
   const autoRep = (await store.get('autoreply')) ? 'ON ✅' : 'OFF ❌';
   const speed   = speedMs !== undefined ? `${speedMs}ms` : '–';
   const botMode = (await store.get('botMode')) || 'public';
-  const prefix  = (await store.get('botPrefix')) || config.prefix;
+  const p       = (await store.get('botPrefix')) || config.prefix;
+
+  const th  = holiday ? HOLIDAY_THEMES[holiday.toLowerCase()] : null;
+  const e1  = th ? th.e   : '⚡';
+  const e2  = th ? th.e2  : '☠️';
+  const div = th ? th.div : '◇━━━━━━━━━━━━━━━━━━━━━━━━━◇';
+  const titleLine = th ? th.title : `☠️ *𝗗𝗢𝗟𝗟𝗔𝗥𝗕𝗢𝗧 𝗩𝟱* ☠️`;
+  const subLine   = th ? `\n${th.sub}` : '';
+  const footerLine = th ? th.footer : `☠️ *DollarBot V5 — Neural ◇ Lethal ◇ Limitless* ☠️`;
 
   const caption =
-    `▸▸▸━━━━━━━━━━━━━━━━━━━━━━◁\n` +
-    `      ☠️ *𝗗𝗢𝗟𝗟𝗔𝗥𝗕𝗢𝗧 𝗩𝟱* ☠️\n` +
-    `▸▸▸━━━━━━━━━━━━━━━━━━━━━━◁\n\n` +
+    `${div}\n` +
+    `      ${titleLine}\n` +
+    `${div}${subLine}\n\n` +
 
-    `⚡ *Neural Core*  ::  *Active*\n` +
-    `🔒 *Signal*  ::  *Encrypted*\n` +
-    `◇━━━━━━━━━━━━━━━━━━━━━━━━━◇\n\n` +
+    `${e1} *Neural Core*  ::  *Active*\n` +
+    `🔒 *Signal*       ::  *Encrypted*\n` +
+    `${div}\n\n` +
 
-    `┌━━━〔 ☠️ *SYSTEM HUB* ☠️ 〕━━━┐\n` +
-    `│▪ *Dev*      :: ${config.ownerName} ${config.ownerCountry}\n` +
-    `│▪ *Prefix*   :: [ ${prefix} ]\n` +
-    `│▪ *Mode*     :: ${botMode === 'self' ? '🔒 SELF' : '🌐 PUBLIC'}\n` +
-    `│▪ *Engine*   :: ${config.engine}\n` +
-    `│▪ *Speed*    :: ${speed}\n` +
-    `│▪ *Uptime*   :: ${uptime}\n` +
-    `│▪ *Version*  :: ${config.version}\n` +
-    `│▪ *RAM*      :: ${ram.bar} ${ram.pct}%\n` +
-    `│▪ *AutoReply*:: ${autoRep}\n` +
-    `└━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┘\n\n` +
+    `┌━━━〔 ${e1} *SYSTEM HUB* ${e2} 〕━━━┐\n` +
+    `│▪ *Dev*       :: ${config.ownerName} ${config.ownerCountry}\n` +
+    `│▪ *Prefix*    :: [ ${p} ]\n` +
+    `│▪ *Mode*      :: ${botMode === 'self' ? '🔒 SELF' : '🌐 PUBLIC'}\n` +
+    `│▪ *Engine*    :: ${config.engine}\n` +
+    `│▪ *Speed*     :: ${speed}\n` +
+    `│▪ *Uptime*    :: ${uptime}\n` +
+    `│▪ *Version*   :: ${config.version}\n` +
+    `│▪ *RAM*       :: ${ram.bar} ${ram.pct}%\n` +
+    `│▪ *AutoReply* :: ${autoRep}\n` +
+    `└━━━━━━━━━━━━━━━━━━━━━━━━━━━━┘\n\n` +
 
-    `◇━━━━━━━━━━━━━━━━━━━━━━━━━◇\n\n` +
+    `${div}\n\n` +
 
     `┌━━━〔 👤 *USER* 〕━━━┐\n` +
-    `│ .ping .alive .owner .stats\n` +
-    `│ .info .time .jid .runtime\n` +
+    `│ ${p}ping ${p}alive ${p}owner ${p}stats\n` +
+    `│ ${p}info ${p}time ${p}jid ${p}runtime\n` +
     `└━━━━━━━━━━━━━━━━━━━━━┘\n\n` +
 
     `┌━━━〔 🔐 *OWNER* 〕━━━┐\n` +
-    `│ .say .sendto .react .vv\n` +
-    `│ .autoreply .broadcast .shutdown\n` +
-    `│ .prefix — change bot prefix\n` +
+    `│ ${p}say ${p}sendto ${p}react ${p}vv\n` +
+    `│ ${p}autoreply ${p}broadcast ${p}shutdown\n` +
+    `│ ${p}prefix — change bot prefix\n` +
     `└━━━━━━━━━━━━━━━━━━━━━┘\n\n` +
 
     `┌━━━〔 🧠 *AI CORE* 〕━━━┐\n` +
-    `│ .cortex .mera .ask .codeai\n` +
-    `│ .roast .complimentai .weather\n` +
-    `│ .imagine .translate .story .poem\n` +
-    `│ .motivate .summarize .summary\n` +
-    `│ .vision .manhwa .clear\n` +
-    `└━━━━━━━━━━━━━━━━━━━━━┘\n\n` +
-
-    `┌━━━〔 🔍 *SEARCH* 〕━━━┐\n` +
-    `│ .search .wiki .define\n` +
+    `│ ${p}cortex ${p}mera ${p}ask ${p}codeai\n` +
+    `│ ${p}roast ${p}complimentai ${p}weather\n` +
+    `│ ${p}imagine ${p}translate ${p}story ${p}poem\n` +
+    `│ ${p}motivate ${p}summarize ${p}summary\n` +
+    `│ ${p}vision ${p}stt ${p}manhwa ${p}clear\n` +
     `└━━━━━━━━━━━━━━━━━━━━━┘\n\n` +
 
     `┌━━━〔 🎭 *FUN* 〕━━━┐\n` +
-    `│ .joke .dadjoke .fact .advice\n` +
-    `│ .compliment .8ball .truth .dare\n` +
-    `│ .reverse .hotcheck .smartcheck\n` +
-    `│ .brainlevel .coolcheck .lovecheck\n` +
-    `│ .wouldyourather .neverhavei\n` +
-    `│ .paranoia .iq .cringe .simp\n` +
-    `│ .rizzmeter .slay .bully .thisorthat\n` +
-    `│ .bodycount .prank .fortune .sus\n` +
-    `│ .superpower .rap .genz .villain .hero\n` +
-    `│ .emojify .lovecalc .twotruth\n` +
-    `│ .darkhumor .roastbattle .personality\n` +
-    `│ .pickup .typingtest .wotd\n` +
+    `│ ${p}joke ${p}dadjoke ${p}fact ${p}advice\n` +
+    `│ ${p}compliment ${p}8ball ${p}truth ${p}dare\n` +
+    `│ ${p}reverse ${p}hotcheck ${p}brainlevel\n` +
+    `│ ${p}wouldyourather ${p}neverhavei ${p}paranoia\n` +
+    `│ ${p}iq ${p}cringe ${p}simp ${p}rizzmeter\n` +
+    `│ ${p}slay ${p}bully ${p}pickup ${p}rap\n` +
+    `│ ${p}genz ${p}villain ${p}hero ${p}emojify\n` +
     `└━━━━━━━━━━━━━━━━━━━━━┘\n\n` +
 
-    `┌━━━〔 👥 *SOCIAL* ☠️ 〕━━━┐\n` +
-    `│ .gaycheck .lesbiancheck .bisexualcheck\n` +
-    `│ .chad .sigma .npc .karen .toxic\n` +
-    `│ .demon .angel .goat .king .queen\n` +
-    `│ .baddie .savage .nerd .hater .single\n` +
-    `│ .clout .swag .drip .luck .karma\n` +
-    `│ .cuteness .crush .stancheck .salary\n` +
-    `│ .lifespan .phone .celeb .actor\n` +
+    `┌━━━〔 ${e1} *SHOCKING* ${e2} 〕━━━┐\n` +
+    `│ ${p}aura ${p}battle ${p}deeproast ${p}spy\n` +
+    `│ ${p}couple ${p}powerup ${p}stalk ${p}bomb\n` +
+    `│ ${p}astrology ${p}lastwords ${p}obituary\n` +
+    `│ ${p}hype ${p}verdict ${p}fakeid\n` +
+    `└━━━━━━━━━━━━━━━━━━━━━┘\n\n` +
+
+    `┌━━━〔 👥 *SOCIAL CHECKS* 〕━━━┐\n` +
+    `│ ${p}gaycheck ${p}lesbiancheck ${p}chad\n` +
+    `│ ${p}sigma ${p}npc ${p}karen ${p}toxic ${p}demon\n` +
+    `│ ${p}angel ${p}goat ${p}king ${p}queen ${p}baddie\n` +
+    `│ ${p}savage ${p}nerd ${p}clout ${p}swag ${p}drip\n` +
+    `│ ${p}luck ${p}karma ${p}crush ${p}stancheck\n` +
+    `│ ${p}celeb ${p}phone ${p}video ${p}actor\n` +
     `└━━━━━━━━━━━━━━━━━━━━━┘\n\n` +
 
     `┌━━━〔 🔮 *AI INTEL* 〕━━━┐\n` +
-    `│ .prediction .timeline .compare\n` +
-    `│ .versus .explain .funfact .history\n` +
-    `│ .hack .matrix .anagram .emoji2\n` +
-    `│ .reverse2 .dark2 .love2 .roast2\n` +
-    `│ .mythology2 .conspiracy2 .zodiac3\n` +
-    `│ .encode2 .decrypt .wordgame\n` +
-    `│ .country2 .planet .animal .nutrition\n` +
-    `│ .exercise .language2 .decode2\n` +
+    `│ ${p}prediction ${p}timeline ${p}compare\n` +
+    `│ ${p}versus ${p}explain ${p}funfact ${p}history\n` +
+    `│ ${p}hack ${p}matrix ${p}anagram ${p}emoji2\n` +
+    `│ ${p}dark2 ${p}love2 ${p}roast2 ${p}mythology2\n` +
+    `│ ${p}country2 ${p}planet ${p}animal ${p}nutrition\n` +
     `└━━━━━━━━━━━━━━━━━━━━━┘\n\n` +
 
     `┌━━━〔 🎮 *GAMES* 〕━━━┐\n` +
-    `│ .coin .dice .rps .math .guess\n` +
-    `│ .slot .tictactoe .trivia .hangman\n` +
-    `│ .hguess .scramble .highlow .hl\n` +
-    `│ .spinwheel .lottery .roulette\n` +
+    `│ ${p}coin ${p}dice ${p}rps ${p}math ${p}guess\n` +
+    `│ ${p}slot ${p}tictactoe ${p}trivia ${p}hangman\n` +
+    `│ ${p}scramble ${p}highlow ${p}spinwheel\n` +
+    `│ ${p}lottery ${p}roulette\n` +
     `└━━━━━━━━━━━━━━━━━━━━━┘\n\n` +
 
     `┌━━━〔 🛠️ *UTILITY* 〕━━━┐\n` +
-    `│ .calculate .genpass .encode .decode\n` +
-    `│ .qr .tinyurl .pingweb .tts\n` +
-    `│ .roman .palindrome .bmi .tip\n` +
-    `│ .worldclock .daysuntil .wordcount\n` +
-    `│ .lorem .mocktext .shuffle .age\n` +
+    `│ ${p}calculate ${p}genpass ${p}encode ${p}decode\n` +
+    `│ ${p}qr ${p}tinyurl ${p}pingweb ${p}tts\n` +
+    `│ ${p}roman ${p}bmi ${p}tip ${p}age\n` +
+    `│ ${p}worldclock ${p}daysuntil ${p}wordcount\n` +
     `└━━━━━━━━━━━━━━━━━━━━━┘\n\n` +
 
     `┌━━━〔 🎨 *STICKER* 〕━━━┐\n` +
-    `│ .sticker  — image/video ➔ sticker\n` +
-    `│ .toimg    — sticker ➔ image\n` +
-    `│ .steal    — rebrand any sticker\n` +
+    `│ ${p}sticker  — image/video ➔ sticker\n` +
+    `│ ${p}toimg    — sticker ➔ image\n` +
+    `│ ${p}steal    — rebrand any sticker\n` +
     `└━━━━━━━━━━━━━━━━━━━━━┘\n\n` +
 
     `┌━━━〔 👥 *GROUP* (admin) 〕━━━┐\n` +
-    `│ .kick .add .promote .demote\n` +
-    `│ .mute .unmute .tagall .everyone\n` +
-    `│ .grouplink .groupinfo .admins\n` +
-    `│ .antilink .welcome .antidelete\n` +
-    `│ .antibot .cancelbot .save .delete\n` +
+    `│ ${p}kick ${p}add ${p}promote ${p}demote\n` +
+    `│ ${p}mute ${p}unmute ${p}tagall ${p}everyone\n` +
+    `│ ${p}antilink ${p}welcome ${p}antidelete\n` +
+    `│ ${p}warn ${p}warns ${p}clearwarn ${p}lock\n` +
+    `│ ${p}filter ${p}setrules ${p}rules ${p}save\n` +
+    `│ ${p}antibot ${p}cancelbot ${p}delete\n` +
     `└━━━━━━━━━━━━━━━━━━━━━┘\n\n` +
 
     `┌━━━〔 🔓 *BYPASS* (Owner) 〕━━━┐\n` +
-    `│ .bypass admin/silence/unsilence\n` +
-    `│ .bypass nosticker/nosave/status\n` +
-    `│ .self   — owner-only mode\n` +
-    `│ .public — everyone mode\n` +
-    `└━━━━━━━━━━━━━━━━━━━━━┘\n\n` +
-
-    `┌━━━〔 🧩 *AI EXTRAS* 〕━━━┐\n` +
-    `│ .debate .quiz .bedtime .eli5\n` +
-    `│ .acronym .haiku .caption\n` +
-    `│ .mythology .element .zodiac2\n` +
-    `│ .numerology .dreaminterp .flag\n` +
-    `│ .timezone .bio\n` +
+    `│ ${p}bypass admin/silence/unsilence\n` +
+    `│ ${p}bypass nosticker/nosave/status\n` +
+    `│ ${p}self   — owner-only mode\n` +
+    `│ ${p}public — everyone mode\n` +
     `└━━━━━━━━━━━━━━━━━━━━━┘\n\n` +
 
     `┌━━━〔 💎 *PREMIUM* 〕━━━┐\n` +
-    `│ .song .video .enhance .ship\n` +
-    `│ .waifu .neko .searchgoogle\n` +
-    `│ .searchimage .gnews .crypto\n` +
-    `│ .tagadmin .getpp .vcard .poll\n` +
-    `│ .binary .morse .detect .fancy\n` +
+    `│ ${p}song ${p}video ${p}enhance ${p}ship\n` +
+    `│ ${p}waifu ${p}neko ${p}searchgoogle\n` +
+    `│ ${p}searchimage ${p}gnews ${p}crypto\n` +
+    `│ ${p}poll ${p}binary ${p}morse ${p}fancy\n` +
     `└━━━━━━━━━━━━━━━━━━━━━┘\n\n` +
 
-    `┌━━━〔 ✨ *EXTRA* 〕━━━┐\n` +
-    `│ .lyrics .recipe .horoscope .rizz\n` +
-    `│ .roastme .news .riddle .remind\n` +
-    `│ .styletext .meme .emoji .quote\n` +
-    `└━━━━━━━━━━━━━━━━━━━━━┘\n\n` +
-
-    `◇━━━━━━━━━━━━━━━━━━━━━━━━━◇\n` +
-    `┃ 🔗 *Channel:* wa.me/channel/0029VbCoG7s3AzNU5TtmiM3f\n` +
-    `◇━━━━━━━━━━━━━━━━━━━━━━━━━◇\n\n` +
-    `☠️ *DollarBot V5 — Neural ◇ Lethal ◇ Limitless* ☠️`;
+    `${div}\n` +
+    `_${footerLine}_\n` +
+    `${div}`;
 
   const imgPath = config.menuImages[menuImageIndex++ % config.menuImages.length];
   try {
     if (fs.existsSync(imgPath)) {
       await Promise.race([
-        safeSend(sock, jid, {
-          image: fs.readFileSync(imgPath),
-          caption,
-          contextInfo: {
-            forwardedNewsletterMessageInfo: {
-              newsletterJid: config.newsletterJid || '0029VbCoG7s3AzNU5TtmiM3f@newsletter',
-              newsletterName: 'DollarBot V5',
-              serverMessageId: 1,
-            },
-          },
-        }, replyOptions(quotedMsg)),
+        safeSend(sock, jid, { image: fs.readFileSync(imgPath), caption }, replyOptions(quotedMsg)),
         new Promise((_, r) => setTimeout(() => r(new Error('timeout')), 8000)),
       ]);
     } else {
@@ -462,14 +473,12 @@ async function sendMenu(sock, jid, speedMs, quotedMsg) {
     const oggPath = path.join(__dirname, '..', 'assets', 'menu_song.ogg');
     const mp3Path = path.join(__dirname, '..', 'assets', 'menu_song.mp3');
     if (fs.existsSync(oggPath)) {
-      // Use pre-converted OGG/Opus — no delay
       await sock.sendMessage(jid, {
         audio: fs.readFileSync(oggPath),
         mimetype: 'audio/ogg; codecs=opus',
         ptt: true,
       });
     } else if (fs.existsSync(mp3Path)) {
-      // Fallback: convert on the fly
       const oggBuffer = await convertToOggOpus(fs.readFileSync(mp3Path), 'mp3');
       await sock.sendMessage(jid, {
         audio: oggBuffer,
@@ -587,7 +596,7 @@ async function handleMessage(sock, msg) {
 
       // ── Menu ──────────────────────────────────────────────────────────────
       case 'menu': case 'help': case 'start':
-        await sendMenu(sock, jid, Date.now() - t0, msg);
+        await sendMenu(sock, jid, Date.now() - t0, msg, args[0]);
         break;
 
       // ── User ──────────────────────────────────────────────────────────────
@@ -861,9 +870,17 @@ async function handleMessage(sock, msg) {
       case 'welcome':
       case 'antidelete':
       case 'antibot':
-      case 'cancelbot': {
+      case 'cancelbot':
+      case 'warn':
+      case 'warns':
+      case 'clearwarn':
+      case 'lock':
+      case 'unlock':
+      case 'setrules':
+      case 'rules':
+      case 'filter': {
         if (!isGroup) return msg.reply('❌ This command only works in groups.');
-        if (!await senderIsAdmin()) return msg.reply('❌ Only group admins can use this command.');
+        if (cmd !== 'rules' && !await senderIsAdmin()) return msg.reply('❌ Only group admins can use this command.');
         await groupCommands[cmd](sock, msg, args);
         break;
       }
@@ -875,9 +892,63 @@ async function handleMessage(sock, msg) {
       case 'steal':   await stickerCommands.steal(sock, msg, args); break;
 
       // ── Wild Features ─────────────────────────────────────────────────────
-      case 'aura':       await wildCommands.aura(sock, msg, args); break;
       case 'roastwar':   await wildCommands.roastwar(sock, msg, args); break;
       case 'demotivate': await wildCommands.demotivate(sock, msg, args); break;
+
+      // ── Shocking Features ─────────────────────────────────────────────────
+      case 'aura':       await shockCommands.aura(sock, msg, args); break;
+      case 'battle':     await shockCommands.battle(sock, msg, args); break;
+      case 'deeproast':  await shockCommands.deeproast(sock, msg, args); break;
+      case 'spy':        await shockCommands.spy(sock, msg, args); break;
+      case 'couple':     await shockCommands.couple(sock, msg, args); break;
+      case 'powerup':    await shockCommands.powerup(sock, msg, args); break;
+      case 'bomb':       await shockCommands.bomb(sock, msg, args); break;
+      case 'stalk':      await shockCommands.stalk(sock, msg, args); break;
+      case 'astrology':  await shockCommands.astrology(sock, msg, args); break;
+      case 'lastwords':  await shockCommands.lastwords(sock, msg, args); break;
+      case 'obituary':   await shockCommands.obituary(sock, msg, args); break;
+      case 'hype':       await shockCommands.hype(sock, msg, args); break;
+      case 'verdict':    await shockCommands.verdict(sock, msg, args); break;
+      case 'fakeid':     await shockCommands.fakeid(sock, msg, args); break;
+
+      // ── Audio Transcription ────────────────────────────────────────────────
+      case 'stt':
+      case 'transcribe': {
+        const { downloadMediaMessage } = require('@whiskeysockets/baileys');
+        const SILENT_LOGGER = { level:'silent', fatal:()=>{}, error:()=>{}, warn:()=>{},
+          info:()=>{}, debug:()=>{}, trace:()=>{}, child:()=>SILENT_LOGGER };
+        const ctx = msg.message?.extendedTextMessage?.contextInfo ||
+          msg.message?.audioMessage?.contextInfo || null;
+        const audioMsg = ctx?.quotedMessage?.audioMessage
+          ? { message: ctx.quotedMessage, key: { remoteJid: jid, id: ctx.stanzaId, fromMe: false, participant: ctx.participant } }
+          : (msg.message?.audioMessage ? msg : null);
+        if (!audioMsg) {
+          await sock.sendMessage(jid, { text: '🎤 *Reply to a voice note or audio message* with `.stt` to transcribe it.\n\nExample: Reply to any audio message with `.stt`' }, { quoted: msg });
+          break;
+        }
+        await sock.sendMessage(jid, { text: '🎤 _Transcribing audio with Whisper AI..._' }, { quoted: msg });
+        try {
+          const buf = await downloadMediaMessage(audioMsg, 'buffer', {}, { logger: SILENT_LOGGER });
+          const mimeType = audioMsg.message?.audioMessage?.mimetype || 'audio/ogg';
+          const transcript = await transcribeAudio(buf, mimeType);
+          if (!transcript) {
+            await sock.sendMessage(jid, { text: '❌ No speech detected or audio was too short.' }, { quoted: msg });
+            break;
+          }
+          await sock.sendMessage(jid, {
+            text:
+              `╭━━━〔 🎤 TRANSCRIPTION 〕━━━⬣\n` +
+              `┃\n` +
+              `${transcript.split('\n').map(l => `┃ ${l}`).join('\n')}\n` +
+              `┃\n` +
+              `┃ _⚡ Whisper AI — DollarBot V5_\n` +
+              `╰━━━━━━━━━━━━━━━━━━⬣`,
+          }, { quoted: msg });
+        } catch (e) {
+          await sock.sendMessage(jid, { text: `❌ Transcription failed: ${e.message}` }, { quoted: msg });
+        }
+        break;
+      }
 
       // ── .save — save status/media to DM ──────────────────────────────────
       case 'save':
@@ -1103,6 +1174,19 @@ async function handleNonCommand(sock, msg, body, jid, sender, isGroup, isOwner) 
       if (antilinkGroups[jid] && LINK_RE.test(body)) {
         await handleAntilinkViolation(sock, jid, sender, msg);
         return;
+      }
+    }
+
+    // Word filter (groups only, non-owner, non-admin)
+    if (isGroup && !isOwner && body) {
+      const filterList = (await store.get(`filter_${jid}`)) || [];
+      if (filterList.length) {
+        const lower = body.toLowerCase();
+        const matched = filterList.find(w => lower.includes(w));
+        if (matched) {
+          try { await sock.sendMessage(jid, { delete: msg.key }); } catch (_) {}
+          return;
+        }
       }
     }
 
