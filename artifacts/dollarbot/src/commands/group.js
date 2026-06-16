@@ -6,7 +6,6 @@ function getSender(msg) {
   return msg?.key?.participant || msg?.key?.remoteJid || '';
 }
 
-// Get quoted participant directly (most reliable method)
 function getQuotedJid(msg) {
   return (
     msg.message?.extendedTextMessage?.contextInfo?.participant ||
@@ -18,7 +17,6 @@ function getQuotedJid(msg) {
   );
 }
 
-// Get mentioned JIDs from @tag
 function getMentioned(msg) {
   const ctx =
     msg.message?.extendedTextMessage?.contextInfo ||
@@ -27,7 +25,6 @@ function getMentioned(msg) {
   return ctx?.mentionedJid || [];
 }
 
-// Resolve the target user — tries quoted first, then @mention, then raw number arg
 function resolveTarget(msg, args) {
   const quoted = getQuotedJid(msg);
   if (quoted) return quoted;
@@ -43,7 +40,6 @@ function resolveTarget(msg, args) {
   return null;
 }
 
-// Normalize bot JID (strip :device suffix)
 function getBotJid(sock) {
   return (sock.user?.id || '').replace(/:.*@/, '@');
 }
@@ -62,6 +58,79 @@ async function isBotGroupAdmin(sock, jid) {
 
 async function send(sock, jid, msg, text, opts = {}) {
   return sock.sendMessage(jid, { text, ...opts }, { quoted: msg });
+}
+
+// ── Antilink warning tracker ───────────────────────────────────────────────
+
+const ANTILINK_WARN_LIMIT = 3;
+
+async function handleAntilinkViolation(sock, jid, sender, msg) {
+  try {
+    const antilinkGroups = (await store.get('antilinkGroups')) || {};
+    if (!antilinkGroups[jid]) return false;
+
+    const botIsAdmin = await isBotGroupAdmin(sock, jid);
+
+    // Delete the message first
+    if (botIsAdmin) {
+      try {
+        await sock.sendMessage(jid, { delete: msg.key });
+      } catch (_) {}
+    }
+
+    // Track warnings
+    const warnKey = `antilink_warn_${jid}`;
+    const warnings = (await store.get(warnKey)) || {};
+    const senderNum = sender.split('@')[0].split(':')[0];
+    warnings[senderNum] = (warnings[senderNum] || 0) + 1;
+    await store.set(warnKey, warnings);
+
+    const count = warnings[senderNum];
+    const remaining = ANTILINK_WARN_LIMIT - count;
+
+    if (count >= ANTILINK_WARN_LIMIT) {
+      // Kick the user
+      if (botIsAdmin) {
+        try {
+          await sock.groupParticipantsUpdate(jid, [sender], 'remove');
+          await sock.sendMessage(jid, {
+            text:
+              `╭━━━〔 🚫 ANTI-LINK 〕━━━⬣\n` +
+              `┃\n` +
+              `┃ @${senderNum} was *KICKED!* 🦶\n` +
+              `┃\n` +
+              `┃ Reason: Sent 3 links — auto-kicked.\n` +
+              `┃ No warnings remaining.\n` +
+              `┃\n` +
+              `┃ _DollarBot V5 — Protecting groups_\n` +
+              `╰━━━━━━━━━━━━━━━━━━⬣`,
+            mentions: [sender],
+          });
+        } catch (_) {}
+        // Reset warnings after kick
+        delete warnings[senderNum];
+        await store.set(warnKey, warnings);
+      }
+    } else {
+      // Send warning
+      await sock.sendMessage(jid, {
+        text:
+          `╭━━━〔 ⚠️ ANTI-LINK WARNING 〕━━━⬣\n` +
+          `┃\n` +
+          `┃ ⚠️ @${senderNum} — *Warning ${count}/${ANTILINK_WARN_LIMIT}*\n` +
+          `┃\n` +
+          `┃ Links are *not allowed* in this group!\n` +
+          `┃ ❌ ${remaining} more warning(s) before kick.\n` +
+          `┃\n` +
+          `┃ _Please follow group rules._\n` +
+          `╰━━━━━━━━━━━━━━━━━━⬣`,
+        mentions: [sender],
+      });
+    }
+    return true;
+  } catch (_) {
+    return false;
+  }
 }
 
 // ── Commands ─────────────────────────────────────────────────────────────
@@ -352,7 +421,7 @@ const groupCommands = {
     }
   },
 
-  // .antilink — toggle anti-link protection
+  // .antilink — toggle anti-link protection (3 warnings then kick)
   async antilink(sock, msg, args) {
     const jid = msg.key.remoteJid;
     const setting = args[0]?.toLowerCase();
@@ -363,9 +432,16 @@ const groupCommands = {
     antilinkGroups[jid] = setting === 'on';
     await store.set('antilinkGroups', antilinkGroups);
 
+    // Reset warnings when toggling
+    if (setting === 'off') {
+      await store.set(`antilink_warn_${jid}`, {});
+    }
+
     await send(sock, jid, msg,
       `🔗 Anti-Link is now *${setting.toUpperCase()}* ${setting === 'on' ? '✅' : '❌'}\n` +
-      (setting === 'on' ? 'Members sending links will have their message deleted.' : 'Link detection disabled.')
+      (setting === 'on'
+        ? '⚠️ Members get *3 warnings* before being kicked.\nLinks will be deleted automatically.'
+        : 'Link detection disabled.')
     );
   },
 
@@ -398,13 +474,11 @@ const groupCommands = {
 
     await send(sock, jid, msg,
       `🗑️ Anti-Delete is now *${setting.toUpperCase()}* ${setting === 'on' ? '✅' : '❌'}\n` +
-      (setting === 'on' ? 'Deleted messages in this group will be intercepted and resent.' : 'Anti-delete disabled.')
+      (setting === 'on' ? 'Deleted messages in this group will be resent for everyone to see.' : 'Anti-delete disabled.')
     );
   },
 
-
-  // .antibot — kick any bot (non-human) detected in the group except DollarBot
-  // Detection: checks verifiedName, known bot number patterns, and bot name keywords
+  // .antibot — kick any bot detected in the group except DollarBot
   async antibot(sock, msg, args) {
     const jid = msg.key.remoteJid;
     const setting = args[0]?.toLowerCase();
@@ -418,34 +492,25 @@ const groupCommands = {
     await send(sock, jid, msg,
       `🤖 Anti-Bot is now *${setting.toUpperCase()}* ${setting === 'on' ? '✅' : '❌'}\n` +
       (setting === 'on'
-        ? '_Any bot detected in this group (except DollarBot) will be kicked automatically._'
+        ? '_Any rival bot detected in this group (except DollarBot) will be kicked automatically._'
         : 'Anti-bot disabled.')
     );
   },
 
-  // .cancelbot — neutralize another bot's command by sending the same command first
-  // Usage: .cancelbot .commandprefix  (e.g. .cancelbot /kick)
-  // This makes your bot respond to that command before the rival bot does,
-  // effectively cancelling it or overriding its output.
+  // .cancelbot — neutralize another bot's command
   async cancelbot(sock, msg, args) {
     const jid = msg.key.remoteJid;
 
     if (!args.length) {
       return send(sock, jid, msg,
         `╭━━━〔 🛡️ CANCEL-BOT 〕━━━⬣\n` +
-        `┃ Block rival bot commands!\n` +
-        `┃\n` +
+        `┃ Block rival bot commands!\n┃\n` +
         `┃ *Usage:*\n` +
         `┃ .cancelbot on  — intercept mode\n` +
         `┃ .cancelbot off — disable\n` +
         `┃ .cancelbot add <prefix>\n` +
-        `┃   e.g: .cancelbot add /kick\n` +
-        `┃        .cancelbot add !\n` +
-        `┃\n` +
-        `┃ When ON, bot intercepts any\n` +
-        `┃ message starting with rival\n` +
-        `┃ prefixes and deletes it before\n` +
-        `┃ the rival bot can respond.\n` +
+        `┃ .cancelbot list\n` +
+        `┃ .cancelbot clear\n` +
         `╰━━━━━━━━━━━━━━━━━━⬣`
       );
     }
@@ -458,10 +523,7 @@ const groupCommands = {
       cancelbotData[jid].active = subCmd === 'on';
       await store.set('cancelbotGroups', cancelbotData);
       return send(sock, jid, msg,
-        `🛡️ Cancel-Bot is now *${subCmd.toUpperCase()}* ${subCmd === 'on' ? '✅' : '❌'}\n` +
-        (subCmd === 'on'
-          ? `_Rival bot commands with tracked prefixes will be auto-deleted._\n_Add prefixes: .cancelbot add /<cmd>_`
-          : 'Cancel-bot disabled.')
+        `🛡️ Cancel-Bot is now *${subCmd.toUpperCase()}* ${subCmd === 'on' ? '✅' : '❌'}`
       );
     }
 
@@ -472,10 +534,7 @@ const groupCommands = {
         cancelbotData[jid].prefixes.push(prefix);
       }
       await store.set('cancelbotGroups', cancelbotData);
-      return send(sock, jid, msg,
-        `✅ Added *${prefix}* to cancel-bot list!\n` +
-        `Current prefixes: *${cancelbotData[jid].prefixes.join(', ')}*`
-      );
+      return send(sock, jid, msg, `✅ Added *${prefix}* to cancel-bot list!`);
     }
 
     if (subCmd === 'list') {
@@ -515,6 +574,89 @@ const groupCommands = {
       await send(sock, jid, msg, `❌ Could not delete: ${e.message}`);
     }
   },
+
+  // .save — save a status/media to gallery (forward to user)
+  async save(sock, msg) {
+    const jid = msg.key.remoteJid;
+    const sender = getSender(msg);
+    const { downloadMediaMessage } = require('@whiskeysockets/baileys');
+
+    const SILENT_LOGGER = {
+      level: 'silent', fatal: () => {}, error: () => {}, warn: () => {},
+      info: () => {}, debug: () => {}, trace: () => {},
+      child: () => SILENT_LOGGER,
+    };
+
+    try {
+      // Check quoted message for media
+      const ctx =
+        msg.message?.extendedTextMessage?.contextInfo ||
+        msg.message?.imageMessage?.contextInfo ||
+        msg.message?.videoMessage?.contextInfo ||
+        null;
+
+      if (!ctx?.quotedMessage) {
+        return send(sock, jid, msg,
+          '❌ Reply to a status/message with *.save* to save it.\n\n' +
+          '_Works with: images, videos, audio, documents_'
+        );
+      }
+
+      const qMsg = { message: ctx.quotedMessage, key: { remoteJid: jid, id: ctx.stanzaId, participant: ctx.participant, fromMe: false } };
+
+      const mediaTypes = ['imageMessage', 'videoMessage', 'audioMessage', 'documentMessage', 'stickerMessage'];
+      const mediaType = mediaTypes.find(t => ctx.quotedMessage[t]);
+
+      if (!mediaType) {
+        return send(sock, jid, msg, '❌ No downloadable media found in the replied message.');
+      }
+
+      await send(sock, jid, msg, '⬇️ _Saving media..._');
+
+      const buffer = await downloadMediaMessage(qMsg, 'buffer', {}, { logger: SILENT_LOGGER });
+      if (!buffer || !buffer.length) {
+        return send(sock, jid, msg, '❌ Could not download media. It may have expired.');
+      }
+
+      // Send to sender's DM so it saves to their gallery
+      const targetJid = sender.includes('@g.us') ? sender : (sender.includes('@s.whatsapp.net') ? sender : sender + '@s.whatsapp.net');
+      const dmJid = targetJid.replace(/@g\.us$/, '@s.whatsapp.net');
+
+      if (mediaType === 'imageMessage') {
+        await sock.sendMessage(dmJid, {
+          image: buffer,
+          caption: '✅ *Saved!* Image saved to your chat.\n\n_DollarBot V5 — Status Saver_',
+        });
+        await send(sock, jid, msg, '✅ *Image saved!* Check your DMs.');
+      } else if (mediaType === 'videoMessage') {
+        await sock.sendMessage(dmJid, {
+          video: buffer,
+          caption: '✅ *Saved!* Video saved to your chat.\n\n_DollarBot V5 — Status Saver_',
+        });
+        await send(sock, jid, msg, '✅ *Video saved!* Check your DMs.');
+      } else if (mediaType === 'audioMessage') {
+        await sock.sendMessage(dmJid, {
+          audio: buffer,
+          mimetype: ctx.quotedMessage[mediaType].mimetype || 'audio/mp4',
+          ptt: ctx.quotedMessage[mediaType].ptt || false,
+        });
+        await send(sock, jid, msg, '✅ *Audio saved!* Check your DMs.');
+      } else if (mediaType === 'documentMessage') {
+        await sock.sendMessage(dmJid, {
+          document: buffer,
+          mimetype: ctx.quotedMessage[mediaType].mimetype || 'application/octet-stream',
+          fileName: ctx.quotedMessage[mediaType].fileName || 'file',
+          caption: '✅ *Saved!* Document saved.\n\n_DollarBot V5 — Status Saver_',
+        });
+        await send(sock, jid, msg, '✅ *Document saved!* Check your DMs.');
+      } else if (mediaType === 'stickerMessage') {
+        await sock.sendMessage(dmJid, { sticker: buffer });
+        await send(sock, jid, msg, '✅ *Sticker saved!* Check your DMs.');
+      }
+    } catch (e) {
+      await send(sock, jid, msg, `❌ Save failed: ${e.message}`);
+    }
+  },
 };
 
-module.exports = groupCommands;
+module.exports = { groupCommands, handleAntilinkViolation };

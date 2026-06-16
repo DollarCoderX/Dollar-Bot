@@ -13,7 +13,7 @@ const aiCommands      = require('./commands/ai');
 const funCommands     = require('./commands/fun');
 const utilityCommands = require('./commands/utility');
 const gameCommands    = require('./commands/games');
-const groupCommands   = require('./commands/group');
+const { groupCommands, handleAntilinkViolation: _halb } = require('./commands/group');
 const searchCommands  = require('./commands/search');
 const extraCommands   = require('./commands/extra');
 const premiumCommands = require('./commands/premium');
@@ -27,6 +27,8 @@ const stickerCommands = require('./commands/sticker');
 const wildCommands    = require('./commands/wild');
 const geminiCommands  = require('./commands/gemini');
 const { safeSend } = require('./lib/safe-send');
+const socialCommands  = require('./commands/social');
+const { handleAntilinkViolation } = require('./commands/group');
 
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -280,154 +282,192 @@ function reactToCmd(sock, msg, cmd) {
 async function sendMenu(sock, jid, speedMs, quotedMsg) {
   const ram     = getRamInfo();
   const uptime  = getUptime();
-  const autoRep = (await store.get('autoreply')) ? 'ON' : 'OFF';
+  const autoRep = (await store.get('autoreply')) ? 'ON ✅' : 'OFF ❌';
   const speed   = speedMs !== undefined ? `${speedMs}ms` : '–';
   const botMode = (await store.get('botMode')) || 'public';
+  const prefix  = (await store.get('botPrefix')) || config.prefix;
 
   const caption =
-    `╭━━━〔 💵 𝐃𝐎𝐋𝐋𝐀𝐑𝐁𝐎𝐓 𝐕5 〕━━━⬣\n` +
-    `┃ ✦ Owner   : ${config.ownerName}\n` +
-    `┃ ✦ Country : ${config.ownerCountry}\n` +
-    `┃ ✦ Prefix  : [ ${config.prefix} ]\n` +
-    `┃ ✦ Mode    : ${botMode === 'self' ? '🔒 SELF (Owner Only)' : '🌐 PUBLIC'}\n` +
-    `┃ ✦ Engine  : ${config.engine}\n` +
-    `┃ ✦ Speed   : ${speed}\n` +
-    `┃ ✦ Uptime  : ${uptime}\n` +
-    `┃ ✦ Version : ${config.version}\n` +
-    `┃ ✦ RAM     : ${ram.bar} ${ram.pct}%\n` +
-    `┃ ✦ AutoReply: ${autoRep}\n` +
-    `╰━━━━━━━━━━━━━━━━━━⬣\n\n` +
-    `«⚡ Developed By Dollar\n⚡ Powered By Cortex & Mera AI»\n\n` +
+    `▸▸▸━━━━━━━━━━━━━━━━━━━━━━◁\n` +
+    `      ☠️ *𝗗𝗢𝗟𝗟𝗔𝗥𝗕𝗢𝗧 𝗩𝟱* ☠️\n` +
+    `▸▸▸━━━━━━━━━━━━━━━━━━━━━━◁\n\n` +
 
-    `╭━━━〔 👤 USER 〕━━━⬣\n` +
-    `┃ .ping .alive .owner .stats .info\n` +
-    `┃ .time .jid .runtime .uptime\n` +
-    `╰━━━━━━━━━━━━━━━━━━⬣\n\n` +
+    `⚡ *Neural Core*  ::  *Active*\n` +
+    `🔒 *Signal*  ::  *Encrypted*\n` +
+    `◇━━━━━━━━━━━━━━━━━━━━━━━━━◇\n\n` +
 
-    `╭━━━〔 🔐 OWNER 〕━━━⬣\n` +
-    `┃ .say .sendto .react .delete .vv\n` +
-    `┃ .autoreply .broadcast .shutdown\n` +
-    `╰━━━━━━━━━━━━━━━━━━⬣\n\n` +
+    `┌━━━〔 ☠️ *SYSTEM HUB* ☠️ 〕━━━┐\n` +
+    `│▪ *Dev*      :: ${config.ownerName} ${config.ownerCountry}\n` +
+    `│▪ *Prefix*   :: [ ${prefix} ]\n` +
+    `│▪ *Mode*     :: ${botMode === 'self' ? '🔒 SELF' : '🌐 PUBLIC'}\n` +
+    `│▪ *Engine*   :: ${config.engine}\n` +
+    `│▪ *Speed*    :: ${speed}\n` +
+    `│▪ *Uptime*   :: ${uptime}\n` +
+    `│▪ *Version*  :: ${config.version}\n` +
+    `│▪ *RAM*      :: ${ram.bar} ${ram.pct}%\n` +
+    `│▪ *AutoReply*:: ${autoRep}\n` +
+    `└━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┘\n\n` +
 
-    `╭━━━〔 🧠 AI 〕━━━⬣\n` +
-    `┃ .cortex .mera .ask .codeai\n` +
-    `┃ .roast .complimentai .weather\n` +
-    `┃ .imagine .translate .story .poem\n` +
-    `┃ .motivate .summarize .clear\n` +
-    `┃ .vision .manhwa\n` +
-    `╰━━━━━━━━━━━━━━━━━━⬣\n\n` +
+    `◇━━━━━━━━━━━━━━━━━━━━━━━━━◇\n\n` +
 
-    `╭━━━〔 🔍 SEARCH 〕━━━⬣\n` +
-    `┃ .search .wiki .define\n` +
-    `╰━━━━━━━━━━━━━━━━━━⬣\n\n` +
+    `┌━━━〔 👤 *USER* 〕━━━┐\n` +
+    `│ .ping .alive .owner .stats\n` +
+    `│ .info .time .jid .runtime\n` +
+    `└━━━━━━━━━━━━━━━━━━━━━┘\n\n` +
 
-    `╭━━━〔 🎭 FUN 〕━━━⬣\n` +
-    `┃ .joke .dadjoke .fact .advice\n` +
-    `┃ .compliment .8ball .truth .dare\n` +
-    `┃ .reverse .hotcheck .smartcheck\n` +
-    `┃ .brainlevel .coolcheck .lovecheck\n` +
-    `┃ .wouldyourather .neverhavei\n` +
-    `┃ .paranoia .iq .cringe .simp\n` +
-    `┃ .rizzmeter .slay .bully .thisorthat\n` +
-    `┃ .bodycount .prank .conspiracy\n` +
-    `┃ .fortune .sus .superpower .rap\n` +
-    `┃ .genz .villain .hero\n` +
-    `┃ .emojify .lovecalc .twotruth\n` +
-    `┃ .darkhumor .advice2 .roastbattle\n` +
-    `┃ .friendlevel .personality .challenge\n` +
-    `┃ .rate .namemeaning .tonguetwister\n` +
-    `┃ .roastself .mission .yesorno .factcat\n` +
-    `┃ .wotd .typingtest .pickup\n` +
-    `╰━━━━━━━━━━━━━━━━━━⬣\n\n` +
+    `┌━━━〔 🔐 *OWNER* 〕━━━┐\n` +
+    `│ .say .sendto .react .vv\n` +
+    `│ .autoreply .broadcast .shutdown\n` +
+    `│ .prefix — change bot prefix\n` +
+    `└━━━━━━━━━━━━━━━━━━━━━┘\n\n` +
 
-    `╭━━━〔 🎮 GAMES 〕━━━⬣\n` +
-    `┃ .coin .dice .rps .math .guess\n` +
-    `┃ .slot .tictactoe .trivia .hangman\n` +
-    `┃ .hguess (hangman letter)\n` +
-    `┃ .scramble .highlow .hl <num>\n` +
-    `┃ .spinwheel .lottery .roulette\n` +
-    `╰━━━━━━━━━━━━━━━━━━⬣\n\n` +
+    `┌━━━〔 🧠 *AI CORE* 〕━━━┐\n` +
+    `│ .cortex .mera .ask .codeai\n` +
+    `│ .roast .complimentai .weather\n` +
+    `│ .imagine .translate .story .poem\n` +
+    `│ .motivate .summarize .summary\n` +
+    `│ .vision .manhwa .clear\n` +
+    `└━━━━━━━━━━━━━━━━━━━━━┘\n\n` +
 
-    `╭━━━〔 🛠️ UTILITY 〕━━━⬣\n` +
-    `┃ .calculate .genpass .encode .decode\n` +
-    `┃ .qr .tinyurl .pingweb .tts\n` +
-    `┃ .roman .palindrome .bmi .tip\n` +
-    `┃ .worldclock .daysuntil .wordcount\n` +
-    `┃ .lorem .mocktext .shuffle .age\n` +
-    `╰━━━━━━━━━━━━━━━━━━⬣\n\n` +
+    `┌━━━〔 🔍 *SEARCH* 〕━━━┐\n` +
+    `│ .search .wiki .define\n` +
+    `└━━━━━━━━━━━━━━━━━━━━━┘\n\n` +
 
-    `╭━━━〔 🎨 STICKER 〕━━━⬣\n` +
-    `┃ .sticker  — image/video → sticker\n` +
-    `┃ .toimage  — sticker → image\n` +
-    `┃ .steal    — rebrand any sticker\n` +
-    `╰━━━━━━━━━━━━━━━━━━⬣\n\n` +
+    `┌━━━〔 🎭 *FUN* 〕━━━┐\n` +
+    `│ .joke .dadjoke .fact .advice\n` +
+    `│ .compliment .8ball .truth .dare\n` +
+    `│ .reverse .hotcheck .smartcheck\n` +
+    `│ .brainlevel .coolcheck .lovecheck\n` +
+    `│ .wouldyourather .neverhavei\n` +
+    `│ .paranoia .iq .cringe .simp\n` +
+    `│ .rizzmeter .slay .bully .thisorthat\n` +
+    `│ .bodycount .prank .fortune .sus\n` +
+    `│ .superpower .rap .genz .villain .hero\n` +
+    `│ .emojify .lovecalc .twotruth\n` +
+    `│ .darkhumor .roastbattle .personality\n` +
+    `│ .pickup .typingtest .wotd\n` +
+    `└━━━━━━━━━━━━━━━━━━━━━┘\n\n` +
 
-    `╭━━━〔 ⚡ WILD FEATURES 〕━━━⬣\n` +
-    `┃ .aura       — AI aura/vibe scanner\n` +
-    `┃ .roastwar   — 2-player AI roast battle\n` +
-    `┃ .demotivate — brutal reality check\n` +
-    `╰━━━━━━━━━━━━━━━━━━⬣\n\n` +
+    `┌━━━〔 👥 *SOCIAL* ☠️ 〕━━━┐\n` +
+    `│ .gaycheck .lesbiancheck .bisexualcheck\n` +
+    `│ .chad .sigma .npc .karen .toxic\n` +
+    `│ .demon .angel .goat .king .queen\n` +
+    `│ .baddie .savage .nerd .hater .single\n` +
+    `│ .clout .swag .drip .luck .karma\n` +
+    `│ .cuteness .crush .stancheck .salary\n` +
+    `│ .lifespan .phone .celeb .actor\n` +
+    `└━━━━━━━━━━━━━━━━━━━━━┘\n\n` +
 
-    `╭━━━〔 👥 GROUP (admin) 〕━━━⬣\n` +
-    `┃ .kick .add .promote .demote\n` +
-    `┃ .mute .unmute .open .close\n` +
-    `┃ .tagall .everyone .hidetag\n` +
-    `┃ .grouplink .revoke .setname .setdesc\n` +
-    `┃ .groupinfo .admins .antilink .welcome\n` +
-    `┃ .antidelete .antibot .cancelbot .delete\n` +
-    `╰━━━━━━━━━━━━━━━━━━⬣\n\n` +
+    `┌━━━〔 🔮 *AI INTEL* 〕━━━┐\n` +
+    `│ .prediction .timeline .compare\n` +
+    `│ .versus .explain .funfact .history\n` +
+    `│ .hack .matrix .anagram .emoji2\n` +
+    `│ .reverse2 .dark2 .love2 .roast2\n` +
+    `│ .mythology2 .conspiracy2 .zodiac3\n` +
+    `│ .encode2 .decrypt .wordgame\n` +
+    `│ .country2 .planet .animal .nutrition\n` +
+    `│ .exercise .language2 .decode2\n` +
+    `└━━━━━━━━━━━━━━━━━━━━━┘\n\n` +
 
-    `╭━━━〔 🔓 BYPASS + MODE (Owner) 〕━━━⬣\n` +
-    `┃ .bypass admin/silence/unsilence\n` +
-    `┃ .bypass nosticker/nosave/status\n` +
-    `┃ .self  — bot responds to owner only\n` +
-    `┃ .public — bot responds to everyone\n` +
-    `╰━━━━━━━━━━━━━━━━━━⬣\n\n` +
+    `┌━━━〔 🎮 *GAMES* 〕━━━┐\n` +
+    `│ .coin .dice .rps .math .guess\n` +
+    `│ .slot .tictactoe .trivia .hangman\n` +
+    `│ .hguess .scramble .highlow .hl\n` +
+    `│ .spinwheel .lottery .roulette\n` +
+    `└━━━━━━━━━━━━━━━━━━━━━┘\n\n` +
 
-    `╭━━━〔 🧩 AI EXTRAS 〕━━━⬣\n` +
-    `┃ .debate .quiz .bedtime .eli5\n` +
-    `┃ .acronym .haiku .caption .prank\n` +
-    `┃ .mythology .element .zodiac2\n` +
-    `┃ .numerology .dreaminterp .flag\n` +
-    `┃ .timezone .bio .typingtest\n` +
-    `╰━━━━━━━━━━━━━━━━━━⬣\n\n` +
+    `┌━━━〔 🛠️ *UTILITY* 〕━━━┐\n` +
+    `│ .calculate .genpass .encode .decode\n` +
+    `│ .qr .tinyurl .pingweb .tts\n` +
+    `│ .roman .palindrome .bmi .tip\n` +
+    `│ .worldclock .daysuntil .wordcount\n` +
+    `│ .lorem .mocktext .shuffle .age\n` +
+    `└━━━━━━━━━━━━━━━━━━━━━┘\n\n` +
 
-    `╭━━━〔 💎 PREMIUM 〕━━━⬣\n` +
-    `┃ .song .video .searchgoogle\n` +
-    `┃ .searchimage .gnews .enhance\n` +
-    `┃ .ship .waifu .neko .crypto\n` +
-    `┃ .tagadmin .getpp .vcard .poll\n` +
-    `┃ .binary .morse .temp .currency\n` +
-    `┃ .dareme .truthme .factoid .gquote\n` +
-    `┃ .detect .summarizeweb .fancy\n` +
-    `╰━━━━━━━━━━━━━━━━━━⬣\n\n` +
+    `┌━━━〔 🎨 *STICKER* 〕━━━┐\n` +
+    `│ .sticker  — image/video ➔ sticker\n` +
+    `│ .toimg    — sticker ➔ image\n` +
+    `│ .steal    — rebrand any sticker\n` +
+    `└━━━━━━━━━━━━━━━━━━━━━┘\n\n` +
 
-    `╭━━━〔 ✨ EXTRA 〕━━━⬣\n` +
-    `┃ .lyrics .recipe .horoscope .rizz\n` +
-    `┃ .roastme .news .riddle .ipinfo\n` +
-    `┃ .remind .styletext .meme .emoji\n` +
-    `┃ .insult .quote\n` +
-    `╰━━━━━━━━━━━━━━━━━━⬣\n\n` +
+    `┌━━━〔 👥 *GROUP* (admin) 〕━━━┐\n` +
+    `│ .kick .add .promote .demote\n` +
+    `│ .mute .unmute .tagall .everyone\n` +
+    `│ .grouplink .groupinfo .admins\n` +
+    `│ .antilink .welcome .antidelete\n` +
+    `│ .antibot .cancelbot .save .delete\n` +
+    `└━━━━━━━━━━━━━━━━━━━━━┘\n\n` +
 
-    `╭━━━〔 🚀 STATUS 〕━━━⬣\n` +
-    `┃ DollarBot Online & Stable ✅\n` +
-    `┃ AI Systems Operational ⚡\n` +
-    `┃ Security Level : High 🔒\n` +
-    `╰━━━━━━━━━━━━━━━━━━⬣\n\n` +
+    `┌━━━〔 🔓 *BYPASS* (Owner) 〕━━━┐\n` +
+    `│ .bypass admin/silence/unsilence\n` +
+    `│ .bypass nosticker/nosave/status\n` +
+    `│ .self   — owner-only mode\n` +
+    `│ .public — everyone mode\n` +
+    `└━━━━━━━━━━━━━━━━━━━━━┘\n\n` +
 
-    `«💵 DollarBot V5 — Smart • Fast • Limitless»`;
+    `┌━━━〔 🧩 *AI EXTRAS* 〕━━━┐\n` +
+    `│ .debate .quiz .bedtime .eli5\n` +
+    `│ .acronym .haiku .caption\n` +
+    `│ .mythology .element .zodiac2\n` +
+    `│ .numerology .dreaminterp .flag\n` +
+    `│ .timezone .bio\n` +
+    `└━━━━━━━━━━━━━━━━━━━━━┘\n\n` +
+
+    `┌━━━〔 💎 *PREMIUM* 〕━━━┐\n` +
+    `│ .song .video .enhance .ship\n` +
+    `│ .waifu .neko .searchgoogle\n` +
+    `│ .searchimage .gnews .crypto\n` +
+    `│ .tagadmin .getpp .vcard .poll\n` +
+    `│ .binary .morse .detect .fancy\n` +
+    `└━━━━━━━━━━━━━━━━━━━━━┘\n\n` +
+
+    `┌━━━〔 ✨ *EXTRA* 〕━━━┐\n` +
+    `│ .lyrics .recipe .horoscope .rizz\n` +
+    `│ .roastme .news .riddle .remind\n` +
+    `│ .styletext .meme .emoji .quote\n` +
+    `└━━━━━━━━━━━━━━━━━━━━━┘\n\n` +
+
+    `◇━━━━━━━━━━━━━━━━━━━━━━━━━◇\n` +
+    `┃ 🔗 *Channel:* wa.me/channel/0029VbCoG7s3AzNU5TtmiM3f\n` +
+    `◇━━━━━━━━━━━━━━━━━━━━━━━━━◇\n\n` +
+    `☠️ *DollarBot V5 — Neural ◇ Lethal ◇ Limitless* ☠️`;
 
   const imgPath = config.menuImages[menuImageIndex++ % config.menuImages.length];
   try {
     if (fs.existsSync(imgPath)) {
       await Promise.race([
-        safeSend(sock, jid, { image: fs.readFileSync(imgPath), caption }, replyOptions(quotedMsg)),
+        safeSend(sock, jid, {
+          image: fs.readFileSync(imgPath),
+          caption,
+          contextInfo: {
+            forwardedNewsletterMessageInfo: {
+              newsletterJid: '0029VbCoG7s3AzNU5TtmiM3f@newsletter',
+              newsletterName: 'DollarBot V5',
+              serverMessageId: 1,
+            },
+          },
+        }, replyOptions(quotedMsg)),
         new Promise((_, r) => setTimeout(() => r(new Error('timeout')), 8000)),
       ]);
-      return;
+    } else {
+      await safeSend(sock, jid, { text: caption }, replyOptions(quotedMsg));
+    }
+  } catch (_) {
+    await safeSend(sock, jid, { text: caption }, replyOptions(quotedMsg));
+  }
+
+  // ── Send menu song as audio after menu ────────────────────────────────────
+  try {
+    const songPath = path.join(__dirname, '..', 'assets', 'menu_song.mp3');
+    if (fs.existsSync(songPath)) {
+      const songBuffer = fs.readFileSync(songPath);
+      await sock.sendMessage(jid, {
+        audio: songBuffer,
+        mimetype: 'audio/mpeg',
+        ptt: true,
+      });
     }
   } catch (_) {}
-  await safeSend(sock, jid, { text: caption }, replyOptions(quotedMsg));
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -576,6 +616,20 @@ async function handleMessage(sock, msg) {
       case 'bypass':
         await bypassCommands.bypass(sock, msg, args, isOwner);
         break;
+
+      // ── Prefix (owner only) ───────────────────────────────────────────────
+      case 'prefix': {
+        if (!isOwner) return msg.reply('🔐 Owner only.');
+        if (!args[0]) {
+          const cur = (await store.get('botPrefix')) || config.prefix;
+          return msg.reply(`⚙️ *Current prefix:* \`${cur}\`\nUsage: .prefix <new_prefix>`);
+        }
+        const newPfx = args[0].trim().slice(0, 3);
+        await store.set('botPrefix', newPfx);
+        config.prefix = newPfx;
+        await msg.reply(`✅ *Prefix changed to:* \`${newPfx}\`\n_All commands now use \`${newPfx}\` as prefix._`);
+        break;
+      }
 
       // ── AI ────────────────────────────────────────────────────────────────
       case 'cortex':       await aiCommands.cortex(sock, msg, args, jid); break;
@@ -806,13 +860,82 @@ async function handleMessage(sock, msg) {
 
       // ── Sticker ───────────────────────────────────────────────────────────
       case 'sticker': await stickerCommands.sticker(sock, msg, args); break;
-      case 'toimage': await stickerCommands.toimage(sock, msg); break;
+      case 'toimage':
+      case 'toimg':   await stickerCommands.toimage(sock, msg); break;
       case 'steal':   await stickerCommands.steal(sock, msg, args); break;
 
       // ── Wild Features ─────────────────────────────────────────────────────
       case 'aura':       await wildCommands.aura(sock, msg, args); break;
       case 'roastwar':   await wildCommands.roastwar(sock, msg, args); break;
       case 'demotivate': await wildCommands.demotivate(sock, msg, args); break;
+
+      // ── .save — save status/media to DM ──────────────────────────────────
+      case 'save':
+        await groupCommands.save(sock, msg);
+        break;
+
+      // ── Social / Personality Checks ───────────────────────────────────────
+      case 'gaycheck':       await socialCommands.gaycheck(sock, msg, args); break;
+      case 'lesbiancheck':   await socialCommands.lesbiancheck(sock, msg, args); break;
+      case 'bisexualcheck':  await socialCommands.bisexualcheck(sock, msg, args); break;
+      case 'toxic':          await socialCommands.toxic(sock, msg, args); break;
+      case 'chad':           await socialCommands.chad(sock, msg, args); break;
+      case 'sigma':          await socialCommands.sigma(sock, msg, args); break;
+      case 'npc':            await socialCommands.npc(sock, msg, args); break;
+      case 'karen':          await socialCommands.karen(sock, msg, args); break;
+      case 'demon':          await socialCommands.demon(sock, msg, args); break;
+      case 'angel':          await socialCommands.angel(sock, msg, args); break;
+      case 'clout':          await socialCommands.clout(sock, msg, args); break;
+      case 'swag':           await socialCommands.swag(sock, msg, args); break;
+      case 'drip':           await socialCommands.drip(sock, msg, args); break;
+      case 'luck':           await socialCommands.luck(sock, msg, args); break;
+      case 'karma':          await socialCommands.karma(sock, msg, args); break;
+      case 'king':           await socialCommands.king(sock, msg, args); break;
+      case 'queen':          await socialCommands.queen(sock, msg, args); break;
+      case 'goat':           await socialCommands.goat(sock, msg, args); break;
+      case 'cuteness':       await socialCommands.cuteness(sock, msg, args); break;
+      case 'baddie':         await socialCommands.baddie(sock, msg, args); break;
+      case 'savage':         await socialCommands.savage(sock, msg, args); break;
+      case 'nerd':           await socialCommands.nerd(sock, msg, args); break;
+      case 'hater':          await socialCommands.hater(sock, msg, args); break;
+      case 'single':         await socialCommands.single(sock, msg, args); break;
+      case 'lifespan':       await socialCommands.lifespan(sock, msg, args); break;
+      case 'salary':         await socialCommands.salary(sock, msg, args); break;
+      case 'crush':          await socialCommands.crush(sock, msg, args); break;
+      case 'stancheck':      await socialCommands.stancheck(sock, msg, args); break;
+      case 'celeb':          await socialCommands.celeb(sock, msg, args); break;
+      case 'actor':          await socialCommands.actor(sock, msg, args); break;
+      case 'phone':          await socialCommands.phone(sock, msg, args); break;
+
+      // ── AI Intel / Research ───────────────────────────────────────────────
+      case 'prediction':     await socialCommands.prediction(sock, msg, args); break;
+      case 'timeline':       await socialCommands.timeline(sock, msg, args); break;
+      case 'compare':        await socialCommands.compare(sock, msg, args); break;
+      case 'versus':         await socialCommands.versus(sock, msg, args); break;
+      case 'explain':        await socialCommands.explain(sock, msg, args); break;
+      case 'funfact':        await socialCommands.funfact(sock, msg, args); break;
+      case 'history':        await socialCommands.history(sock, msg, args); break;
+      case 'hack':           await socialCommands.hack(sock, msg, args); break;
+      case 'matrix':         await socialCommands.matrix(sock, msg, args); break;
+      case 'anagram':        await socialCommands.anagram(sock, msg, args); break;
+      case 'emoji2':         await socialCommands.emoji2(sock, msg, args); break;
+      case 'reverse2':       await socialCommands.reverse2(sock, msg, args); break;
+      case 'dark2':          await socialCommands.dark2(sock, msg, args); break;
+      case 'love2':          await socialCommands.love2(sock, msg, args); break;
+      case 'roast2':         await socialCommands.roast2(sock, msg, args); break;
+      case 'mythology2':     await socialCommands.mythology2(sock, msg, args); break;
+      case 'conspiracy2':    await socialCommands.conspiracy2(sock, msg, args); break;
+      case 'zodiac3':        await socialCommands.zodiac3(sock, msg, args); break;
+      case 'encrypt':        await socialCommands.encrypt(sock, msg, args); break;
+      case 'decrypt':        await socialCommands.decrypt(sock, msg, args); break;
+      case 'wordgame':       await socialCommands.wordgame(sock, msg, args); break;
+      case 'country2':       await socialCommands.country2(sock, msg, args); break;
+      case 'planet':         await socialCommands.planet(sock, msg, args); break;
+      case 'animal':         await socialCommands.animal(sock, msg, args); break;
+      case 'nutrition':      await socialCommands.nutrition(sock, msg, args); break;
+      case 'exercise':       await socialCommands.exercise(sock, msg, args); break;
+      case 'language2':      await socialCommands.language2(sock, msg, args); break;
+      case 'decode2':        await socialCommands.decode2(sock, msg, args); break;
 
       // ── Group — open to all members ────────────────────────────────────────
       case 'groupinfo': {
@@ -964,16 +1087,11 @@ async function handleNonCommand(sock, msg, body, jid, sender, isGroup, isOwner) 
       }
     }
 
-    // Anti-link (groups only, non-owner)
+    // Anti-link with 3-warning system (groups only, non-owner)
     if (isGroup && !isOwner) {
       const antilinkGroups = (await store.get('antilinkGroups')) || {};
       if (antilinkGroups[jid] && LINK_RE.test(body)) {
-        try { await sock.sendMessage(jid, { delete: msg.key }); } catch (_) {}
-        const senderNum = bareJid(sender).split('@')[0];
-        await sock.sendMessage(jid, {
-          text: `⛔ @${senderNum} — links are not allowed in this group!`,
-          mentions: [sender],
-        });
+        await handleAntilinkViolation(sock, jid, sender, msg);
         return;
       }
     }

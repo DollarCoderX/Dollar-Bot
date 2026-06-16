@@ -550,12 +550,15 @@ const premiumCommands = {
 
       const cleanTitle = title.replace(/[^\w\s-]/g, '').trim().slice(0, 60);
 
-      // Send as audio document (most compatible with WhatsApp)
+      // Send as WhatsApp PTT voice note
       await sock.sendMessage(jid, {
-        document: audioBuffer,
+        audio: audioBuffer,
         mimetype: 'audio/mpeg',
-        fileName: `${cleanTitle}.mp3`,
-        caption: `🎵 *${title}*\n\n_Downloaded by DollarBot V5_ 💵`,
+        ptt: true,
+      }, { quoted: msg });
+      // Also send title info
+      await sock.sendMessage(jid, {
+        text: `🎵 *${title}*\n\n_Served by DollarBot V5_ 💵`,
       }, { quoted: msg });
 
     } catch (e) {
