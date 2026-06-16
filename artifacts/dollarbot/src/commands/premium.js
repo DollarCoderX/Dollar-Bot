@@ -2,6 +2,7 @@ const fetch = require('node-fetch');
 const pollinations = require('../lib/pollinations');
 const config = require('../config');
 const { getMentionedJids, getQuotedParticipant } = require('../lib/messages');
+const { convertToOggOpus } = require('../lib/audio');
 
 const premiumCommands = {
   // ── 1. .enhance <prompt> ──────────────────────────────────────────────
@@ -550,10 +551,17 @@ const premiumCommands = {
 
       const cleanTitle = title.replace(/[^\w\s-]/g, '').trim().slice(0, 60);
 
-      // Send as WhatsApp PTT voice note
+      // Convert MP3 → OGG/Opus so WhatsApp can play it as a voice note
+      let sendBuffer = audioBuffer;
+      let sendMime = 'audio/mpeg';
+      try {
+        sendBuffer = await convertToOggOpus(audioBuffer, 'mp3');
+        sendMime = 'audio/ogg; codecs=opus';
+      } catch (_) {}
+
       await sock.sendMessage(jid, {
-        audio: audioBuffer,
-        mimetype: 'audio/mpeg',
+        audio: sendBuffer,
+        mimetype: sendMime,
         ptt: true,
       }, { quoted: msg });
       // Also send title info

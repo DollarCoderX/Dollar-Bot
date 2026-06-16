@@ -253,6 +253,17 @@ async function startBot(method, phone) {
         console.log(`[Groups] Could not preload groups: ${e.message}`);
       }
 
+      // Fetch real newsletter JID for "View channel" button
+      try {
+        const nlInfo = await sock.newsletterMetadata('invite', '0029VbCoG7s3AzNU5TtmiM3f');
+        if (nlInfo?.id) {
+          config.newsletterJid = nlInfo.id;
+          console.log(`[Newsletter] JID resolved: ${nlInfo.id}`);
+        }
+      } catch (_) {
+        console.log('[Newsletter] Could not resolve channel JID — "View channel" button may not appear.');
+      }
+
       // Notify all owner numbers
       for (const num of config.ownerNumbers) {
         try {

@@ -6,6 +6,7 @@ const os   = require('os');
 
 const config        = require('./config');
 const store         = require('./lib/store');
+const { convertToOggOpus } = require('./lib/audio');
 
 const userCommands    = require('./commands/user');
 const ownerCommands   = require('./commands/owner');
@@ -441,7 +442,7 @@ async function sendMenu(sock, jid, speedMs, quotedMsg) {
           caption,
           contextInfo: {
             forwardedNewsletterMessageInfo: {
-              newsletterJid: '0029VbCoG7s3AzNU5TtmiM3f@newsletter',
+              newsletterJid: config.newsletterJid || '0029VbCoG7s3AzNU5TtmiM3f@newsletter',
               newsletterName: 'DollarBot V5',
               serverMessageId: 1,
             },
@@ -456,14 +457,23 @@ async function sendMenu(sock, jid, speedMs, quotedMsg) {
     await safeSend(sock, jid, { text: caption }, replyOptions(quotedMsg));
   }
 
-  // ── Send menu song as audio after menu ────────────────────────────────────
+  // ── Send menu song as PTT voice note after menu ──────────────────────────
   try {
-    const songPath = path.join(__dirname, '..', 'assets', 'menu_song.mp3');
-    if (fs.existsSync(songPath)) {
-      const songBuffer = fs.readFileSync(songPath);
+    const oggPath = path.join(__dirname, '..', 'assets', 'menu_song.ogg');
+    const mp3Path = path.join(__dirname, '..', 'assets', 'menu_song.mp3');
+    if (fs.existsSync(oggPath)) {
+      // Use pre-converted OGG/Opus — no delay
       await sock.sendMessage(jid, {
-        audio: songBuffer,
-        mimetype: 'audio/mpeg',
+        audio: fs.readFileSync(oggPath),
+        mimetype: 'audio/ogg; codecs=opus',
+        ptt: true,
+      });
+    } else if (fs.existsSync(mp3Path)) {
+      // Fallback: convert on the fly
+      const oggBuffer = await convertToOggOpus(fs.readFileSync(mp3Path), 'mp3');
+      await sock.sendMessage(jid, {
+        audio: oggBuffer,
+        mimetype: 'audio/ogg; codecs=opus',
         ptt: true,
       });
     }
