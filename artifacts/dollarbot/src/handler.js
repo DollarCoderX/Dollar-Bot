@@ -1703,7 +1703,7 @@ async function handleMessage(sock, msg) {
         // Unknown command fallthrough
         if (cmd) {
           await sock.sendMessage(jid, {
-            text: `❓ Unknown command: *.${cmd}*\n\nType *.menu* to see all commands.`,
+            text: `╭━━━〔 Unknown Command 〕━━━⬣\n\n*.${cmd}*\n\n╰━━━━━━━━━━━━━━━━━━⬣\n\nTry .menu`,
           }, { quoted: msg });
         }
       }

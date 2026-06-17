@@ -175,7 +175,7 @@ async function textGenerate(messages, model = 'openai') {
   });
   if (together) return together;
 
-  throw new Error('All AI services failed. Please try again later.');
+  throw new Error("Nahh i didn't get that request, try later");
 }
 
 // ── AI Personas ───────────────────────────────────────────────────────────

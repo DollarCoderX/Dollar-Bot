@@ -1,5 +1,5 @@
 {
-  "autoreply": false,
+  "autoreply": true,
   "autolike": true,
   "bypassState": {
     "120363426777925361@g.us": {
@@ -58,5 +58,11 @@
   "antilink_warn_120363426985134376@g.us": {
     "80793233842185": 5
   },
-  "filter_120363421668772346@g.us": []
+  "filter_120363421668772346@g.us": [],
+  "antiedit_120363426985134376@g.us": true,
+  "antigstatus_120363426985134376@g.us": true,
+  "afk_14378898269:16@s.whatsapp.net": {
+    "message": "hungry",
+    "ts": 1781674977147
+  }
 }
