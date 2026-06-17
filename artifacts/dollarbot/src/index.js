@@ -100,7 +100,7 @@ setInterval(() => {
 const PORT = process.env.PORT || 3000;
 const server = http.createServer((req, res) => {
   res.writeHead(200, { 'Content-Type': 'text/plain' });
-  res.end('DollarBot V5 is Alive & Running!');
+  res.end('DollarBot V6is Alive & Running!');
 });
 server.on('error', (err) => {
   if (err.code === 'EADDRINUSE') {
@@ -241,7 +241,7 @@ async function startBot(method, phone) {
     if (connection === 'open') {
       reconnectDelay = 3000;
       console.log('\x1b[32m╔══════════════════════════════╗\x1b[0m');
-      console.log('\x1b[32m║   DOLLARBOT V5 ONLINE!       ║\x1b[0m');
+      console.log('\x1b[32m║   DollarBot V6 ONLINE!       ║\x1b[0m');
       console.log('\x1b[32m╚══════════════════════════════╝\x1b[0m\n');
       try {
         const groups = await sock.groupFetchAllParticipating();
@@ -258,7 +258,7 @@ async function startBot(method, phone) {
         try {
           await sock.sendMessage(`${num}@s.whatsapp.net`, {
             text:
-              `*DollarBot V5 is Online*\n\n` +
+              `*DollarBot V6 is Online*\n\n` +
               `- Engine: ${config.engine}\n` +
               `- Version: ${config.version}\n` +
               `- Status: Ready\n\n` +

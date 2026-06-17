@@ -1,7 +1,7 @@
 'use strict';
 /**
  * src/lib/sticker.js
- * Sticker utilities for DollarBot V5:
+ * Sticker utilities for DollarBot V6:
  *   - imageToSticker(buffer, packname, author)  → WebP buffer with EXIF metadata
  *   - stickerToImage(buffer)                    → PNG buffer
  *   - addStickerMetadata(webpBuffer, opts)       → injects packname/author EXIF

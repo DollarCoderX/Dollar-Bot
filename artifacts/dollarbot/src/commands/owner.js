@@ -237,7 +237,7 @@ const ownerCommands = {
 
   async shutdown(sock, msg) {
     const jid = msg.key.remoteJid;
-    await sock.sendMessage(jid, { text: '*DollarBot V5 shutting down...*\nGoodbye!' });
+    await sock.sendMessage(jid, { text: '*DollarBot v6 shutting down...*\nGoodbye!' });
     await new Promise(r => setTimeout(r, 2000));
     process.exit(0);
   },

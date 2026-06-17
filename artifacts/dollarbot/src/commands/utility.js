@@ -100,7 +100,7 @@ const utilityCommands = {
         `┃ Converts your text to a voice\n` +
         `┃ message using Pollinations AI.\n` +
         `╰━━━━━━━━━━━━━━━━━━⬣\n\n` +
-        `Example: .tts Hello, I am DollarBot V5!`
+        `Example: .tts Hello, I am DollarBot V6!`
       );
     }
     const text = args.join(' ');

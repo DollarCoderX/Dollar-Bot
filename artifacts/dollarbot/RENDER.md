@@ -1,4 +1,4 @@
-# DollarBot V5 — Render environment variables guide
+# DollarBot V6 — Render environment variables guide
 
 This bot is configured to read secrets from **environment variables** (Render Dashboard → Environment).
 

@@ -181,7 +181,7 @@ const wildCommands = {
             `🗣️ *Round 1 (@${existing.challenger}):*\n${existing.challengerRoast}\n\n` +
             `🗣️ *Round 2 (@${existing.opponent}):*\n${opponentRoast}\n\n` +
             `⚖️ *AI VERDICT:*\n${verdict}\n\n` +
-            `╰━━━━━━━━━━━━━━━━━━⬣\n_Powered by DollarBot V5_`,
+            `╰━━━━━━━━━━━━━━━━━━⬣\n_Powered by DollarBot V6_`,
         }, { quoted: msg });
       } catch (e) {
         roastWarSessions.delete(jid);
@@ -221,7 +221,7 @@ const wildCommands = {
         `┃ Topic: _${topic}_\n` +
         `╰━━━━━━━━━━━━━━━━━━⬣\n\n` +
         `${result}\n\n` +
-        `_💵 DollarBot V5 — Keeping it real since 2024_`
+        `_💵 DollarBot V6 — Keeping it real since 2024_`
       );
     } catch (e) {
       await msg.reply(`❌ Error: ${e.message}`);

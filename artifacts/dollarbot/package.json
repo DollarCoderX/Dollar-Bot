@@ -1,7 +1,7 @@
 {
   "name": "@workspace/dollarbot",
   "version": "5.0.0",
-  "description": "DollarBot V5 - Powerful WhatsApp Bot",
+  "description": "DollarBot V6 - Powerful WhatsApp Bot",
   "main": "src/index.js",
   "type": "commonjs",
   "scripts": {

@@ -67,7 +67,7 @@ const shockCommands = {
         `┃ ${reading.replace(/\n/g, '\n┃ ')}\n` +
         `┃\n` +
         `╰━━━━━━━━━━━━━━━━━━⬣\n\n` +
-        `_⚡ DollarBot V5 — Aura Intelligence_`,
+        `_⚡ DollarBot V6 — Aura Intelligence_`,
     }, { quoted: msg });
   },
 
@@ -93,7 +93,7 @@ const shockCommands = {
       `Write a short 3-round WhatsApp rap battle between ${p1} and ${p2}. Each round has 2 punchy bars per person. Make it funny, savage, and use their names cleverly. Format as:\n🎤 Round 1:\n${p1}: [bars]\n${p2}: [bars]\n🎤 Round 2:\n...\n🎤 WINNER: [name] 👑\nKeep it under 20 lines total.`
     );
     await sock.sendMessage(jid, {
-      text: `🎤 *RAP BATTLE* 🎤\n*${p1}* vs *${p2}*\n\n${result}\n\n_⚡ DollarBot V5 — Battle Arena_`,
+      text: `🎤 *RAP BATTLE* 🎤\n*${p1}* vs *${p2}*\n\n${result}\n\n_⚡ DollarBot V6 — Battle Arena_`,
     }, { quoted: msg });
   },
 
@@ -113,7 +113,7 @@ const shockCommands = {
         `┃━━━━━━━━━━━━━━━━━━━━━━━\n` +
         `┃\n${result}\n┃\n` +
         `╰━━━━━━━━━━━━━━━━━━⬣\n\n` +
-        `_⚡ DollarBot V5 — Roast Intelligence_`,
+        `_⚡ DollarBot V6 — Roast Intelligence_`,
     }, { quoted: msg });
   },
 
@@ -355,7 +355,7 @@ const shockCommands = {
       `Write a short, funny, satirical obituary for a fictional character named "${n}". Include: how they "died" (something ridiculous), what they'll be remembered for, and a funny eulogy quote. Keep it 5-7 lines. WhatsApp-friendly. No hashtags.`
     );
     await sock.sendMessage(jid, {
-      text: `📰 *In Memoriam: ${n}*\n\n${result}\n\n_⚡ DollarBot V5 — Memorial Services_`,
+      text: `📰 *In Memoriam: ${n}*\n\n${result}\n\n_⚡ DollarBot V6 — Memorial Services_`,
     }, { quoted: msg });
   },
 
@@ -446,7 +446,7 @@ const shockCommands = {
         `┃ ✅ *Status:* ACTIVE & THRIVING\n` +
         `┃\n` +
         `╰━━━━━━━━━━━━━━━━━━⬣\n\n` +
-        `_This is an official DollarBot V5 document 😂_`,
+        `_This is an official DollarBot V6 document 😂_`,
     }, { quoted: msg });
   },
 };

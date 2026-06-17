@@ -102,7 +102,7 @@ async function handleAntilinkViolation(sock, jid, sender, msg) {
               `┃ Reason: Sent 3 links — auto-kicked.\n` +
               `┃ No warnings remaining.\n` +
               `┃\n` +
-              `┃ _DollarBot V5 — Protecting groups_\n` +
+              `┃ _DollarBot V6 — Protecting groups_\n` +
               `╰━━━━━━━━━━━━━━━━━━⬣`,
             mentions: [sender],
           });
@@ -780,13 +780,13 @@ const groupCommands = {
       if (mediaType === 'imageMessage') {
         await sock.sendMessage(dmJid, {
           image: buffer,
-          caption: '✅ *Saved!* Image saved to your chat.\n\n_DollarBot V5 — Status Saver_',
+          caption: '✅ *Saved!* Image saved to your chat.\n\n_DollarBot V6 — Status Saver_',
         });
         await send(sock, jid, msg, '✅ *Image saved!* Check your DMs.');
       } else if (mediaType === 'videoMessage') {
         await sock.sendMessage(dmJid, {
           video: buffer,
-          caption: '✅ *Saved!* Video saved to your chat.\n\n_DollarBot V5 — Status Saver_',
+          caption: '✅ *Saved!* Video saved to your chat.\n\n_DollarBot V6 — Status Saver_',
         });
         await send(sock, jid, msg, '✅ *Video saved!* Check your DMs.');
       } else if (mediaType === 'audioMessage') {
@@ -801,7 +801,7 @@ const groupCommands = {
           document: buffer,
           mimetype: ctx.quotedMessage[mediaType].mimetype || 'application/octet-stream',
           fileName: ctx.quotedMessage[mediaType].fileName || 'file',
-          caption: '✅ *Saved!* Document saved.\n\n_DollarBot V5 — Status Saver_',
+          caption: '✅ *Saved!* Document saved.\n\n_DollarBot V6 — Status Saver_',
         });
         await send(sock, jid, msg, '✅ *Document saved!* Check your DMs.');
       } else if (mediaType === 'stickerMessage') {

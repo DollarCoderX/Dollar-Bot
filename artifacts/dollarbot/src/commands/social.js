@@ -142,7 +142,7 @@ const socialCommands = {
         `┃ ${extract.replace(/\n/g, '\n┃ ')}\n` +
         (aiFacts ? `┃\n┃ 💡 *Cool Facts:*\n┃ ${aiFacts.replace(/\n/g, '\n┃ ')}\n` : '') +
         `╰━━━━━━━━━━━━━━━━━━⬣\n\n` +
-        `_⚡ Powered by DollarBot V5_`;
+        `_⚡ Powered by DollarBot V6_`;
 
       if (imgUrl) {
         try {
@@ -269,7 +269,7 @@ const socialCommands = {
         `┃ ⚠️  *Risk Level:* ${risk}\n` +
         `┃\n` +
         `┃ 🕒 *Scanned:* ${scanTime}\n` +
-        `┃ _Powered by DollarBot V5 Intelligence_\n` +
+        `┃ _Powered by DollarBot V6 Intelligence_\n` +
         `╰━━━━━━━━━━━━━━━━━━⬣`,
     }, { quoted: msg });
   },

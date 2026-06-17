@@ -112,7 +112,7 @@ const stickerCommands = {
 
       // Allow custom name override: .steal PackName
       const customPack = args.join(' ').trim() || 'Dollar 🇨🇦';
-      const author     = 'Dollar | DollarBot V5';
+      const author     = 'Dollar | DollarBot V6';
 
       // Inject fresh metadata over existing sticker buffer
       const branded = addStickerMetadata(media.buffer, {

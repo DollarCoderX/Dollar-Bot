@@ -566,7 +566,7 @@ const premiumCommands = {
       }, { quoted: msg });
       // Also send title info
       await sock.sendMessage(jid, {
-        text: `🎵 *${title}*\n\n_Served by DollarBot V5_ 💵`,
+        text: `🎵 *${title}*\n\n_Served by DollarBot V6_ 💵`,
       }, { quoted: msg });
 
     } catch (e) {
@@ -609,14 +609,14 @@ const premiumCommands = {
         `┃ 🎵 *${title}*\n` +
         `┃\n` +
         `┃ 📺 *Channel:* ${channel}\n` +
-        `┃ ⏱️  *Duration:* ${duration}\n` +
+        `┃ ⏱️  *Duration:* ${duration}\n` + 
         `┃ 👁️  *Views:* ${views}\n` +
         `┃\n` +
         `┃ 🔗 *Link:*\n` +
         `┃ ${url}\n` +
         `┃\n` +
         `╰━━━━━━━━━━━━━━━━━━⬣\n\n` +
-        `_⚡ DollarBot V5 — Video Intelligence_`;
+        `_⚡ DollarBot V6 — Video Intelligence_`;
 
       // Try to send with thumbnail image
       try {

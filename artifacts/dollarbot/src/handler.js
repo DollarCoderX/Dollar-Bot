@@ -423,7 +423,7 @@ async function sendMenu(sock, jid, speedMs, quotedMsg, holiday) {
   const div = th ? th.div : '◇━━━━━━━━━━━━━━━━━━━━━━━━━◇';
   const titleLine = th ? th.title : `☠️ *𝗗𝗢𝗟𝗟𝗔𝗥𝗕𝗢𝗧 𝗩𝟱* ☠️`;
   const subLine   = th ? `\n${th.sub}` : '';
-  const footerLine = th ? th.footer : `☠️ *DollarBot V5 — Neural ◇ Lethal ◇ Limitless* ☠️`;
+  const footerLine = th ? th.footer : `☠️ *DollarBot V6 — Neural ◇ Lethal ◇ Limitless* ☠️`;
 
   const caption =
     `${div}\n` +
@@ -1037,7 +1037,7 @@ async function handleMessage(sock, msg) {
               `┃\n` +
               `${transcript.split('\n').map(l => `┃ ${l}`).join('\n')}\n` +
               `┃\n` +
-              `┃ _⚡ Whisper AI — DollarBot V5_\n` +
+              `┃ _⚡ Whisper AI — DollarBot V6_\n` +
               `╰━━━━━━━━━━━━━━━━━━⬣`,
           }, { quoted: msg });
         } catch (e) {
@@ -1871,7 +1871,7 @@ async function checkAntiBotKick(sock, msg, jid, sender) {
       text:
         `🤖 *Anti-Bot Activated!*\n\n` +
         `🚫 @${senderNum} was detected as a bot and removed from the group.\n` +
-        `_DollarBot V5 — Protecting your group_`,
+        `_DollarBot V6 — Protecting your group_`,
       mentions: [senderBare],
     });
   } catch (_) {} // Silent — no permission = no kick, no crash

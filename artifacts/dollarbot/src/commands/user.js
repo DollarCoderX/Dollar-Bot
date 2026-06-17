@@ -117,7 +117,7 @@ const userCommands = {
         `┃ ✦ Voice     : Dollar Voice\n` +
         `╰━━━━━━━━━━━━━━━━━━⬣\n\n` +
         `📖 Type *.menu* to see all commands.\n` +
-        `💵 DollarBot V5 — Smart • Fast • Limitless`
+        `💵 DollarBot V6 — Smart • Fast • Limitless`
     );
   },
 

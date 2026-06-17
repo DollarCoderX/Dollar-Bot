@@ -43,7 +43,7 @@ async function sendYoutubeVideo(sock, jid, msg, videoUrl, title) {
 
   await sock.sendMessage(jid, {
     video: { url: media.mp4 },
-    caption: `🎬 *${title}*\n\n_Ready by DollarBot V5_ 💵\n\n🔗 ${videoUrl}`,
+    caption: `🎬 *${title}*\n\n_Ready by DollarBot V6_ 💵\n\n🔗 ${videoUrl}`,
   }, { quoted: msg });
 }
 
