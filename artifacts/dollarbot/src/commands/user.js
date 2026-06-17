@@ -175,4 +175,109 @@ const userCommands = {
   },
 };
 
+// ── V6 User Commands ───────────────────────────────────────────────────────
+
+Object.assign(userCommands, {
+
+  async block(sock, msg, args) {
+    const jid = msg.key.remoteJid;
+    const ctx = msg.message?.extendedTextMessage?.contextInfo;
+    const mentioned = ctx?.mentionedJid || [];
+    const target = mentioned[0] || (args[0]?.replace(/[^0-9]/g, '') + '@s.whatsapp.net');
+    if (!target || target === '@s.whatsapp.net')
+      return sock.sendMessage(jid, { text: '❌ Usage: .block @user or .block number\nExample: .block 14378898269' }, { quoted: msg });
+    try {
+      await sock.updateBlockStatus(target, 'block');
+      await sock.sendMessage(jid, { text: `🚫 *Blocked* @${target.split('@')[0]}`, mentions: [target] }, { quoted: msg });
+    } catch (e) {
+      await sock.sendMessage(jid, { text: `❌ Block failed: ${e.message}` }, { quoted: msg });
+    }
+  },
+
+  async unblock(sock, msg, args) {
+    const jid = msg.key.remoteJid;
+    const ctx = msg.message?.extendedTextMessage?.contextInfo;
+    const mentioned = ctx?.mentionedJid || [];
+    const target = mentioned[0] || (args[0]?.replace(/[^0-9]/g, '') + '@s.whatsapp.net');
+    if (!target || target === '@s.whatsapp.net')
+      return sock.sendMessage(jid, { text: '❌ Usage: .unblock @user or .unblock number' }, { quoted: msg });
+    try {
+      await sock.updateBlockStatus(target, 'unblock');
+      await sock.sendMessage(jid, { text: `✅ *Unblocked* @${target.split('@')[0]}`, mentions: [target] }, { quoted: msg });
+    } catch (e) {
+      await sock.sendMessage(jid, { text: `❌ Unblock failed: ${e.message}` }, { quoted: msg });
+    }
+  },
+
+  async pp(sock, msg, args) {
+    const jid = msg.key.remoteJid;
+    const ctx = msg.message?.extendedTextMessage?.contextInfo;
+    const mentioned = ctx?.mentionedJid || [];
+    const target = mentioned[0] || ctx?.participant
+      || (args[0] ? args[0].replace(/[^0-9]/g, '') + '@s.whatsapp.net' : null)
+      || msg.key.participant || jid;
+    try {
+      const ppUrl = await sock.profilePictureUrl(target, 'preview');
+      const fetch2 = require('node-fetch');
+      const buf = await (await fetch2(ppUrl, { timeout: 15000 })).buffer();
+      await sock.sendMessage(jid, {
+        image: buf, caption: `📸 *Profile Picture*\n👤 @${target.split('@')[0]}`, mentions: [target],
+      }, { quoted: msg });
+    } catch (e) {
+      await sock.sendMessage(jid, { text: `❌ No profile picture available. Privacy may be set to Nobody.` }, { quoted: msg });
+    }
+  },
+
+  async fullpp(sock, msg, args) {
+    const jid = msg.key.remoteJid;
+    const ctx = msg.message?.extendedTextMessage?.contextInfo;
+    const mentioned = ctx?.mentionedJid || [];
+    const target = mentioned[0] || ctx?.participant
+      || (args[0] ? args[0].replace(/[^0-9]/g, '') + '@s.whatsapp.net' : null)
+      || msg.key.participant || jid;
+    try {
+      const ppUrl = await sock.profilePictureUrl(target, 'image');
+      const fetch2 = require('node-fetch');
+      const buf = await (await fetch2(ppUrl, { timeout: 15000 })).buffer();
+      await sock.sendMessage(jid, {
+        image: buf, caption: `🖼️ *Full Profile Picture*\n👤 @${target.split('@')[0]}`, mentions: [target],
+      }, { quoted: msg });
+    } catch (e) {
+      await sock.sendMessage(jid, { text: `❌ Could not get full profile picture.` }, { quoted: msg });
+    }
+  },
+
+  async left(sock, msg) {
+    const jid = msg.key.remoteJid;
+    if (!jid.endsWith('@g.us'))
+      return sock.sendMessage(jid, { text: '❌ This command works in groups only.' }, { quoted: msg });
+    try {
+      const meta = await sock.groupMetadata(jid);
+      await sock.sendMessage(jid, {
+        text:
+          `╭━━━〔 👤 MEMBER INFO 〕━━━⬣\n` +
+          `┃ 📛 *Group:* ${meta.subject}\n` +
+          `┃ 👥 *Current Members:* ${meta.participants.length}\n` +
+          `┃ 📅 *Created:* ${new Date((meta.creation || 0) * 1000).toLocaleDateString('en-CA')}\n` +
+          `┃\n┃ _WhatsApp does not expose left-member history._\n` +
+          `╰━━━━━━━━━━━━━━━━━━⬣`,
+      }, { quoted: msg });
+    } catch (e) {
+      await sock.sendMessage(jid, { text: `❌ Failed: ${e.message}` }, { quoted: msg });
+    }
+  },
+
+  async gjid(sock, msg) {
+    const jid = msg.key.remoteJid;
+    if (!jid.endsWith('@g.us'))
+      return sock.sendMessage(jid, { text: `ℹ️ *Chat JID:* ${jid}` }, { quoted: msg });
+    await sock.sendMessage(jid, {
+      text:
+        `╭━━━〔 🆔 GROUP JID 〕━━━⬣\n` +
+        `┃ 🆔 *JID:*\n┃ ${jid}\n` +
+        `╰━━━━━━━━━━━━━━━━━━⬣`,
+    }, { quoted: msg });
+  },
+});
+
 module.exports = userCommands;

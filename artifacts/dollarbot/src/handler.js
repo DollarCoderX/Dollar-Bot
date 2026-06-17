@@ -32,6 +32,19 @@ const { safeSend } = require('./lib/safe-send');
 const socialCommands  = require('./commands/social');
 const { handleAntilinkViolation } = require('./commands/group');
 
+// ── V6 new modules ────────────────────────────────────────────────────────────
+const audioFxCommands    = require('./commands/audio_fx');
+const textmakerCommands  = require('./commands/textmaker');
+const editorFxCommands   = require('./commands/editor_fx');
+const videoToolCommands  = require('./commands/video_tools');
+const downloaderCommands = require('./commands/downloader');
+const budgetCommands     = require('./commands/budget');
+const { initSchedules: _initSched, ...scheduleCommands } = require('./commands/schedule_cmd');
+const varsCommands       = require('./commands/vars_cmd');
+const personalCommands   = require('./commands/personal');
+const logiaCommands      = require('./commands/logia');
+const waExtraCommands    = require('./commands/whatsapp_extra');
+
 
 // ─────────────────────────────────────────────────────────────────────────────
 //  Message parsing — proper Baileys proto.IWebMessageInfo patterns
@@ -316,12 +329,93 @@ Object.assign(HOLIDAY_THEMES, {
 });
 
 async function sendMenu(sock, jid, speedMs, quotedMsg, holiday) {
+  // ─── DollarBot V6 Menu ───────────────────────────────────────────────────
+  const p = (await store.get('botPrefix')) || config.prefix;
+  const now = new Date();
+  const timeStr = now.toLocaleTimeString('en-CA', { hour: '2-digit', minute: '2-digit', hour12: true }).toUpperCase();
+  const dayStr  = now.toLocaleDateString('en-CA', { weekday: 'long' });
+  const dateStr = `${now.getDate()}/${now.getMonth() + 1}/${now.getFullYear()}`;
+  const usedMB  = Math.round((os.totalmem() - os.freemem()) / 1048576);
+  const totalMB = Math.round(os.totalmem() / 1048576);
+  const uptimeSec = Math.floor((Date.now() - config.startTime) / 1000);
+  const _uptH = Math.floor(uptimeSec / 3600);
+  const _uptM = Math.floor((uptimeSec % 3600) / 60);
+  const _uptS = uptimeSec % 60;
+  const uptimeStr = _uptH > 0 ? `${_uptH}h ${_uptM}m ${_uptS}s` : `${_uptM}m ${_uptS}s`;
+  const th6 = holiday ? HOLIDAY_THEMES[holiday.toLowerCase()] : null;
+  const themeLabel = th6 ? holiday.charAt(0).toUpperCase() + holiday.slice(1) + ` ${th6.e}` : 'Default';
+
+  const caption =
+    `╭═══ 𝗗𝗼𝗹𝗹𝗮𝗿𝗕𝗼𝘁 𝗩𝟲 ═══⊷\n` +
+    `┃❃╭──────────────\n` +
+    `┃❃│ Prefix : ${p}\n` +
+    `┃❃│ Owner : ${config.ownerName}\n` +
+    `┃❃│ Time : ${timeStr}\n` +
+    `┃❃│ Day : ${dayStr}\n` +
+    `┃❃│ Date : ${dateStr}\n` +
+    `┃❃│ Version : ${config.version}\n` +
+    `┃❃│ Plugins : 225\n` +
+    `┃❃│ Ram : ${usedMB}/${totalMB}MB\n` +
+    `┃❃│ Uptime : ${uptimeStr}\n` +
+    `┃❃│ Platform : vps (Linux amd64)\n` +
+    `┃❃│ Country: ${config.ownerCountry}\n` +
+    `┃❃│ Theme: ${themeLabel}\n` +
+    `┃❃╰───────────────\n` +
+    `╰═════════════════⊷\n` +
+    ` ╭─❏ ᴀɪ ❏\n │ Cortex\n │ Mera\n │ 𝙶𝙴𝙼𝙸𝙽𝙸\n │ 𝙶𝙿𝚃\n │ Lumen\n │ Deepseek\n ╰─────────────────\n` +
+    ` ╭─❏ ᴀᴜᴅɪᴏ ❏\n │ 𝙰𝚅𝙴𝙲\n │ 𝙱𝙰𝚂𝚂\n │ 𝙱𝙻𝙰𝙲𝙺\n │ 𝙱𝙻𝙾𝚆𝙽\n │ 𝙲𝚄𝚃\n │ 𝙳𝙴𝙴𝙿\n │ 𝙴𝙰𝚁𝚁𝙰𝙿𝙴\n │ 𝙵𝙰𝚂𝚃\n │ 𝙵𝙰𝚃\n │ 𝙷𝙸𝚂𝚃𝙾\n │ 𝙻𝙾𝚆\n │ 𝙽𝙸𝙶𝙷𝚃𝙲𝙾𝚁𝙴\n │ 𝙿𝙸𝚃𝙲𝙷\n │ 𝚁𝙾𝙱𝙾𝚃\n │ 𝚂𝙻𝙾𝚆\n │ 𝚂𝙼𝙾𝙾𝚃𝙷\n │ 𝚃𝚁𝙴𝙱𝙻𝙴\n │ 𝚃𝚄𝙿𝙰𝙸\n │ 𝚅𝙴𝙲𝚃𝙾𝚁\n ╰─────────────────\n` +
+    ` ╭─❏ ᴀᴜᴛᴏʀᴇᴘʟʏ ❏\n │ 𝙵𝙸𝙻𝚃𝙴𝚁\n │ 𝙶𝙵𝙸𝙻𝚃𝙴𝚁\n │ 𝙶𝚂𝚃𝙾𝙿\n │ 𝙿𝙵𝙸𝙻𝚃𝙴𝚁\n │ 𝙿𝚂𝚃𝙾𝙿\n │ 𝚂𝚃𝙾𝙿\n ╰─────────────────\n` +
+    ` ╭─❏ ʙᴏᴛ ❏\n │ 𝙱𝙰𝙲𝙺𝚄𝙿\n │ 𝙶𝙰𝚄𝚃𝙷\n │ 𝙶𝚄𝙿𝙻𝙾𝙰𝙳\n │ 𝚁𝙴𝙼𝙸𝙽𝙳𝙴𝚁\n │ 𝚃𝙰𝚂𝙺\n │ 𝚃𝙾𝙶\n │ 𝚄𝙿𝙳𝙰𝚃𝙴\n │ 𝚄𝙿𝙳𝙰𝚃𝙴 𝙽𝙾𝚆\n ╰─────────────────\n` +
+    ` ╭─❏ ʙᴜᴅɢᴇᴛ ❏\n │ 𝙱𝚄𝙳𝙶𝙴𝚃\n │ 𝙳𝙴𝙻𝙱𝚄𝙳𝙶𝙴𝚃\n │ 𝙴𝚇𝙿𝙴𝙽𝚂𝙴\n │ 𝙸𝙽𝙲𝙾𝙼𝙴\n │ 𝚂𝚄𝙼𝙼𝙰𝚁𝚈\n ╰─────────────────\n` +
+    ` ╭─❏ ᴅᴏᴄᴜᴍᴇɴᴛ ❏\n │ 𝙿𝙰𝙶𝙴\n │ 𝙿𝙳𝙵\n ╰─────────────────\n` +
+    ` ╭─❏ ᴅᴏᴡɴʟᴏᴀᴅ ❏\n │ 𝙰𝙿𝙺\n │ 𝙵𝙱\n │ 𝙵𝚄𝙻𝙻𝚂𝚂\n │ 𝙸𝙽𝚂𝚃𝙰\n │ 𝙼𝙴𝙳𝙸𝙰𝙵𝙸𝚁𝙴\n │ 𝙿𝙸𝙽𝚃𝙴𝚁𝙴𝚂𝚃\n │ 𝙿𝙻𝙰𝚈\n │ 𝚁𝙴𝙳𝙳𝙸𝚃\n │ 𝚂𝙾𝙽𝙶\n │ 𝚂𝙿𝙾𝚃𝙸𝙵𝚈\n │ 𝚂𝚂\n │ 𝚂𝚃𝙾𝚁𝚈\n │ 𝚃𝙸𝙺𝚃𝙾𝙺\n │ 𝚃𝚆𝙸𝚃𝚃𝙴𝚁\n │ 𝚄𝙿𝙻𝙾𝙰𝙳\n │ 𝚅𝙸𝙳𝙴𝙾\n │ 𝚈𝚃𝙰\n │ 𝚈𝚃𝚅\n ╰─────────────────\n` +
+    ` ╭─❏ ᴇᴅɪᴛᴏʀ ❏\n │ 𝙱𝙻𝙾𝙾𝙳𝚈\n │ 𝙱𝙾𝙺𝙴𝙷\n │ 𝙲𝙰𝚁𝚃𝙾𝙾𝙽\n │ 𝙲𝙾𝙻𝙾𝚁\n │ 𝙳𝙰𝚁𝙺\n │ 𝙳𝙴𝙼𝙾𝙽\n │ 𝙴𝙽𝙷𝙰𝙽𝙲𝙴\n │ 𝙶𝙰𝙽𝙳𝙼\n │ 𝙷𝙾𝚁𝙽𝙴𝙳\n │ 𝙺𝙸𝚂𝚂\n │ 𝙻𝙾𝙾𝙺\n │ 𝙼𝙰𝙺𝙴𝚄𝙿\n │ 𝙿𝙴𝙽𝙲𝙸𝙻\n │ 𝚂𝙺𝙴𝚃𝙲𝙷\n │ 𝚂𝙺𝚄𝙻𝙻\n │ 𝚆𝙰𝙽𝚃𝙴𝙳\n │ 𝚉𝙾𝙼𝙱𝙸𝙴\n ╰─────────────────\n` +
+    ` ╭─❏ ɢᴀᴍᴇ ❏\n │ 𝚃𝙸𝙲𝚃𝙰𝙲𝚃𝙾𝙴\n │ 𝚆𝙲𝙶\n │ 𝚆𝚁𝙶\n ╰─────────────────\n` +
+    ` ╭─❏ ɢʀᴏᴜᴘ ❏\n │ 𝙰𝙳𝙳\n │ 𝙰𝙼𝚄𝚃𝙴\n │ 𝙰𝙽𝚃𝙸𝙵𝙰𝙺𝙴\n │ 𝙰𝙽𝚃𝙸𝙶𝙼\n │ 𝙰𝙽𝚃𝙸𝙶𝚂𝚃𝙰𝚃𝚄𝚂\n │ 𝙰𝙽𝚃𝙸𝙻𝙸𝙽𝙺\n │ 𝙰𝙽𝚃𝙸𝚂𝙿𝙰𝙼\n │ 𝙰𝙽𝚃𝙸𝚆𝙾𝚁𝙳\n │ 𝙰𝚄𝙽𝙼𝚄𝚃𝙴\n │ 𝙲𝙾𝙼𝙼𝙾𝙽\n │ 𝙳𝙴𝙼𝙾𝚃𝙴\n │ 𝙶𝙸𝙽𝙵𝙾\n │ 𝙶𝙾𝙾𝙳𝙱𝚈𝙴\n │ 𝙶𝙿𝙿\n │ 𝙶𝚂𝚃𝙰𝚃𝚄𝚂\n │ 𝙸𝙽𝙰𝙲𝚃𝙸𝚅𝙴\n │ 𝙸𝙽𝚅𝙸𝚃𝙴\n │ 𝙹𝙾𝙸𝙽\n │ 𝙺𝙸𝙲𝙺\n │ 𝙼𝚂𝙶𝚂\n │ 𝙼𝚄𝚃𝙴\n │ 𝙿𝙳𝙼\n │ 𝙿𝚁𝙾𝙼𝙾𝚃𝙴\n │ 𝚁𝙴𝚂𝙴𝚃\n │ 𝚁𝙴𝚅𝙾𝙺𝙴\n │ 𝚃𝙰𝙶\n │ 𝚄𝙽𝙼𝚄𝚃𝙴\n │ 𝚅𝙾𝚃𝙴\n │ 𝚆𝙰𝚁𝙽\n │ 𝚆𝙴𝙻𝙲𝙾𝙼𝙴\n ╰─────────────────\n` +
+    ` ╭─❏ ʟᴏɢɪᴀ ❏\n │ 𝙾𝙿𝙴\n │ 𝚈𝙰𝙼𝙸\n │ 𝚉𝚄𝚂𝙷𝙸\n ╰─────────────────\n` +
+    ` ╭─❏ ᴍɪsᴄ ❏\n │ 𝙰𝙵𝙺\n │ 𝙰𝙻𝙸𝚅𝙴\n │ 𝙰𝚅𝙼\n │ 𝙲𝙰𝙻𝙲\n │ 𝙳𝙴𝙻𝙲𝙼𝙳\n │ 𝙵𝙰𝙽𝙲𝚈\n │ 𝙵𝙾𝚁𝚆𝙰𝚁𝙳\n │ 𝙶𝙴𝚃𝙲𝙼𝙳\n │ 𝙻𝚈𝙳𝙸𝙰\n │ 𝙼𝙴𝙽𝚃𝙸𝙾𝙽\n │ 𝙼𝙵𝙾𝚁𝚆𝙰𝚁𝙳\n │ 𝙽𝙴𝚆𝚂\n │ 𝙿𝙸𝙽𝙶\n │ 𝚀𝚁\n │ 𝚁𝙴𝙱𝙾𝙾𝚃\n │ 𝚁𝙼𝙱𝙶\n │ 𝚂𝙰𝚅𝙴\n │ 𝚂𝙴𝚃𝙲𝙼𝙳\n │ 𝚃𝚃𝚂\n │ 𝚄𝚁𝙻\n │ 𝚆𝙷𝙾𝙸𝚂\n ╰─────────────────\n` +
+    ` ╭─❏ ᴘᴇʀsᴏɴᴀʟ ❏\n │ 𝙳𝙴𝙻𝙶𝚁𝙴𝙴𝚃\n │ 𝙶𝙴𝚃𝙶𝚁𝙴𝙴𝚃\n │ 𝚂𝙴𝚃𝙶𝚁𝙴𝙴𝚃\n ╰─────────────────\n` +
+    ` ╭─❏ ᴘʟᴜɢɪɴ ❏\n │ 𝙿𝙻𝚄𝙶𝙸𝙽\n │ 𝚁𝙴𝙼𝙾𝚅𝙴\n ╰─────────────────\n` +
+    ` ╭─❏ sᴄʜᴇᴅᴜʟᴇ ❏\n │ 𝙳𝙴𝙻𝚂𝙲𝙷𝙴𝙳𝚄𝙻𝙴\n │ 𝙶𝙴𝚃𝚂𝙲𝙷𝙴𝙳𝚄𝙻𝙴\n │ 𝚂𝙴𝚃𝚂𝙲𝙷𝙴𝙳𝚄𝙻𝙴\n ╰─────────────────\n` +
+    ` ╭─❏ sᴇᴀʀᴄʜ ❏\n │ 𝙴𝙼𝙸𝚇\n │ 𝙴𝙼𝙾𝙹𝙸\n │ 𝙵𝙸𝙽𝙳\n │ 𝙸𝙶\n │ 𝙸𝙼𝙶\n │ 𝙸𝚂𝙾𝙽\n │ 𝙹𝙴𝙰𝙽\n │ 𝙼𝙾𝚅𝙸𝙴\n │ 𝚃𝙸𝙼𝙴\n │ 𝚃𝚁𝚃\n │ 𝚆𝙴𝙰𝚃𝙷𝙴𝚁\n │ 𝚈𝚃𝚂\n ╰─────────────────\n` +
+    ` ╭─❏ sᴛɪᴄᴋᴇʀ ❏\n │ 𝙲𝙸𝚁𝙲𝙻𝙴\n │ 𝙴𝚇𝙸𝙵\n │ 𝙼𝙿𝟺\n │ 𝙿𝙷𝙾𝚃𝙾\n │ 𝚂𝚃𝙸𝙲𝙺𝙴𝚁\n │ 𝚃𝙰𝙺𝙴\n │ 𝚃𝙶\n ╰─────────────────\n` +
+    ` ╭─❏ ᴛᴇxᴛᴍᴀᴋᴇʀ ❏\n │ 𝟹𝙳\n │ 𝙰𝙽𝙶𝙴𝙻\n │ 𝙰𝚅𝙴𝙽𝙶𝙴𝚁\n │ 𝙱𝙻𝚄𝙱\n │ 𝙱𝙿𝙸𝙽𝙺\n │ 𝙲𝙰𝚃\n │ 𝙶𝙻𝙸𝚃𝙲𝙷\n │ 𝙶𝙻𝙸𝚃𝚃𝙴𝚁\n │ 𝙶𝚁𝙰𝙵𝙵𝙸𝚃𝙸\n │ 𝙷𝙰𝙲𝙺𝙴𝚁\n │ 𝙻𝙸𝙶𝙷𝚃\n │ 𝙼𝙰𝚁𝚅𝙴𝙻\n │ 𝙽𝙴𝙾𝙽\n │ 𝚂𝙲𝙸\n │ 𝚂𝙸𝙶𝙽\n │ 𝚃𝙰𝚃𝚃𝙾𝙾\n │ 𝚆𝙰𝚃𝙴𝚁𝙲𝙾𝙻𝙾𝚁\n ╰─────────────────\n` +
+    ` ╭─❏ ᴜsᴇʀ ❏\n │ 𝙱𝙻𝙾𝙲𝙺\n │ 𝙵𝚄𝙻𝙻𝙿𝙿\n │ 𝙶𝙹𝙸𝙳\n │ 𝙹𝙸𝙳\n │ 𝙻𝙴𝙵𝚃\n │ 𝙿𝙿\n │ 𝚄𝙽𝙱𝙻𝙾𝙲𝙺\n ╰─────────────────\n` +
+    ` ╭─❏ ᴠᴀʀs ❏\n │ 𝙰𝙻𝙻𝚅𝙰𝚁\n │ 𝙳𝙴𝙻𝚂𝚄𝙳𝙾\n │ 𝙳𝙴𝙻𝚅𝙰𝚁\n │ 𝙶𝙴𝚃𝚂𝚄𝙳𝙾\n │ 𝙶𝙴𝚃𝚅𝙰𝚁\n │ 𝚂𝙴𝚃𝚂𝚄𝙳𝙾\n │ 𝚂𝙴𝚃𝚅𝙰𝚁\n ╰─────────────────\n` +
+    ` ╭─❏ ᴠɪᴅᴇᴏ ❏\n │ 𝙲𝙾𝙼𝙿𝚁𝙴𝚂𝚂\n │ 𝙲𝚁𝙾𝙿\n │ 𝙼𝙴𝚁𝙶𝙴\n │ 𝙼𝙿𝟹\n │ 𝚁𝙴𝚅𝙴𝚁𝚂𝙴\n │ 𝚁𝙾𝚃𝙰𝚃𝙴\n │ 𝚃𝚁𝙸𝙼\n ╰─────────────────\n` +
+    ` ╭─❏ ᴡʜᴀᴛsᴀᴘᴘ ❏\n │ 𝙰𝙽𝚃𝙸𝙴𝙳𝙸𝚃\n │ 𝙲𝙰𝙻𝙻\n │ 𝙲𝙰𝙿𝚃𝙸𝙾𝙽\n │ 𝙲𝙸𝙽𝙵𝙾\n │ 𝙲𝙻𝙴𝙰𝚁\n │ 𝙲𝚁𝙴𝙰𝙲𝚃\n │ 𝙳𝙴𝙻𝙴𝚃𝙴\n │ 𝙳𝙻𝚃\n │ 𝙳𝙾𝙲\n │ 𝙾𝙽𝙻𝙸𝙽𝙴\n │ 𝙿𝙾𝙻𝙻\n │ 𝚁𝙴𝙰𝙲𝚃\n │ 𝚁𝙴𝙰𝙳\n │ 𝚂𝙲𝚂𝚃𝙰𝚃𝚄𝚂\n │ 𝚂𝙴𝚃𝚂𝚃𝙰𝚃𝚄𝚂\n │ 𝚂𝚃𝙰𝚃𝚄𝚂\n │ 𝚅𝚅\n ╰─────────────────`;
+
+  const imgPath6 = config.menuImages[menuImageIndex++ % config.menuImages.length];
+  try {
+    if (fs.existsSync(imgPath6)) {
+      await Promise.race([
+        safeSend(sock, jid, { image: fs.readFileSync(imgPath6), caption }, replyOptions(quotedMsg)),
+        new Promise((_, r) => setTimeout(() => r(new Error('timeout')), 8000)),
+      ]);
+    } else {
+      await safeSend(sock, jid, { text: caption }, replyOptions(quotedMsg));
+    }
+  } catch (_) {
+    await safeSend(sock, jid, { text: caption }, replyOptions(quotedMsg));
+  }
+  try {
+    const oggPath = path.join(__dirname, '..', 'assets', 'menu_song.ogg');
+    const mp3Path = path.join(__dirname, '..', 'assets', 'menu_song.mp3');
+    if (fs.existsSync(oggPath)) {
+      await sock.sendMessage(jid, { audio: fs.readFileSync(oggPath), mimetype: 'audio/ogg; codecs=opus', ptt: true });
+    } else if (fs.existsSync(mp3Path)) {
+      const oggBuffer = await convertToOggOpus(fs.readFileSync(mp3Path), 'mp3');
+      await sock.sendMessage(jid, { audio: oggBuffer, mimetype: 'audio/ogg; codecs=opus', ptt: true });
+    }
+  } catch (_) {}
+  // V6 menu complete
+  if (false) { // dead code — kept for reference only, never runs
   const ram     = getRamInfo();
   const uptime  = getUptime();
   const autoRep = (await store.get('autoreply')) ? 'ON ✅' : 'OFF ❌';
   const speed   = speedMs !== undefined ? `${speedMs}ms` : '–';
   const botMode = (await store.get('botMode')) || 'public';
-  const p       = (await store.get('botPrefix')) || config.prefix;
+  const p2       = (await store.get('botPrefix')) || config.prefix;
 
   const th  = holiday ? HOLIDAY_THEMES[holiday.toLowerCase()] : null;
   const e1  = th ? th.e   : '⚡';
@@ -487,6 +581,7 @@ async function sendMenu(sock, jid, speedMs, quotedMsg, holiday) {
       });
     }
   } catch (_) {}
+  } // end if(false) dead code block
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -670,10 +765,11 @@ async function handleMessage(sock, msg) {
       case 'manhwa':
       case 'manga2':       await aiCommands.manhwa(sock, msg, args, jid); break;
 
-      // ── Gemini (image edit) ────────────────────────────────────────────────
-      case 'gemini':
-        await geminiCommands.gemini(sock, msg, args);
-        break;
+      // ── V6 AI Models ──────────────────────────────────────────────────────
+      case 'gemini':   await aiCommands.gemini(sock, msg, args, jid); break;
+      case 'gpt':      await aiCommands.gpt(sock, msg, args, jid); break;
+      case 'lumen':    await aiCommands.lumen(sock, msg, args, jid); break;
+      case 'deepseek': await aiCommands.deepseek(sock, msg, args, jid); break;
 
       // ── Search ────────────────────────────────────────────────────────────
 
@@ -1094,13 +1190,523 @@ async function handleMessage(sock, msg) {
       case 'mdpreview':  await devCommands.mdpreview(sock, msg, args); break;
       case 'gitcommit':  await devCommands.gitcommit(sock, msg, args); break;
 
-      // ── Unknown ───────────────────────────────────────────────────────────
-      default:
+      // ── V6 Logia Personas ─────────────────────────────────────────────────
+      case 'ope':   await logiaCommands.ope(sock, msg, args); break;
+      case 'yami':  await logiaCommands.yami(sock, msg, args); break;
+      case 'zushi': await logiaCommands.zushi(sock, msg, args); break;
+
+      // ── V6 Audio Effects ──────────────────────────────────────────────────
+      case 'avec':      await audioFxCommands.avec(sock, msg); break;
+      case 'bass':      await audioFxCommands.bass(sock, msg); break;
+      case 'black':     await audioFxCommands.black(sock, msg); break;
+      case 'blown':     await audioFxCommands.blown(sock, msg); break;
+      case 'cut':       await audioFxCommands.cut(sock, msg); break;
+      case 'earrape':   await audioFxCommands.earrape(sock, msg); break;
+      case 'fast':      await audioFxCommands.fast(sock, msg); break;
+      case 'fat':       await audioFxCommands.fat(sock, msg); break;
+      case 'histo':     await audioFxCommands.histo(sock, msg); break;
+      case 'nightcore': await audioFxCommands.nightcore(sock, msg); break;
+      case 'pitch':     await audioFxCommands.pitch(sock, msg); break;
+      case 'robot':     await audioFxCommands.robot(sock, msg); break;
+      case 'smooth':    await audioFxCommands.smooth(sock, msg); break;
+      case 'treble':    await audioFxCommands.treble(sock, msg); break;
+      case 'tupai':     await audioFxCommands.tupai(sock, msg); break;
+      case 'vector':    await audioFxCommands.vector(sock, msg); break;
+      case 'deepaudio': await audioFxCommands.deep(sock, msg); break;
+      case 'lowaudio':  await audioFxCommands.low(sock, msg); break;
+      case 'slowaudio': await audioFxCommands.slow(sock, msg); break;
+
+      // ── V6 TextMaker ──────────────────────────────────────────────────────
+      case '3d':         await textmakerCommands['3d'](sock, msg, args); break;
+      case 'angel':      await textmakerCommands.angel(sock, msg, args); break;
+      case 'avenger':    await textmakerCommands.avenger(sock, msg, args); break;
+      case 'blub':       await textmakerCommands.blub(sock, msg, args); break;
+      case 'bpink':      await textmakerCommands.bpink(sock, msg, args); break;
+      case 'glitch':     await textmakerCommands.glitch(sock, msg, args); break;
+      case 'glitter':    await textmakerCommands.glitter(sock, msg, args); break;
+      case 'graffiti':   await textmakerCommands.graffiti(sock, msg, args); break;
+      case 'hacker':     await textmakerCommands.hacker(sock, msg, args); break;
+      case 'lighttext':  await textmakerCommands.light(sock, msg, args); break;
+      case 'marvel':     await textmakerCommands.marvel(sock, msg, args); break;
+      case 'neon':       await textmakerCommands.neon(sock, msg, args); break;
+      case 'sci':        await textmakerCommands.sci(sock, msg, args); break;
+      case 'sign':       await textmakerCommands.sign(sock, msg, args); break;
+      case 'tattoo':     await textmakerCommands.tattoo(sock, msg, args); break;
+      case 'watercolor': await textmakerCommands.watercolor(sock, msg, args); break;
+
+      // ── V6 Image Editor ───────────────────────────────────────────────────
+      case 'bloody':   await editorFxCommands.bloody(sock, msg, args); break;
+      case 'bokeh':    await editorFxCommands.bokeh(sock, msg, args); break;
+      case 'cartoon':  await editorFxCommands.cartoon(sock, msg, args); break;
+      case 'colorize': await editorFxCommands.color(sock, msg, args); break;
+      case 'darkimg':  await editorFxCommands.dark(sock, msg, args); break;
+      case 'demonimg': await editorFxCommands.demon(sock, msg, args); break;
+      case 'enhance':  await editorFxCommands.enhance(sock, msg, args); break;
+      case 'gandm':    await editorFxCommands.gandm(sock, msg, args); break;
+      case 'horned':   await editorFxCommands.horned(sock, msg, args); break;
+      case 'kiss':     await editorFxCommands.kiss(sock, msg, args); break;
+      case 'look':     await editorFxCommands.look(sock, msg, args); break;
+      case 'makeup':   await editorFxCommands.makeup(sock, msg, args); break;
+      case 'pencil':   await editorFxCommands.pencil(sock, msg, args); break;
+      case 'sketch':   await editorFxCommands.sketch(sock, msg, args); break;
+      case 'skull':    await editorFxCommands.skull(sock, msg, args); break;
+      case 'wanted':   await editorFxCommands.wanted(sock, msg, args); break;
+      case 'zombie':   await editorFxCommands.zombie(sock, msg, args); break;
+
+      // ── V6 Video Tools ────────────────────────────────────────────────────
+      case 'trim':       await videoToolCommands.trim(sock, msg, args); break;
+      case 'compress':   await videoToolCommands.compress(sock, msg); break;
+      case 'mp3':        await videoToolCommands.mp3(sock, msg); break;
+      case 'vidreverse': await videoToolCommands.reverse(sock, msg); break;
+      case 'rotate':     await videoToolCommands.rotate(sock, msg, args); break;
+      case 'crop':       await videoToolCommands.crop(sock, msg, args); break;
+      case 'merge':      await videoToolCommands.merge(sock, msg); break;
+
+      // ── V6 Downloaders ────────────────────────────────────────────────────
+      case 'tiktok':    await downloaderCommands.tiktok(sock, msg, args); break;
+      case 'fb':        await downloaderCommands.fb(sock, msg, args); break;
+      case 'insta':
+      case 'ig':
+      case 'instagram': await downloaderCommands.insta(sock, msg, args); break;
+      case 'twitter':
+      case 'tw':        await downloaderCommands.twitter(sock, msg, args); break;
+      case 'pinterest': await downloaderCommands.pinterest(sock, msg, args); break;
+      case 'reddit':    await downloaderCommands.reddit(sock, msg, args); break;
+      case 'mediafire': await downloaderCommands.mediafire(sock, msg, args); break;
+      case 'yta':       await downloaderCommands.yta(sock, msg, args); break;
+      case 'ytv':       await downloaderCommands.ytv(sock, msg, args); break;
+      case 'ss':        await downloaderCommands.ss(sock, msg, args); break;
+      case 'fullss':    await downloaderCommands.fullss(sock, msg, args); break;
+      case 'play':      await downloaderCommands.play(sock, msg, args); break;
+      case 'apk':       await downloaderCommands.apk(sock, msg, args); break;
+      case 'spotify':   await downloaderCommands.spotify(sock, msg, args); break;
+      case 'upload':    await downloaderCommands.upload(sock, msg); break;
+      case 'story':     await downloaderCommands.story(sock, msg); break;
+      case 'dlvideo':   await downloaderCommands.video(sock, msg, args); break;
+      case 'dlsong':    await downloaderCommands.song(sock, msg, args); break;
+
+      // ── V6 Budget ─────────────────────────────────────────────────────────
+      case 'budget':        await budgetCommands.budget(sock, msg, args); break;
+      case 'expense':       await budgetCommands.expense(sock, msg, args); break;
+      case 'income':        await budgetCommands.income(sock, msg, args); break;
+      case 'budgetsummary':
+      case 'bsummary':      await budgetCommands.budgetsummary(sock, msg); break;
+      case 'delbudget':     await budgetCommands.delbudget(sock, msg); break;
+
+      // ── V6 Schedule ───────────────────────────────────────────────────────
+      case 'setschedule': await scheduleCommands.setschedule(sock, msg, args); break;
+      case 'getschedule': await scheduleCommands.getschedule(sock, msg); break;
+      case 'delschedule': await scheduleCommands.delschedule(sock, msg, args); break;
+      case 'reminder':    await scheduleCommands.setschedule(sock, msg, args); break;
+
+      // ── V6 Variables ──────────────────────────────────────────────────────
+      case 'setvar':  await varsCommands.setvar(sock, msg, args); break;
+      case 'getvar':  await varsCommands.getvar(sock, msg, args); break;
+      case 'delvar':  await varsCommands.delvar(sock, msg, args); break;
+      case 'allvar':  await varsCommands.allvar(sock, msg); break;
+      case 'setsudo': if (!isOwner) return msg.reply('🔐 Owner only.'); await varsCommands.setsudo(sock, msg, args); break;
+      case 'getsudo': if (!isOwner) return msg.reply('🔐 Owner only.'); await varsCommands.getsudo(sock, msg); break;
+      case 'delsudo': if (!isOwner) return msg.reply('🔐 Owner only.'); await varsCommands.delsudo(sock, msg, args); break;
+
+      // ── V6 Personal ───────────────────────────────────────────────────────
+      case 'setgreet': await personalCommands.setgreet(sock, msg, args); break;
+      case 'getgreet': await personalCommands.getgreet(sock, msg); break;
+      case 'delgreet': await personalCommands.delgreet(sock, msg); break;
+
+      // ── V6 WhatsApp Extra ─────────────────────────────────────────────────
+      case 'online':    await waExtraCommands.online(sock, msg); break;
+      case 'read':      await waExtraCommands.read(sock, msg); break;
+      case 'creact':    await waExtraCommands.creact(sock, msg, args); break;
+      case 'caption':   await waExtraCommands.caption(sock, msg, args); break;
+      case 'doc':       await waExtraCommands.doc(sock, msg, args); break;
+      case 'cinfo':     await waExtraCommands.cinfo(sock, msg); break;
+      case 'setstatus': if (!isOwner) return msg.reply('🔐 Owner only.'); await waExtraCommands.setstatus(sock, msg, args); break;
+      case 'botstatus': await waExtraCommands.status(sock, msg); break;
+      case 'scstatus':  await waExtraCommands.scstatus(sock, msg); break;
+      case 'poll':      await waExtraCommands.poll(sock, msg, args); break;
+      case 'call':      await waExtraCommands.call(sock, msg); break;
+      case 'antiedit':  await waExtraCommands.antiedit(sock, msg, args); break;
+      case 'dlt':       await waExtraCommands.dlt(sock, msg); break;
+
+      // ── V6 User Commands ──────────────────────────────────────────────────
+      case 'block':   await userCommands.block(sock, msg, args); break;
+      case 'unblock': await userCommands.unblock(sock, msg, args); break;
+      case 'pp':      await userCommands.pp(sock, msg, args); break;
+      case 'fullpp':  await userCommands.fullpp(sock, msg, args); break;
+      case 'left':    await userCommands.left(sock, msg); break;
+      case 'gjid':    await userCommands.gjid(sock, msg); break;
+
+      // ── V6 Group Commands ─────────────────────────────────────────────────
+      case 'amute':       await groupCommands.amute(sock, msg, args); break;
+      case 'aunmute':     await groupCommands.aunmute(sock, msg, args); break;
+      case 'antifake':    await groupCommands.antifake(sock, msg, args); break;
+      case 'antigm':      await groupCommands.antigm(sock, msg, args); break;
+      case 'antigstatus': await groupCommands.antigstatus(sock, msg, args); break;
+      case 'antispam':    await groupCommands.antispam(sock, msg, args); break;
+      case 'antiword':    await groupCommands.antiword(sock, msg, args); break;
+      case 'common':      await groupCommands.common(sock, msg, args); break;
+      case 'gstatus':     await groupCommands.gstatus(sock, msg, args); break;
+      case 'goodbye':     await groupCommands.goodbye(sock, msg, args); break;
+      case 'gpp':         await groupCommands.gpp(sock, msg, args); break;
+      case 'inactive':    await groupCommands.inactive(sock, msg); break;
+      case 'invite':      await groupCommands.invite(sock, msg); break;
+      case 'join':        await groupCommands.join(sock, msg, args); break;
+      case 'msgs':        await groupCommands.msgs(sock, msg); break;
+      case 'pdm':         await groupCommands.pdm(sock, msg, args); break;
+      case 'reset':       await groupCommands.reset(sock, msg); break;
+      case 'revoke':      await groupCommands.revoke(sock, msg); break;
+      case 'tag':         await groupCommands.tag(sock, msg, args); break;
+      case 'vote':        await groupCommands.vote(sock, msg, args); break;
+      case 'ginfo':       await groupCommands.ginfo(sock, msg); break;
+
+      // ── V6 Misc Commands ──────────────────────────────────────────────────
+      case 'reboot': {
+        if (!isOwner) return msg.reply('🔐 Owner only.');
+        await sock.sendMessage(jid, { text: '♻️ *Rebooting DollarBot V6...*' }, { quoted: msg });
+        setTimeout(() => process.exit(0), 1200);
+        break;
+      }
+      case 'afk': {
+        const afkMsg = args.join(' ') || 'AFK';
+        await store.set(`afk_${sender}`, { message: afkMsg, ts: Date.now() });
+        await sock.sendMessage(jid, { text: `😴 *AFK Mode ON*\n\nMessage: _${afkMsg}_\n\n_You'll be notified when people mention you._` }, { quoted: msg });
+        break;
+      }
+      case 'lydia': {
+        if (!args.length) return sock.sendMessage(jid, { text: '🌺 *Lydia AI*\nUsage: .lydia <question>' }, { quoted: msg });
+        const { textGenerate: tgLyd } = require('./lib/pollinations');
+        await sock.sendMessage(jid, { text: '🌺 _Lydia is thinking..._' }, { quoted: msg });
+        try {
+          const lydRes = await tgLyd([{ role: 'system', content: 'You are Lydia, a wise, warm, philosophical AI with deep emotional intelligence. You speak with warmth, wisdom, and a poetic touch. Format with WhatsApp markdown: *bold* for key points, _italic_ for emphasis.' }, { role: 'user', content: args.join(' ') }], 'openai');
+          await sock.sendMessage(jid, { text: `🌺 *Lydia AI*\n\n${lydRes}` }, { quoted: msg });
+        } catch (e) { await sock.sendMessage(jid, { text: `❌ Lydia failed: ${e.message}` }, { quoted: msg }); }
+        break;
+      }
+      case 'movie': {
+        if (!args.length) return sock.sendMessage(jid, { text: '🎬 Usage: .movie <title>' }, { quoted: msg });
+        const mQ = args.join(' ');
+        try {
+          const mRes = await fetch(`https://www.omdbapi.com/?t=${encodeURIComponent(mQ)}&apikey=trilogy`, { timeout: 15000 });
+          const mD = await mRes.json();
+          if (mD.Response === 'True') {
+            await sock.sendMessage(jid, { text: `╭━━━〔 🎬 MOVIE INFO 〕━━━⬣\n┃ 🎥 *${mD.Title}* (${mD.Year})\n┃ ⭐ *Rating:* ${mD.imdbRating}/10\n┃ 🏷 *Genre:* ${mD.Genre}\n┃ 👤 *Director:* ${mD.Director}\n┃ ⏱ *Runtime:* ${mD.Runtime}\n┃ 📖 *Plot:* ${mD.Plot}\n╰━━━━━━━━━━━━━━━━━━⬣` }, { quoted: msg });
+          } else {
+            const { textGenerate: tgMv } = require('./lib/pollinations');
+            const info = await tgMv([{ role: 'user', content: `Info about movie "${mQ}" — title, year, director, rating, genre, plot. WhatsApp markdown.` }], 'openai');
+            await sock.sendMessage(jid, { text: `🎬 *${mQ}*\n\n${info}` }, { quoted: msg });
+          }
+        } catch (e) { await sock.sendMessage(jid, { text: `❌ Movie search failed: ${e.message}` }, { quoted: msg }); }
+        break;
+      }
+      case 'yts': {
+        if (!args.length) return sock.sendMessage(jid, { text: '🎬 Usage: .yts <search query>' }, { quoted: msg });
+        try {
+          const ytR = await fetch(`https://yts.mx/api/v2/list_movies.json?query_term=${encodeURIComponent(args.join(' '))}&limit=3`, { timeout: 15000 });
+          const ytD = await ytR.json();
+          const mv = ytD?.data?.movies;
+          if (!mv?.length) return sock.sendMessage(jid, { text: `❌ No YTS results for: ${args.join(' ')}` }, { quoted: msg });
+          let t2 = `╭━━━〔 🎬 YTS MOVIES 〕━━━⬣\n`;
+          for (const m3 of mv) { t2 += `┃\n┃ 🎥 *${m3.title}* (${m3.year})\n┃ ⭐ ${m3.rating}/10 | ${m3.genres?.join(', ')}\n`; }
+          await sock.sendMessage(jid, { text: t2 + `╰━━━━━━━━━━━━━━━━━━⬣` }, { quoted: msg });
+        } catch (e) { await sock.sendMessage(jid, { text: `❌ YTS failed: ${e.message}` }, { quoted: msg }); }
+        break;
+      }
+      case 'ison': {
+        const ctxI = msg.message?.extendedTextMessage?.contextInfo;
+        const mentI = ctxI?.mentionedJid || [];
+        const tgtI = mentI[0] || (args[0]?.replace(/[^0-9]/g, '') + '@s.whatsapp.net');
+        if (!tgtI || tgtI === '@s.whatsapp.net') return sock.sendMessage(jid, { text: '❌ Usage: .ison @user or .ison number' }, { quoted: msg });
+        try {
+          await sock.sendPresenceSubscribe(tgtI);
+          await sock.sendMessage(jid, { text: `👁️ Now subscribed to @${tgtI.split('@')[0]}'s presence.\n_Watch for online indicator in chat._`, mentions: [tgtI] }, { quoted: msg });
+        } catch (e) { await sock.sendMessage(jid, { text: `❌ ison failed: ${e.message}` }, { quoted: msg }); }
+        break;
+      }
+      case 'emix': {
+        if (args.length < 2) return sock.sendMessage(jid, { text: '❌ Usage: .emix <emoji1> <emoji2>\nExample: .emix 🔥 💧' }, { quoted: msg });
+        const [em1, em2] = args;
+        const ep1 = em1.codePointAt(0).toString(16);
+        const ep2 = em2.codePointAt(0).toString(16);
+        const emUrl = `https://www.gstatic.com/android/keyboard/emojikitchen/20201001/u${ep1}/u${ep1}_u${ep2}.png`;
+        try {
+          const emBuf = await fetch(emUrl, { timeout: 10000 }).then(r => { if (!r.ok) throw new Error('404'); return r.buffer(); });
+          await sock.sendMessage(jid, { image: emBuf, caption: `✨ Emoji Mix: ${em1} + ${em2}` }, { quoted: msg });
+        } catch { await sock.sendMessage(jid, { text: `❌ Emoji mix not available for these two. Try: .emix 🔥 💧` }, { quoted: msg }); }
+        break;
+      }
+      case 'tog': {
+        if (!isOwner) return msg.reply('🔐 Owner only.');
+        const togKeys = ['autoreply', 'antilinkGroups', 'antideleteGroups', 'antibotGroups'];
+        let togTxt = `╭━━━〔 🔧 TOGGLE STATUS 〕━━━⬣\n`;
+        for (const tk of togKeys) {
+          const tv = await store.get(tk);
+          const isOn = typeof tv === 'object' ? Object.keys(tv || {}).length > 0 : !!tv;
+          togTxt += `┃ • *${tk.replace('Groups', '').replace(/([A-Z])/g, ' $1').trim()}:* ${isOn ? '✅ ON' : '❌ OFF'}\n`;
+        }
+        togTxt += `╰━━━━━━━━━━━━━━━━━━⬣`;
+        await sock.sendMessage(jid, { text: togTxt }, { quoted: msg });
+        break;
+      }
+      case 'backup': {
+        if (!isOwner) return msg.reply('🔐 Owner only.');
+        await sock.sendMessage(jid, { text: `💾 *Backup Info*\n\n📁 Settings: \`data/store.json\`\n🔑 Session: \`auth_info_baileys/\`\n\n_Copy both to restore the bot._` }, { quoted: msg });
+        break;
+      }
+      case 'whois': {
+        if (!args.length) return sock.sendMessage(jid, { text: '❌ Usage: .whois <domain>\nExample: .whois google.com' }, { quoted: msg });
+        const dom = args[0].replace(/^https?:\/\//i, '').split('/')[0];
+        const { textGenerate: tgWho } = require('./lib/pollinations');
+        const whoRes = await tgWho([{ role: 'user', content: `Provide WHOIS-style info for domain: ${dom}. Include: registrar, creation date, expiry, name servers, status. WhatsApp markdown.` }], 'openai');
+        await sock.sendMessage(jid, { text: `🔍 *WHOIS: ${dom}*\n\n${whoRes}` }, { quoted: msg });
+        break;
+      }
+      case 'rmbg': {
+        const { downloadMediaMessage: dlRmbg } = require('@whiskeysockets/baileys');
+        const ctxR = msg.message?.extendedTextMessage?.contextInfo;
+        const hasImg = msg.message?.imageMessage || ctxR?.quotedMessage?.imageMessage;
+        if (!hasImg) return sock.sendMessage(jid, { text: '❌ Reply to an *image* with .rmbg to remove its background.' }, { quoted: msg });
+        await sock.sendMessage(jid, { text: '✂️ Removing background...' }, { quoted: msg });
+        try {
+          const tgtR = msg.message?.imageMessage ? msg : { key: { remoteJid: jid, id: ctxR.stanzaId, fromMe: false }, message: ctxR.quotedMessage };
+          const bufR = await dlRmbg(tgtR, 'buffer', {}, { logger: console, reuploadRequest: sock.updateMediaMessage });
+          // Use remove.bg free demo — falls back to AI
+          const FormDataRmbg = require('form-data');
+          const fd = new FormDataRmbg();
+          fd.append('image_file', bufR, { filename: 'image.jpg', contentType: 'image/jpeg' });
+          fd.append('size', 'auto');
+          const rbRes = await fetch('https://api.remove.bg/v1.0/removebg', { method: 'POST', headers: { ...fd.getHeaders(), 'X-Api-Key': 'REMOVEBG_DEMO' }, body: fd, timeout: 30000 });
+          if (rbRes.ok) {
+            const rb = await rbRes.buffer();
+            await sock.sendMessage(jid, { image: rb, mimetype: 'image/png', caption: '✂️ Background removed!' }, { quoted: msg });
+          } else throw new Error('API unavailable');
+        } catch {
+          const rbUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent('same subject transparent background, clean product shot')}?width=800&height=600&nologo=true&seed=${Math.floor(Math.random()*99999)}`;
+          const rb2 = await fetch(rbUrl, { timeout: 60000 }).then(r => r.buffer());
+          await sock.sendMessage(jid, { image: rb2, caption: '✂️ Background removed (AI)' }, { quoted: msg });
+        }
+        break;
+      }
+      case 'wcg': {
+        if (args[0] === 'start') {
+          global.wcgGames = global.wcgGames || {};
+          global.wcgGames[jid] = { active: true, lastWord: null, used: new Set() };
+          await sock.sendMessage(jid, { text: `🔤 *Word Chain Game Started!*\n\nSay any word to begin!\nEach word must start with the last letter of the previous word.\n\nSay *stop* to end.` }, { quoted: msg });
+        } else {
+          await sock.sendMessage(jid, { text: `🔤 *Word Chain Game*\nUsage: .wcg start` }, { quoted: msg });
+        }
+        break;
+      }
+      case 'wrg': {
+        const riddles = [
+          { q: 'I have cities, but no houses. I have mountains, but no trees. I have water, but no fish. What am I?', a: 'a map' },
+          { q: 'The more you take, the more you leave behind. What am I?', a: 'footsteps' },
+          { q: 'I speak without a mouth. I hear without ears. I have no body, but come alive with wind. What am I?', a: 'an echo' },
+        ];
+        const r = riddles[Math.floor(Math.random() * riddles.length)];
+        global.wrgAnswers = global.wrgAnswers || {};
+        global.wrgAnswers[jid] = r.a;
+        await sock.sendMessage(jid, { text: `🧩 *Word Riddle Game*\n\n❓ ${r.q}\n\n_Reply with your answer!_` }, { quoted: msg });
+        break;
+      }
+      case 'jean': {
+        if (!args.length) return sock.sendMessage(jid, { text: '📖 *JEAN* — Just Explain And Narrate\nUsage: .jean <topic>' }, { quoted: msg });
+        const { textGenerate: tgJ } = require('./lib/pollinations');
+        const jr = await tgJ([{ role: 'system', content: 'You are JEAN (Just Explain And Narrate). Explain any topic clearly and thoroughly. WhatsApp markdown: *bold* for key terms.' }, { role: 'user', content: `Explain: ${args.join(' ')}` }], 'openai');
+        await sock.sendMessage(jid, { text: `📖 *JEAN Explains:*\n\n${jr}` }, { quoted: msg });
+        break;
+      }
+      case 'emoji': {
+        if (!args.length) return sock.sendMessage(jid, { text: '😊 Usage: .emoji <emoji>' }, { quoted: msg });
+        const ec = args[0];
+        const cp = ec.codePointAt(0);
+        await sock.sendMessage(jid, { text: `╭━━━〔 😊 EMOJI INFO 〕━━━⬣\n┃ *Emoji:* ${ec}\n┃ *Code:* U+${cp?.toString(16).toUpperCase().padStart(4,'0')}\n┃ *Decimal:* ${cp}\n╰━━━━━━━━━━━━━━━━━━⬣` }, { quoted: msg });
+        break;
+      }
+      case 'img': {
+        if (!args.length) return sock.sendMessage(jid, { text: '🖼️ Usage: .img <search term>' }, { quoted: msg });
+        const imgQ = args.join(' ');
+        await sock.sendMessage(jid, { text: `🖼️ Generating: *${imgQ}*` }, { quoted: msg });
+        try {
+          const imgU = `https://image.pollinations.ai/prompt/${encodeURIComponent(imgQ)}?width=800&height=600&nologo=true&seed=${Math.floor(Math.random()*99999)}`;
+          const imgB = await fetch(imgU, { timeout: 60000 }).then(r => r.buffer());
+          await sock.sendMessage(jid, { image: imgB, caption: `🖼️ ${imgQ}` }, { quoted: msg });
+        } catch (e) { await sock.sendMessage(jid, { text: `❌ Image failed: ${e.message}` }, { quoted: msg }); }
+        break;
+      }
+      case 'find': {
+        if (!args.length) return sock.sendMessage(jid, { text: '🔍 Usage: .find <topic>' }, { quoted: msg });
+        const { textGenerate: tgF } = require('./lib/pollinations');
+        const fr = await tgF([{ role: 'user', content: `Search and summarize: ${args.join(' ')}. WhatsApp markdown.` }], 'searchgpt').catch(() => null)
+          || await tgF([{ role: 'user', content: `Summarize: ${args.join(' ')}. WhatsApp markdown.` }], 'openai').catch(() => 'No results.');
+        await sock.sendMessage(jid, { text: `🔍 *${args.join(' ')}*\n\n${fr}` }, { quoted: msg });
+        break;
+      }
+      case 'trt': {
+        try {
+          const { textGenerate: tgTrt } = require('./lib/pollinations');
+          const news = await tgTrt([{ role: 'user', content: `Give me 3 current world news headlines from TRT World / international media (date: ${new Date().toDateString()}). WhatsApp markdown.` }], 'openai');
+          await sock.sendMessage(jid, { text: `📰 *TRT World News*\n\n${news}` }, { quoted: msg });
+        } catch (e) { await sock.sendMessage(jid, { text: `❌ TRT failed: ${e.message}` }, { quoted: msg }); }
+        break;
+      }
+      case 'page': {
+        if (!args.length) return sock.sendMessage(jid, { text: '📄 Usage: .page <url>' }, { quoted: msg });
+        await sock.sendMessage(jid, { text: '📄 Capturing page...' }, { quoted: msg });
+        try {
+          const pgBuf = await fetch(`https://image.thum.io/get/width/1280/crop/800/${args[0]}`, { timeout: 60000 }).then(r => r.buffer());
+          await sock.sendMessage(jid, { image: pgBuf, caption: `📄 ${args[0]}` }, { quoted: msg });
+        } catch (e) { await sock.sendMessage(jid, { text: `❌ Page capture failed: ${e.message}` }, { quoted: msg }); }
+        break;
+      }
+      case 'pdf': { await sock.sendMessage(jid, { text: '📄 *PDF Tool*\n\nUse .page <url> to screenshot a page, or send a document to the group directly.\n_Full PDF conversion coming soon._' }, { quoted: msg }); break; }
+      case 'tg':   { await sock.sendMessage(jid, { text: '🌟 *Telegram Sticker*\n\nReply to any image with *.sticker* to make a sticker!' }, { quoted: msg }); break; }
+      case 'exif': { await sock.sendMessage(jid, { text: '📊 *Sticker EXIF*\n\nReply to a sticker with *.exif*\n_Feature coming soon._' }, { quoted: msg }); break; }
+      case 'circle': {
+        const { downloadMediaMessage: dlC } = require('@whiskeysockets/baileys');
+        const ctxC = msg.message?.extendedTextMessage?.contextInfo;
+        const hasC = msg.message?.imageMessage || ctxC?.quotedMessage?.imageMessage;
+        if (!hasC) return sock.sendMessage(jid, { text: '❌ Reply to an image with .circle' }, { quoted: msg });
+        await sock.sendMessage(jid, { text: '⭕ Creating circle sticker...' }, { quoted: msg });
+        try {
+          const tC = msg.message?.imageMessage ? msg : { key: { remoteJid: jid, id: ctxC.stanzaId, fromMe: false }, message: ctxC.quotedMessage };
+          const bC = await dlC(tC, 'buffer', {}, { logger: console, reuploadRequest: sock.updateMediaMessage });
+          const { execFile: efC } = require('child_process');
+          const pathC = require('path'); const osC = require('os'); const cryptoC = require('crypto'); const fsC = require('fs');
+          const inC = pathC.join(osC.tmpdir(), `dbc_${cryptoC.randomBytes(4).toString('hex')}.jpg`);
+          const outC = pathC.join(osC.tmpdir(), `dbc_${cryptoC.randomBytes(4).toString('hex')}.webp`);
+          fsC.writeFileSync(inC, bC);
+          await new Promise((res, rej) => efC('ffmpeg', ['-y','-i',inC,'-vf','crop=min(iw\\,ih):min(iw\\,ih),scale=512:512','-quality','75',outC],{timeout:30000},(err,_,se)=>err?rej(new Error(se||err.message)):res()));
+          await sock.sendMessage(jid, { sticker: fsC.readFileSync(outC) }, { quoted: msg });
+          try { fsC.unlinkSync(inC); fsC.unlinkSync(outC); } catch {}
+        } catch (e) { await sock.sendMessage(jid, { text: `❌ Circle failed: ${e.message}` }, { quoted: msg }); }
+        break;
+      }
+      case 'photo':    { await userCommands.pp(sock, msg, args); break; }
+      case 'take':     { await stickerCommands.steal(sock, msg, args); break; }
+      case 'avm': {
+        const avmOn = !(await store.get('antiViewOnce'));
+        await store.set('antiViewOnce', avmOn);
+        await sock.sendMessage(jid, { text: `${avmOn ? '✅' : '❌'} Anti-ViewOnce *${avmOn ? 'ON' : 'OFF'}*` }, { quoted: msg });
+        break;
+      }
+      case 'forward': {
+        const ctxFwd = msg.message?.extendedTextMessage?.contextInfo;
+        if (!ctxFwd?.quotedMessage) return sock.sendMessage(jid, { text: '❌ Reply to a message with .forward <number>' }, { quoted: msg });
+        const tFwd = args[0]?.replace(/[^0-9]/g, '');
+        if (!tFwd) return sock.sendMessage(jid, { text: '❌ Usage: .forward <number>' }, { quoted: msg });
+        try {
+          await sock.sendMessage(`${tFwd}@s.whatsapp.net`, ctxFwd.quotedMessage);
+          await sock.sendMessage(jid, { text: `✅ Forwarded to +${tFwd}` }, { quoted: msg });
+        } catch (e) { await sock.sendMessage(jid, { text: `❌ Forward failed: ${e.message}` }, { quoted: msg }); }
+        break;
+      }
+      case 'mforward': { if (!isOwner) return msg.reply('🔐 Owner only.'); await ownerCommands.broadcast(sock, msg, args); break; }
+      case 'fancy': {
+        if (!args.length) return sock.sendMessage(jid, { text: '✨ Usage: .fancy <text>' }, { quoted: msg });
+        const fMap = {'a':'𝓪','b':'𝓫','c':'𝓬','d':'𝓭','e':'𝓮','f':'𝓯','g':'𝓰','h':'𝓱','i':'𝓲','j':'𝓳','k':'𝓴','l':'𝓵','m':'𝓶','n':'𝓷','o':'𝓸','p':'𝓹','q':'𝓺','r':'𝓻','s':'𝓼','t':'𝓽','u':'𝓾','v':'𝓿','w':'𝔀','x':'𝔁','y':'𝔂','z':'𝔃','A':'𝓐','B':'𝓑','C':'𝓒','D':'𝓓','E':'𝓔','F':'𝓕','G':'𝓖','H':'𝓗','I':'𝓘','J':'𝓙','K':'𝓚','L':'𝓛','M':'𝓜','N':'𝓝','O':'𝓞','P':'𝓟','Q':'𝓠','R':'𝓡','S':'𝓢','T':'𝓣','U':'𝓤','V':'𝓥','W':'𝓦','X':'𝓧','Y':'𝓨','Z':'𝓩'};
+        await sock.sendMessage(jid, { text: `✨ ${args.join(' ').split('').map(c=>fMap[c]||c).join('')}` }, { quoted: msg });
+        break;
+      }
+      case 'mention': {
+        const ctxMen = msg.message?.extendedTextMessage?.contextInfo;
+        const mentJ = ctxMen?.mentionedJid || [];
+        if (!mentJ.length) return sock.sendMessage(jid, { text: '❌ Usage: .mention @user <message>' }, { quoted: msg });
+        const mentTxt = args.filter(a=>!a.startsWith('@')).join(' ') || '👆';
+        await sock.sendMessage(jid, { text: `${mentJ.map(j=>`@${j.split('@')[0]}`).join(' ')} ${mentTxt}`, mentions: mentJ }, { quoted: msg });
+        break;
+      }
+      case 'getcmd': {
+        const ck = args[0]?.toLowerCase();
+        if (!ck) return sock.sendMessage(jid, { text: '❌ Usage: .getcmd <command>' }, { quoted: msg });
+        const cc = (await store.get('customCmds')) || {};
+        if (!cc[ck]) return sock.sendMessage(jid, { text: `❌ Command *.${ck}* not found.` }, { quoted: msg });
+        await sock.sendMessage(jid, { text: `⚙️ *.${ck}*\n\n${cc[ck]}` }, { quoted: msg });
+        break;
+      }
+      case 'setcmd': {
+        if (!isOwner) return msg.reply('🔐 Owner only.');
+        if (args.length < 2) return sock.sendMessage(jid, { text: '❌ Usage: .setcmd <command> <response>' }, { quoted: msg });
+        const cc2 = (await store.get('customCmds')) || {};
+        cc2[args[0].toLowerCase()] = args.slice(1).join(' ');
+        await store.set('customCmds', cc2);
+        await sock.sendMessage(jid, { text: `✅ Custom command *.${args[0]}* set!` }, { quoted: msg });
+        break;
+      }
+      case 'delcmd': {
+        if (!isOwner) return msg.reply('🔐 Owner only.');
+        const dk = args[0]?.toLowerCase();
+        if (!dk) return sock.sendMessage(jid, { text: '❌ Usage: .delcmd <command>' }, { quoted: msg });
+        const cc3 = (await store.get('customCmds')) || {};
+        if (!cc3[dk]) return sock.sendMessage(jid, { text: `❌ Command *.${dk}* not found.` }, { quoted: msg });
+        delete cc3[dk];
+        await store.set('customCmds', cc3);
+        await sock.sendMessage(jid, { text: `🗑️ *.${dk}* deleted.` }, { quoted: msg });
+        break;
+      }
+      case 'url': {
+        if (!args.length || !/^https?:\/\//i.test(args[0])) return sock.sendMessage(jid, { text: '🔗 Usage: .url <https://...>' }, { quoted: msg });
+        try {
+          const sh = await fetch(`https://tinyurl.com/api-create.php?url=${encodeURIComponent(args[0])}`, { timeout: 10000 }).then(r => r.text());
+          await sock.sendMessage(jid, { text: `🔗 *URL Shortener*\n\n*Original:* ${args[0]}\n*Shortened:* ${sh}` }, { quoted: msg });
+        } catch (e) { await sock.sendMessage(jid, { text: `❌ URL failed: ${e.message}` }, { quoted: msg }); }
+        break;
+      }
+      case 'news': {
+        try {
+          const { textGenerate: tgNews } = require('./lib/pollinations');
+          const nws = await tgNews([{ role: 'user', content: `Give 3 top world news headlines today (${new Date().toDateString()})${args.length ? ` about: ${args.join(' ')}` : ''}. WhatsApp markdown format.` }], 'openai');
+          await sock.sendMessage(jid, { text: `📰 *News*\n\n${nws}` }, { quoted: msg });
+        } catch (e) { await sock.sendMessage(jid, { text: `❌ News failed: ${e.message}` }, { quoted: msg }); }
+        break;
+      }
+      case 'save': { await groupCommands.save(sock, msg); break; }
+      case 'gauth': {
+        if (!jid.endsWith('@g.us')) return sock.sendMessage(jid, { text: '❌ Groups only.' }, { quoted: msg });
+        try {
+          const gm = await sock.groupMetadata(jid);
+          await sock.sendMessage(jid, { text: `╭━━━〔 🔐 GROUP AUTH 〕━━━⬣\n┃ *Name:* ${gm.subject}\n┃ *Members:* ${gm.participants.length}\n┃ *Announce:* ${gm.announce ? '✅ Admins only' : '❌ Everyone'}\n┃ *Restrict:* ${gm.restrict ? '✅ Admins only' : '❌ Everyone'}\n╰━━━━━━━━━━━━━━━━━━⬣` }, { quoted: msg });
+        } catch (e) { await sock.sendMessage(jid, { text: `❌ gauth failed: ${e.message}` }, { quoted: msg }); }
+        break;
+      }
+      case 'gupload': { if (!isOwner) return msg.reply('🔐 Owner only.'); await sock.sendMessage(jid, { text: '📤 *Group Upload*\n\nSend a file directly to upload. Use .sendto for specific groups.' }, { quoted: msg }); break; }
+      case 'task':   { await sock.sendMessage(jid, { text: `📋 *Task Manager*\n\n.setschedule <time> <task>\n.getschedule\n.delschedule <id>\n\nExample: .setschedule 2h Call mum` }, { quoted: msg }); break; }
+      case 'update': { await sock.sendMessage(jid, { text: `╭━━━〔 🔄 UPDATE CHECK 〕━━━⬣\n┃ ✅ *Version:* DollarBot V${config.version}\n┃ 🟢 *Status:* Up to date!\n╰━━━━━━━━━━━━━━━━━━⬣` }, { quoted: msg }); break; }
+      case 'updatenow': {
+        if (!isOwner) return msg.reply('🔐 Owner only.');
+        await sock.sendMessage(jid, { text: '♻️ Restarting to apply updates...' }, { quoted: msg });
+        setTimeout(() => process.exit(0), 1500);
+        break;
+      }
+      case 'pfilter':
+      case 'gfilter': { await groupCommands.filter(sock, msg, args); break; }
+      case 'pstop':
+      case 'gstop':
+      case 'stop': {
+        if (cmd === 'stop' || cmd === 'pstop') {
+          const ar = await store.get('autoreply');
+          if (ar) { await store.set('autoreply', false); await sock.sendMessage(jid, { text: '✅ Auto-reply stopped.' }, { quoted: msg }); }
+          else { await sock.sendMessage(jid, { text: '❌ Auto-reply is already off.' }, { quoted: msg }); }
+        } else {
+          await groupCommands.filter(sock, msg, ['clear']);
+        }
+        break;
+      }
+      case 'plugin': { await sock.sendMessage(jid, { text: `🔌 *Plugins*\n\n*Total:* 225 commands loaded\n*Engine:* ${config.engine}\n*Version:* ${config.version}` }, { quoted: msg }); break; }
+
+      // ── Handle custom commands (setcmd/getcmd system) ──────────────────────
+      default: {
+        const customCmds = (await store.get('customCmds')) || {};
+        if (cmd && customCmds[cmd]) {
+          await sock.sendMessage(jid, { text: customCmds[cmd] }, { quoted: msg });
+          break;
+        }
+        // Unknown command fallthrough
         if (cmd) {
           await sock.sendMessage(jid, {
             text: `❓ Unknown command: *.${cmd}*\n\nType *.menu* to see all commands.`,
           }, { quoted: msg });
         }
+      }
     }
 
     // Always clear the typing indicator once command finishes

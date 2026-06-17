@@ -3,3 +3,5 @@
 - [Menu song path](menu-song.md) — menu_song.mp3 lives at `artifacts/dollarbot/assets/menu_song.mp3` (4.4MB); sent as PTT audio after every .menu call.
 - [Prefix dynamic change](prefix-change.md) — botPrefix stored in store.json, config.prefix mutated at runtime; menu reads from store first then falls back to config.prefix.
 - [Antilink warning system](antilink-warnings.md) — 3 warnings per user per group tracked in store key `antilink_warn_{jid}`; warns on 1st/2nd, kicks on 3rd; reset on kick and when antilink toggled off.
+- [V6 dead-code scoping fix](v6-dead-code.md) — when inserting early-return before old function body in same scope, wrap old code in `if (false) { }` to prevent duplicate `const` SyntaxErrors without deleting it.
+- [V6 sendMenu pattern](v6-menu-pattern.md) — sendMenu uses early-return: V6 menu at top, old code fenced in `if (false)` below; gemini/gpt/lumen/deepseek route to aiCommands; new V6 routing block goes before `default:` case.

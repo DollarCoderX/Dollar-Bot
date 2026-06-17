@@ -1,4 +1,4 @@
-# DollarBot V5
+# DollarBot V6
 
 A powerful WhatsApp bot with AI chat, group management, games, fun commands, and utilities. Built with Baileys and Pollinations AI.
 
@@ -73,7 +73,7 @@ DollarBot V5 is a full-featured public WhatsApp bot that runs 24/7. Users intera
 - Prefix: `.`
 - Mode: Public
 - Engine branding: Cortex AI + Mera AI (Powered by Pollinations)
-- Version: 5.0.0
+- Version: 6.1.2
 
 ## Gotchas
 

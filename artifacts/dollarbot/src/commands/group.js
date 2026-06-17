@@ -814,4 +814,291 @@ const groupCommands = {
   },
 };
 
+// ── V6 Group Commands ─────────────────────────────────────────────────────────
+
+Object.assign(groupCommands, {
+
+  // .ginfo — detailed group info
+  async ginfo(sock, msg) {
+    const jid = msg.key.remoteJid;
+    if (!jid.endsWith('@g.us')) return sock.sendMessage(jid, { text: '❌ Groups only.' }, { quoted: msg });
+    try {
+      const meta = await sock.groupMetadata(jid);
+      const admins = meta.participants.filter(p => p.admin).map(p => `@${p.id.split('@')[0]}`);
+      await sock.sendMessage(jid, {
+        text:
+          `╭━━━〔 📋 GROUP INFO 〕━━━⬣\n` +
+          `┃ 📛 *Name:* ${meta.subject}\n` +
+          `┃ 🆔 *JID:* ${jid}\n` +
+          `┃ 👥 *Members:* ${meta.participants.length}\n` +
+          `┃ 👑 *Admins:* ${admins.join(', ') || 'None'}\n` +
+          `┃ 📅 *Created:* ${new Date((meta.creation || 0) * 1000).toLocaleDateString('en-CA')}\n` +
+          `┃ 📝 *Desc:* ${(meta.desc || 'No description').slice(0, 100)}\n` +
+          `┃ 🔒 *Announce:* ${meta.announce ? 'Admins only' : 'Everyone'}\n` +
+          `╰━━━━━━━━━━━━━━━━━━⬣`,
+        mentions: meta.participants.filter(p => p.admin).map(p => p.id),
+      }, { quoted: msg });
+    } catch (e) { await sock.sendMessage(jid, { text: `❌ ginfo failed: ${e.message}` }, { quoted: msg }); }
+  },
+
+  // .invite — get group invite link
+  async invite(sock, msg) {
+    const jid = msg.key.remoteJid;
+    if (!jid.endsWith('@g.us')) return sock.sendMessage(jid, { text: '❌ Groups only.' }, { quoted: msg });
+    try {
+      const code = await sock.groupInviteCode(jid);
+      await sock.sendMessage(jid, { text: `🔗 *Group Invite Link:*\nhttps://chat.whatsapp.com/${code}` }, { quoted: msg });
+    } catch (e) { await sock.sendMessage(jid, { text: `❌ invite failed: ${e.message}` }, { quoted: msg }); }
+  },
+
+  // .join <link> — join a group via invite link (owner only)
+  async join(sock, msg, args) {
+    const jid = msg.key.remoteJid;
+    const sender = msg.key.participant || msg.key.remoteJid;
+    const sNum = (sender || '').split('@')[0].split(':')[0];
+    const { ownerNumbers } = require('../config');
+    if (!ownerNumbers.includes(sNum)) return sock.sendMessage(jid, { text: '❌ Owner only.' }, { quoted: msg });
+    const link = args[0];
+    if (!link) return sock.sendMessage(jid, { text: '❌ Usage: .join <group invite link>' }, { quoted: msg });
+    const code = link.split('chat.whatsapp.com/')[1] || link;
+    try {
+      await sock.groupAcceptInvite(code);
+      await sock.sendMessage(jid, { text: `✅ Successfully joined the group!` }, { quoted: msg });
+    } catch (e) { await sock.sendMessage(jid, { text: `❌ join failed: ${e.message}` }, { quoted: msg }); }
+  },
+
+  // .reset — reset group invite link
+  async reset(sock, msg) {
+    const jid = msg.key.remoteJid;
+    try {
+      await sock.groupRevokeInvite(jid);
+      const code = await sock.groupInviteCode(jid);
+      await sock.sendMessage(jid, {
+        text: `🔄 *Group link reset!*\n\n🔗 New link: https://chat.whatsapp.com/${code}`,
+      }, { quoted: msg });
+    } catch (e) { await sock.sendMessage(jid, { text: `❌ reset failed: ${e.message}` }, { quoted: msg }); }
+  },
+
+  // .revoke — revoke and regenerate invite link
+  async revoke(sock, msg) {
+    return groupCommands.reset(sock, msg);
+  },
+
+  // .gstatus <text> — set group description
+  async gstatus(sock, msg, args) {
+    const jid = msg.key.remoteJid;
+    if (!jid.endsWith('@g.us')) return sock.sendMessage(jid, { text: '❌ Groups only.' }, { quoted: msg });
+    if (!args.length) return sock.sendMessage(jid, { text: '❌ Usage: .gstatus <description text>' }, { quoted: msg });
+    try {
+      await sock.groupUpdateDescription(jid, args.join(' '));
+      await sock.sendMessage(jid, { text: `✅ Group description updated!` }, { quoted: msg });
+    } catch (e) { await sock.sendMessage(jid, { text: `❌ gstatus failed: ${e.message}` }, { quoted: msg }); }
+  },
+
+  // .gpp — get group profile picture
+  async gpp(sock, msg) {
+    const jid = msg.key.remoteJid;
+    if (!jid.endsWith('@g.us')) return sock.sendMessage(jid, { text: '❌ Groups only.' }, { quoted: msg });
+    try {
+      const ppUrl = await sock.profilePictureUrl(jid, 'image');
+      const fetch2 = require('node-fetch');
+      const buf = await (await fetch2(ppUrl, { timeout: 15000 })).buffer();
+      const meta = await sock.groupMetadata(jid);
+      await sock.sendMessage(jid, { image: buf, caption: `🖼️ *Group Photo:* ${meta.subject}` }, { quoted: msg });
+    } catch (e) { await sock.sendMessage(jid, { text: `❌ No group photo set.` }, { quoted: msg }); }
+  },
+
+  // .goodbye <on|off> — toggle goodbye message
+  async goodbye(sock, msg, args) {
+    const jid = msg.key.remoteJid;
+    if (!jid.endsWith('@g.us')) return sock.sendMessage(jid, { text: '❌ Groups only.' }, { quoted: msg });
+    const key = `goodbyeGroups`;
+    const current = (await store.get(key)) || {};
+    if (args[0] === 'off') {
+      delete current[jid];
+      await store.set(key, current);
+      return sock.sendMessage(jid, { text: '❌ Goodbye messages *OFF*' }, { quoted: msg });
+    }
+    const customMsg = args.slice(args[0] === 'on' ? 1 : 0).join(' ') || '';
+    current[jid] = { active: true, custom: customMsg };
+    await store.set(key, current);
+    await sock.sendMessage(jid, { text: `✅ Goodbye messages *ON*${customMsg ? `\n\nMessage: _${customMsg}_` : ''}` }, { quoted: msg });
+  },
+
+  // .msgs — show message stats
+  async msgs(sock, msg) {
+    const jid = msg.key.remoteJid;
+    const count = global.msgStore?.messages?.[jid]?.array?.length || 0;
+    await sock.sendMessage(jid, {
+      text:
+        `╭━━━〔 💬 MESSAGE STATS 〕━━━⬣\n` +
+        `┃ 📊 *Cached Messages:* ${count}\n` +
+        `┃ 🆔 *Chat:* ${jid}\n` +
+        `┃ _Stats since bot last connected_\n` +
+        `╰━━━━━━━━━━━━━━━━━━⬣`,
+    }, { quoted: msg });
+  },
+
+  // .pdm @user <message> — send private DM to group member
+  async pdm(sock, msg, args) {
+    const jid = msg.key.remoteJid;
+    const ctx = msg.message?.extendedTextMessage?.contextInfo;
+    const mentioned = ctx?.mentionedJid || [];
+    const target = mentioned[0];
+    if (!target) return sock.sendMessage(jid, { text: '❌ Usage: .pdm @user <message>' }, { quoted: msg });
+    const message = args.filter(a => !a.startsWith('@')).join(' ') || 'Hello from the group!';
+    try {
+      await sock.sendMessage(target, { text: `📩 *Private Message from group:*\n\n${message}` });
+      await sock.sendMessage(jid, { text: `✅ Private message sent to @${target.split('@')[0]}`, mentions: [target] }, { quoted: msg });
+    } catch (e) { await sock.sendMessage(jid, { text: `❌ pdm failed: ${e.message}` }, { quoted: msg }); }
+  },
+
+  // .tag @user1 @user2 <message> — tag specific users
+  async tag(sock, msg, args) {
+    const jid = msg.key.remoteJid;
+    const ctx = msg.message?.extendedTextMessage?.contextInfo;
+    const mentioned = ctx?.mentionedJid || [];
+    if (!mentioned.length) return sock.sendMessage(jid, { text: '❌ Usage: .tag @user1 @user2 <message>' }, { quoted: msg });
+    const message = args.filter(a => !a.startsWith('@')).join(' ') || '👆';
+    await sock.sendMessage(jid, {
+      text: `${mentioned.map(j => `@${j.split('@')[0]}`).join(' ')} ${message}`,
+      mentions: mentioned,
+    }, { quoted: msg });
+  },
+
+  // .vote <question> | <opt1> | <opt2> — create group vote
+  async vote(sock, msg, args) {
+    const jid = msg.key.remoteJid;
+    const raw = args.join(' ');
+    const parts = raw.split('|').map(s => s.trim()).filter(Boolean);
+    if (parts.length < 3)
+      return sock.sendMessage(jid, {
+        text: '❌ Usage: .vote <question> | <option1> | <option2>\nExample: .vote Best fruit? | Apple | Mango | Banana',
+      }, { quoted: msg });
+    const [question, ...options] = parts;
+    try {
+      await sock.sendMessage(jid, { poll: { name: question, values: options.slice(0, 12), selectableCount: 1 } });
+    } catch (e) { await sock.sendMessage(jid, { text: `❌ vote failed: ${e.message}` }, { quoted: msg }); }
+  },
+
+  // .inactive — show members who haven't sent messages recently
+  async inactive(sock, msg) {
+    const jid = msg.key.remoteJid;
+    if (!jid.endsWith('@g.us')) return sock.sendMessage(jid, { text: '❌ Groups only.' }, { quoted: msg });
+    try {
+      const meta = await sock.groupMetadata(jid);
+      const allMembers = meta.participants.map(p => p.id.split('@')[0]);
+      const cached = global.msgStore?.messages?.[jid]?.array || [];
+      const activeSet = new Set();
+      for (const m of cached) {
+        const s = (m.key.participant || m.key.remoteJid || '').split('@')[0].split(':')[0];
+        if (s) activeSet.add(s);
+      }
+      const inactive = allMembers.filter(n => !activeSet.has(n)).slice(0, 20);
+      if (!inactive.length) {
+        await sock.sendMessage(jid, { text: `✅ All members appear active (based on cached messages)` }, { quoted: msg });
+        return;
+      }
+      const jids = inactive.map(n => `${n}@s.whatsapp.net`);
+      await sock.sendMessage(jid, {
+        text: `╭━━━〔 😴 INACTIVE MEMBERS 〕━━━⬣\n┃ _Based on cached messages_\n┃\n${inactive.map(n => `┃ • @${n}`).join('\n')}\n╰━━━━━━━━━━━━━━━━━━⬣`,
+        mentions: jids,
+      }, { quoted: msg });
+    } catch (e) { await sock.sendMessage(jid, { text: `❌ inactive failed: ${e.message}` }, { quoted: msg }); }
+  },
+
+  // .antispam <on|off> — toggle anti-spam
+  async antispam(sock, msg, args) {
+    const jid = msg.key.remoteJid;
+    const key = 'antispamGroups';
+    const data = (await store.get(key)) || {};
+    const newState = args[0] === 'off' ? false : true;
+    if (newState) data[jid] = { active: true, count: {}, lastReset: Date.now() };
+    else delete data[jid];
+    await store.set(key, data);
+    await sock.sendMessage(jid, { text: `${newState ? '✅' : '❌'} Anti-spam *${newState ? 'ON' : 'OFF'}*` }, { quoted: msg });
+  },
+
+  // .antiword <on|off> — alias for filter
+  async antiword(sock, msg, args) {
+    return groupCommands.filter(sock, msg, args);
+  },
+
+  // .antifake <on|off> — toggle anti-fake number detection
+  async antifake(sock, msg, args) {
+    const jid = msg.key.remoteJid;
+    const key = 'antifakeGroups';
+    const data = (await store.get(key)) || {};
+    const newState = args[0] === 'off' ? false : true;
+    if (newState) data[jid] = true; else delete data[jid];
+    await store.set(key, data);
+    await sock.sendMessage(jid, {
+      text: `${newState ? '✅' : '❌'} Anti-fake *${newState ? 'ON' : 'OFF'}*\n_${newState ? 'Members with suspicious numbers will be kicked.' : 'Disabled.'}_`,
+    }, { quoted: msg });
+  },
+
+  // .antigm <on|off> — anti group-message (limit messaging)
+  async antigm(sock, msg, args) {
+    const jid = msg.key.remoteJid;
+    const key = `antigm_${jid}`;
+    const newState = args[0] === 'off' ? false : true;
+    await store.set(key, newState);
+    await sock.sendMessage(jid, { text: `${newState ? '✅' : '❌'} Anti-GM *${newState ? 'ON' : 'OFF'}*` }, { quoted: msg });
+  },
+
+  // .antigstatus <on|off> — suppress group status updates
+  async antigstatus(sock, msg, args) {
+    const jid = msg.key.remoteJid;
+    const key = `antigstatus_${jid}`;
+    const newState = args[0] === 'off' ? false : true;
+    await store.set(key, newState);
+    await sock.sendMessage(jid, { text: `${newState ? '✅' : '❌'} Anti-Group-Status *${newState ? 'ON' : 'OFF'}*` }, { quoted: msg });
+  },
+
+  // .amute @user — mute a specific user (bot ignores their messages)
+  async amute(sock, msg, args) {
+    const jid = msg.key.remoteJid;
+    const ctx = msg.message?.extendedTextMessage?.contextInfo;
+    const mentioned = ctx?.mentionedJid || [];
+    const target = mentioned[0] || (args[0]?.replace(/[^0-9]/g, '') + '@s.whatsapp.net');
+    if (!target || target === '@s.whatsapp.net') return sock.sendMessage(jid, { text: '❌ Usage: .amute @user' }, { quoted: msg });
+    const key = `amuted_${jid}`;
+    const muted = (await store.get(key)) || [];
+    const num = target.split('@')[0].split(':')[0];
+    if (muted.includes(num)) return sock.sendMessage(jid, { text: `⚠️ @${num} is already muted.`, mentions: [target] }, { quoted: msg });
+    muted.push(num);
+    await store.set(key, muted);
+    await sock.sendMessage(jid, { text: `🔇 @${num} has been *muted* by the bot.`, mentions: [target] }, { quoted: msg });
+  },
+
+  // .aunmute @user — unmute a user
+  async aunmute(sock, msg, args) {
+    const jid = msg.key.remoteJid;
+    const ctx = msg.message?.extendedTextMessage?.contextInfo;
+    const mentioned = ctx?.mentionedJid || [];
+    const target = mentioned[0] || (args[0]?.replace(/[^0-9]/g, '') + '@s.whatsapp.net');
+    if (!target || target === '@s.whatsapp.net') return sock.sendMessage(jid, { text: '❌ Usage: .aunmute @user' }, { quoted: msg });
+    const key = `amuted_${jid}`;
+    const num = target.split('@')[0].split(':')[0];
+    let muted = (await store.get(key)) || [];
+    if (!muted.includes(num)) return sock.sendMessage(jid, { text: `❌ @${num} is not muted.`, mentions: [target] }, { quoted: msg });
+    muted = muted.filter(n => n !== num);
+    await store.set(key, muted);
+    await sock.sendMessage(jid, { text: `🔊 @${num} has been *unmuted*.`, mentions: [target] }, { quoted: msg });
+  },
+
+  // .common @user — show common groups with a user
+  async common(sock, msg, args) {
+    const jid = msg.key.remoteJid;
+    const ctx = msg.message?.extendedTextMessage?.contextInfo;
+    const mentioned = ctx?.mentionedJid || [];
+    const target = mentioned[0] || (args[0]?.replace(/[^0-9]/g, '') + '@s.whatsapp.net');
+    if (!target || target === '@s.whatsapp.net') return sock.sendMessage(jid, { text: '❌ Usage: .common @user' }, { quoted: msg });
+    await sock.sendMessage(jid, {
+      text: `👥 *Common Groups*\n\n_Finding common groups with @${target.split('@')[0]}..._\n\n_Note: Baileys doesn't expose common groups API directly. Feature limited._`,
+      mentions: [target],
+    }, { quoted: msg });
+  },
+});
+
 module.exports = { groupCommands, handleAntilinkViolation };

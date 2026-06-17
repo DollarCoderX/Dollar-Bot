@@ -26,13 +26,37 @@
       "noSticker": false,
       "noSaveSticker": false,
       "silenced": []
+    },
+    "120363423115036971@g.us": {
+      "noSticker": false,
+      "noSaveSticker": false,
+      "silenced": []
+    },
+    "120363426985134376@g.us": {
+      "noSticker": false,
+      "noSaveSticker": false,
+      "silenced": []
     }
   },
   "antideleteGroups": {
-    "120363405533425174@g.us": true
+    "120363405533425174@g.us": true,
+    "120363426985134376@g.us": true
   },
   "antilinkGroups": {
-    "120363405533425174@g.us": false
+    "120363405533425174@g.us": false,
+    "120363426985134376@g.us": true
   },
-  "botPrefix": "!"
+  "botPrefix": "!",
+  "filter_120363426985134376@g.us": [
+    "sex add porn",
+    "porn",
+    "mad"
+  ],
+  "welcomeGroups": {
+    "120363426985134376@g.us": true
+  },
+  "antilink_warn_120363426985134376@g.us": {
+    "80793233842185": 5
+  },
+  "filter_120363421668772346@g.us": []
 }

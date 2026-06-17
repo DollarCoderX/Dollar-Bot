@@ -5,10 +5,10 @@ const config = {
   ownerName: 'Dollar',
   ownerCountry: 'Canada 🇨🇦',
   botName: 'DollarBot',
-  version: '5.0.0',
+  version: '6.1.2',
   prefix: '.',
   mode: 'public',
-  engine: 'Dollar Engine V5',
+  engine: 'Dollar Engine V6',
 
   // Primary owner JID (Canada number — shown publicly)
   ownerJid: '14378898269@s.whatsapp.net',

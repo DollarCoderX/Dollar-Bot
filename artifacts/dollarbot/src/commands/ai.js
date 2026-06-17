@@ -556,4 +556,50 @@ const aiCommands = {
   },
 };
 
+// ── V6 AI Models via Pollinations (Gemini, GPT-4o, Lumen, DeepSeek) ──────────
+
+const V6_MODELS = {
+  gemini:   { model: 'gemini',        name: '🌐 Gemini',  system: `You are Gemini, Google's most capable AI model. You are intelligent, accurate, and helpful. Format ALL responses using WhatsApp markdown ONLY: *bold* for key terms, _italic_ for emphasis, bullets for lists. Be comprehensive and clear.` },
+  gpt:      { model: 'openai-large',  name: '🤖 GPT-4o',  system: `You are GPT-4o, OpenAI's most advanced model. You are extremely capable, creative, and precise. Format ALL responses using WhatsApp markdown ONLY: *bold* for key terms, _italic_ for emphasis. Be accurate and thorough.` },
+  lumen:    { model: 'openai',        name: '✨ Lumen',    system: `You are Lumen — a creative, illuminating AI by DollarBot. "Lumen" means light. You are thoughtful, poetic, insightful, and artistic. You illuminate complex ideas with clarity and beauty. Format with WhatsApp markdown ONLY: *bold* for key points, _italic_ for poetic emphasis. Bring light to every question.` },
+  deepseek: { model: 'deepseek-r1',   name: '🔍 DeepSeek', system: `You are DeepSeek, a powerful reasoning AI. You excel at deep analysis, reasoning, coding, mathematics, and complex problem solving. Format ALL responses using WhatsApp markdown ONLY: *bold* for key terms, _italic_ for emphasis. Think step-by-step and reason carefully.` },
+};
+
+const v6Mem = {};
+function getV6Hist(k, jid) { return v6Mem[`${k}_${jid}`] || []; }
+function addV6Hist(k, jid, role, content) {
+  const key = `${k}_${jid}`;
+  if (!v6Mem[key]) v6Mem[key] = [];
+  v6Mem[key].push({ role, content });
+  if (v6Mem[key].length > 20) v6Mem[key] = v6Mem[key].slice(-20);
+}
+
+async function v6Chat(sock, msg, args, jid, model) {
+  const cfg = V6_MODELS[model];
+  if (!args.length)
+    return sock.sendMessage(jid, { text: `${cfg.name} _AI — powered by DollarBot V6_\n\nUsage: *.${model} <question>*\n_Reply .${model} .clear to reset memory_` }, { quoted: msg });
+  if (args.join(' ') === '.clear') {
+    delete v6Mem[`${model}_${jid}`];
+    return sock.sendMessage(jid, { text: `🧹 *${cfg.name}* memory cleared.` }, { quoted: msg });
+  }
+  const input = args.join(' ');
+  const history = getV6Hist(model, jid);
+  const messages = [{ role: 'system', content: cfg.system }, ...history, { role: 'user', content: input }];
+  sock.sendPresenceUpdate('composing', jid).catch(() => {});
+  try {
+    const res = await pollinations.textGenerate(messages, cfg.model);
+    if (!res) throw new Error('Empty response');
+    addV6Hist(model, jid, 'user', input);
+    addV6Hist(model, jid, 'assistant', res);
+    await sock.sendMessage(jid, { text: `${cfg.name}\n\n${res}` }, { quoted: msg });
+  } catch (e) {
+    await sock.sendMessage(jid, { text: `❌ ${cfg.name} failed: ${e.message}` }, { quoted: msg });
+  }
+}
+
+aiCommands.gemini   = (sock, msg, args, jid) => v6Chat(sock, msg, args, jid, 'gemini');
+aiCommands.gpt      = (sock, msg, args, jid) => v6Chat(sock, msg, args, jid, 'gpt');
+aiCommands.lumen    = (sock, msg, args, jid) => v6Chat(sock, msg, args, jid, 'lumen');
+aiCommands.deepseek = (sock, msg, args, jid) => v6Chat(sock, msg, args, jid, 'deepseek');
+
 module.exports = aiCommands;
