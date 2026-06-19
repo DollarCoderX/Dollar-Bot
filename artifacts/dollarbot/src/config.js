@@ -90,11 +90,6 @@ Stay witty, conversational, and engaging while still being useful.`,
   googleCseId: '57a3d0370a5894de3',
   serperApiKey: '2fd99d47900a62609e9e6e838be1e99bc0869797',
   newsApiKey: 'c2bef1be2acb42a7bac5dac4aad585be',
-  GROQ_KEYS='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',
-
-GROQ_API_KEY='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',
-GROQ_KEY='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',
-GROQ_TTS_KEY='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',
   startTime: Date.now(),
 };
 
