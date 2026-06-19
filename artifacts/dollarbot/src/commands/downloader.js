@@ -21,19 +21,67 @@ async function dlTikTok(url) {
 
 // ─── Instagram ────────────────────────────────────────────────────────────────
 async function dlInsta(url) {
-  const r = await fetch(`https://instavideosave.com/download?url=${encodeURIComponent(url)}`, {
-    headers: { 'User-Agent': 'Mozilla/5.0' }, timeout: 30000,
-  });
-  if (!r.ok) throw new Error(`HTTP ${r.status}`);
-  const html = await r.text();
-  const m = html.match(/href="(https:\/\/[^"]+\.mp4[^"]*)"/);
-  if (!m) {
-    // Try image fallback
-    const m2 = html.match(/src="(https:\/\/[^"]+\.jpg[^"]*)"/);
-    if (m2) return { url: m2[1], type: 'image' };
-    throw new Error('Could not find Instagram media');
-  }
-  return { url: m[1], type: 'video' };
+  // Method 1: saveinsta API (reliable, good quality)
+  try {
+    const r = await fetch('https://v3.saveinsta.app/api/ajaxSearch', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+        'Referer': 'https://saveinsta.app/',
+        'X-Requested-With': 'XMLHttpRequest',
+      },
+      body: `q=${encodeURIComponent(url)}&t=media&lang=en`,
+      timeout: 30000,
+    });
+    const json = await r.json();
+    if (json?.data) {
+      const html = json.data;
+      // Extract HD video
+      const videoM = html.match(/href="(https:\/\/[^"]+\.mp4[^"]*)" class="[^"]*btn[^"]*"/);
+      if (videoM) return { url: videoM[1].replace(/&amp;/g,'&'), type: 'video' };
+      // Extract image
+      const imgM = html.match(/src="(https:\/\/[^"]+(?:instagram|cdninstagram)[^"]+\.jpg[^"]*)"/);
+      if (imgM) return { url: imgM[1].replace(/&amp;/g,'&'), type: 'image' };
+    }
+  } catch (_) {}
+  // Method 2: Snapinsta API
+  try {
+    const r2 = await fetch('https://snapinsta.app/api/ajaxSearch', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+        'User-Agent': 'Mozilla/5.0',
+        'Referer': 'https://snapinsta.app/',
+      },
+      body: `q=${encodeURIComponent(url)}&lang=en`,
+      timeout: 30000,
+    });
+    const json2 = await r2.json();
+    if (json2?.data) {
+      const html2 = json2.data;
+      const vidM2 = html2.match(/href="(https:\/\/[^"]+\.mp4[^"]*)"/);
+      if (vidM2) return { url: vidM2[1].replace(/&amp;/g,'&'), type: 'video' };
+      const imgM2 = html2.match(/src="(https:\/\/[^"]+\.jpg[^"]*)"/);
+      if (imgM2) return { url: imgM2[1].replace(/&amp;/g,'&'), type: 'image' };
+    }
+  } catch (_) {}
+  // Method 3: Direct scrape from Instagram page (image/video from meta)
+  try {
+    const r3 = await fetch(url, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15',
+        'Accept-Language': 'en-US,en;q=0.9',
+      },
+      timeout: 30000,
+    });
+    const html3 = await r3.text();
+    const vidM3 = html3.match(/"video_url":"(https:\/\/[^"]+)"/);
+    if (vidM3) return { url: vidM3[1].replace(/\\u0026/g,'&'), type: 'video' };
+    const imgM3 = html3.match(/property="og:image" content="([^"]+)"/);
+    if (imgM3) return { url: imgM3[1], type: 'image' };
+  } catch (_) {}
+  throw new Error('Could not find Instagram media. Link may be private or expired');
 }
 
 // ─── Facebook ─────────────────────────────────────────────────────────────────
@@ -56,34 +104,100 @@ async function dlFacebook(url) {
 
 // ─── Twitter/X ────────────────────────────────────────────────────────────────
 async function dlTwitter(url) {
-  const r = await fetch(`https://twdown.net/download.php`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/x-www-form-urlencoded',
-      'User-Agent': 'Mozilla/5.0',
-      'Referer': 'https://twdown.net/',
-    },
-    body: `URL=${encodeURIComponent(url)}`,
-    timeout: 30000,
-  });
-  const html = await r.text();
-  const m = html.match(/href="(https:\/\/[^"]+\.mp4[^"]*)"/);
-  if (!m) throw new Error('Could not fetch Twitter video');
-  return { url: m[1].replace(/&amp;/g, '&') };
+  // Method 1: twitsave (reliable)
+  try {
+    const r = await fetch(`https://twitsave.com/info?url=${encodeURIComponent(url)}`, {
+      headers: { 'User-Agent': 'Mozilla/5.0' },
+      timeout: 30000,
+    });
+    const html = await r.text();
+    // Extract highest quality — look for download-btn links with quality labels
+    const matches = [...html.matchAll(/href="(https:\/\/video\.twimg\.com\/[^"]+\.mp4[^"]*)"/g)];
+    if (matches.length > 0) {
+      const best = matches[matches.length - 1][1].replace(/&amp;/g,'&');
+      return { url: best };
+    }
+  } catch (_) {}
+  // Method 2: ssstwitter
+  try {
+    const r2 = await fetch('https://ssstwitter.com/', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+        'User-Agent': 'Mozilla/5.0',
+        'Referer': 'https://ssstwitter.com/',
+      },
+      body: `id=${encodeURIComponent(url)}&locale=en&tt=&ts=&_ts=`,
+      timeout: 30000,
+    });
+    const html2 = await r2.text();
+    const m2 = html2.match(/href="(https:\/\/[^"]+\.mp4[^"]*)"/);
+    if (m2) return { url: m2[1].replace(/&amp;/g,'&') };
+  } catch (_) {}
+  throw new Error('Could not fetch Twitter video. Make sure the tweet contains a video');
 }
 
 // ─── Pinterest ────────────────────────────────────────────────────────────────
 async function dlPinterest(url) {
-  const r = await fetch(url, { headers: { 'User-Agent': 'Mozilla/5.0' }, timeout: 30000 });
-  const html = await r.text();
-  // Extract high-res image
-  const m = html.match(/"url":"(https:\/\/i\.pinimg\.com\/[^"]+\.jpg)"/);
-  if (!m) {
-    const m2 = html.match(/content="(https:\/\/i\.pinimg\.com\/[^"]+\.jpg)"/);
-    if (!m2) throw new Error('Could not find Pinterest image');
-    return { url: m2[1].replace(/&amp;/g, '&'), type: 'image' };
+  // Resolve shortlinks (pin.it)
+  let resolvedUrl = url;
+  if (url.includes('pin.it')) {
+    try {
+      const redir = await fetch(url, { redirect: 'follow', headers: { 'User-Agent': 'Mozilla/5.0' }, timeout: 15000 });
+      resolvedUrl = redir.url;
+    } catch (_) {}
   }
-  return { url: m[1], type: 'image' };
+
+  const r = await fetch(resolvedUrl, {
+    headers: {
+      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+      'Accept-Language': 'en-US,en;q=0.9',
+    },
+    timeout: 30000,
+  });
+  const html = await r.text();
+
+  // ── Video pins ─────────────────────────────────────────────────
+  const videoPatterns = [
+    /https:\/\/v\.pinimg\.com\/[^"'\s\\]+\.mp4/g,
+    /"url":"(https:\/\/v\.pinimg\.com\/[^"]+\.mp4)"/g,
+  ];
+  for (const pat of videoPatterns) {
+    const matches = [...html.matchAll(pat)];
+    if (matches.length > 0) {
+      const videoUrl = (matches[matches.length - 1][1] || matches[matches.length - 1][0]).replace(/\\u002F/g,'/').replace(/\\/g,'');
+      if (videoUrl.startsWith('http')) return { url: videoUrl, type: 'video' };
+    }
+  }
+
+  // ── Image pins — extract ALL pinimg URLs and pick highest quality ──
+  const allPinUrls = new Set();
+  const imgRegexes = [
+    /https:\/\/i\.pinimg\.com\/originals\/[^"'\s\\]+\.(?:jpg|jpeg|png|gif|webp)/gi,
+    /https:\/\/i\.pinimg\.com\/736x\/[^"'\s\\]+\.(?:jpg|jpeg|png|gif|webp)/gi,
+    /https:\/\/i\.pinimg\.com\/564x\/[^"'\s\\]+\.(?:jpg|jpeg|png|gif|webp)/gi,
+    /https:\/\/i\.pinimg\.com\/474x\/[^"'\s\\]+\.(?:jpg|jpeg|png|gif|webp)/gi,
+    /https:\/\/i\.pinimg\.com\/236x\/[^"'\s\\]+\.(?:jpg|jpeg|png|gif|webp)/gi,
+  ];
+
+  // Priority: originals > 736x > 564x > 474x > 236x
+  for (const regex of imgRegexes) {
+    const found = [...html.matchAll(regex)];
+    if (found.length > 0) {
+      const best = found[0][0].replace(/\\u002F/g,'/').replace(/\\/g,'').replace(/&amp;/g,'&');
+      return { url: best, type: 'image' };
+    }
+  }
+
+  // Fallback: og:image meta tag
+  const ogImg = html.match(/property="og:image" content="([^"]+)"/);
+  if (ogImg) return { url: ogImg[1], type: 'image' };
+
+  // Fallback: any pinimg URL in the page
+  const anyPin = html.match(/https:\/\/i\.pinimg\.com\/[^"'\s\\]+\.(?:jpg|jpeg|png)/i);
+  if (anyPin) return { url: anyPin[0], type: 'image' };
+
+  throw new Error('Could not find Pinterest media. Make sure it\'s a public pin URL');
 }
 
 // ─── Reddit ───────────────────────────────────────────────────────────────────

@@ -33,7 +33,12 @@ const socialCommands  = require('./commands/social');
 const { handleAntilinkViolation } = require('./commands/group');
 
 // ── V7 new modules ────────────────────────────────────────────────────────────
-const v7aiCommands = require('./commands/v7ai');
+const v7aiCommands     = require('./commands/v7ai');
+const textfxCommands   = require('./commands/textfx');
+const creativeCommands = require('./commands/creative');
+const lifestyleCommands = require('./commands/lifestyle');
+const knowledgeCommands = require('./commands/knowledge');
+const generatorCommands = require('./commands/generators');
 
 // ── V6 new modules ────────────────────────────────────────────────────────────
 const audioFxCommands    = require('./commands/audio_fx');
@@ -366,7 +371,7 @@ async function sendMenu(sock, jid, speedMs, quotedMsg, holiday) {
     `┃❃│ Day : ${dayStr}\n` +
     `┃❃│ Date : ${dateStr}\n` +
     `┃❃│ Version : ${config.version}\n` +
-    `┃❃│ Plugins : 500+\n` +
+    `┃❃│ Plugins : 750+\n` +
     `┃❃│ Ram : ${usedMB}/${totalMB}MB\n` +
     `┃❃│ Uptime : ${uptimeStr}\n` +
     `┃❃│ Platform : vps (Linux amd64)\n` +
@@ -1730,7 +1735,7 @@ async function handleMessage(sock, msg) {
         }
         break;
       }
-      case 'plugin': { await sock.sendMessage(jid, { text: `🔌 *Plugins*\n\n*Total:* 500+ commands loaded\n*Engine:* ${config.engine}\n*Version:* ${config.version}` }, { quoted: msg }); break; }
+      case 'plugin': { await sock.sendMessage(jid, { text: `🔌 *Plugins*\n\n*Total:* 750+ commands loaded\n*Engine:* ${config.engine}\n*Version:* ${config.version}` }, { quoted: msg }); break; }
 
       // ── V7 AI Personas ────────────────────────────────────────────────────
       case 'brie':    await v7aiCommands.brie(sock, msg, args, jid); break;
@@ -1764,6 +1769,182 @@ async function handleMessage(sock, msg) {
       case 'rizzwar':      await v7aiCommands.rizzwar(sock, msg, args, jid); break;
       case 'situation':    await v7aiCommands.situation(sock, msg, args, jid); break;
       case 'clearv7':      await v7aiCommands.clearv7(sock, msg, args, jid); break;
+
+      // ── Text FX commands ───────────────────────────────────────────────────
+      case 'uwu':          await textfxCommands.uwu(sock, msg, args); break;
+      case 'owo':          await textfxCommands.owo(sock, msg, args); break;
+      case 'mock':         await textfxCommands.mock(sock, msg, args); break;
+      case 'vaporwave':    await textfxCommands.vaporwave(sock, msg, args); break;
+      case 'leet':         await textfxCommands.leet(sock, msg, args); break;
+      case 'piglatin':     await textfxCommands.piglatin(sock, msg, args); break;
+      case 'clap':         await textfxCommands.clap(sock, msg, args); break;
+      case 'zalgo':        await textfxCommands.zalgo(sock, msg, args); break;
+      case 'flip2':        await textfxCommands.flip(sock, msg, args); break;
+      case 'mirror':       await textfxCommands.mirror(sock, msg, args); break;
+      case 'aesthetic2':   await textfxCommands.aesthetic(sock, msg, args); break;
+      case 'caesar':       await textfxCommands.caesar(sock, msg, args); break;
+      case 'atbash':       await textfxCommands.atbash(sock, msg, args); break;
+      case 'morse':        await textfxCommands.morse(sock, msg, args); break;
+      case 'unmorse':      await textfxCommands.unmorse(sock, msg, args); break;
+      case 'braille':      await textfxCommands.braille(sock, msg, args); break;
+      case 'tiny':         await textfxCommands.tiny(sock, msg, args); break;
+      case 'bold2':        await textfxCommands.bold2(sock, msg, args); break;
+      case 'italic2':      await textfxCommands.italic2(sock, msg, args); break;
+      case 'double2':      await textfxCommands.double2(sock, msg, args); break;
+      case 'fraktur':      await textfxCommands.fraktur(sock, msg, args); break;
+      case 'sansbold':     await textfxCommands.sansbold(sock, msg, args); break;
+      case 'jumble':       await textfxCommands.jumble(sock, msg, args); break;
+      case 'shout':        await textfxCommands.shout(sock, msg, args); break;
+      case 'whisper':      await textfxCommands.whisper(sock, msg, args); break;
+      case 'rainbow2':     await textfxCommands.rainbow(sock, msg, args); break;
+      case 'repeat2':      await textfxCommands.repeat(sock, msg, args); break;
+      case 'backwards':    await textfxCommands.backwards(sock, msg, args); break;
+      case 'charcount':    await textfxCommands.charcount(sock, msg, args); break;
+      case 'upper':        await textfxCommands.upper(sock, msg, args); break;
+      case 'lower':        await textfxCommands.lower(sock, msg, args); break;
+      case 'titlecase':    await textfxCommands.titlecase(sock, msg, args); break;
+      case 'base64e':      await textfxCommands.base64e(sock, msg, args); break;
+      case 'base64d':      await textfxCommands.base64d(sock, msg, args); break;
+      case 'hexify':       await textfxCommands.hexify(sock, msg, args); break;
+      case 'unhex':        await textfxCommands.unhex(sock, msg, args); break;
+      case 'binarytext':   await textfxCommands.binarytext(sock, msg, args); break;
+      case 'unbinary':     await textfxCommands.unbinary(sock, msg, args); break;
+      case 'cursed':       await textfxCommands.cursed(sock, msg, args); break;
+      case 'monospacetext': await textfxCommands.monospacetext(sock, msg, args); break;
+      case 'findreplace':  await textfxCommands.findreplace(sock, msg, args); break;
+      case 'shuffle2':     await textfxCommands.shuffle(sock, msg, args); break;
+      case 'stutter':      await textfxCommands.stutter(sock, msg, args); break;
+      case 'emspace':      await textfxCommands.emspace(sock, msg, args); break;
+
+      // ── Creative writing commands ──────────────────────────────────────────
+      case 'sonnet':       await creativeCommands.sonnet(sock, msg, args); break;
+      case 'limerick':     await creativeCommands.limerick(sock, msg, args); break;
+      case 'haiku2':       await creativeCommands.haiku2(sock, msg, args); break;
+      case 'acrostic':     await creativeCommands.acrostic(sock, msg, args); break;
+      case 'story2':       await creativeCommands.story2(sock, msg, args); break;
+      case 'plothole':     await creativeCommands.plothole(sock, msg, args); break;
+      case 'characterbio': await creativeCommands.characterbio(sock, msg, args); break;
+      case 'worldbuild':   await creativeCommands.worldbuild(sock, msg, args); break;
+      case 'dialogue2':    await creativeCommands.dialogue(sock, msg, args); break;
+      case 'tagline':      await creativeCommands.tagline(sock, msg, args); break;
+      case 'slogan':       await creativeCommands.slogan(sock, msg, args); break;
+      case 'jingle':       await creativeCommands.jingle(sock, msg, args); break;
+      case 'breakup':      await creativeCommands.breakup(sock, msg, args); break;
+      case 'apology':      await creativeCommands.apology(sock, msg, args); break;
+      case 'lovemsg':      await creativeCommands.lovemsg(sock, msg, args); break;
+      case 'email2':       await creativeCommands.email2(sock, msg, args); break;
+      case 'pitch':        await creativeCommands.pitch(sock, msg, args); break;
+      case 'thread':       await creativeCommands.thread(sock, msg, args); break;
+      case 'manifesto':    await creativeCommands.manifesto(sock, msg, args); break;
+      case 'lyrics2':      await creativeCommands.lyrics2(sock, msg, args); break;
+      case 'speech':       await creativeCommands.speech(sock, msg, args); break;
+      case 'toast':        await creativeCommands.toast(sock, msg, args); break;
+      case 'eulogy':       await creativeCommands.eulogy(sock, msg, args); break;
+      case 'weddingvow':   await creativeCommands.weddingvow(sock, msg, args); break;
+      case 'headline':     await creativeCommands.headline(sock, msg, args); break;
+      case 'blurb':        await creativeCommands.blurb(sock, msg, args); break;
+      case 'bio2':         await creativeCommands.bio2(sock, msg, args); break;
+      case 'resume2':      await creativeCommands.resume2(sock, msg, args); break;
+      case 'coverlettertpl': await creativeCommands.coverlettertpl(sock, msg, args); break;
+      case 'interviewq':   await creativeCommands.interviewq(sock, msg, args); break;
+      case 'pressrelease': await creativeCommands.pressrelease(sock, msg, args); break;
+      case 'productdesc':  await creativeCommands.productdesc(sock, msg, args); break;
+
+      // ── Lifestyle & wellness commands ──────────────────────────────────────
+      case 'recipe2':      await lifestyleCommands.recipe2(sock, msg, args); break;
+      case 'cocktail':     await lifestyleCommands.cocktail(sock, msg, args); break;
+      case 'coffee2':      await lifestyleCommands.coffee(sock, msg, args); break;
+      case 'snack':        await lifestyleCommands.snack(sock, msg, args); break;
+      case 'mealplan':     await lifestyleCommands.mealplan(sock, msg, args); break;
+      case 'meditation':   await lifestyleCommands.meditation(sock, msg, args); break;
+      case 'affirmation':  await lifestyleCommands.affirmation(sock, msg, args); break;
+      case 'breathing':    await lifestyleCommands.breathing(sock, msg, args); break;
+      case 'workout':      await lifestyleCommands.workout(sock, msg, args); break;
+      case 'diet2':        await lifestyleCommands.diet2(sock, msg, args); break;
+      case 'sleeptips':    await lifestyleCommands.sleeptips(sock, msg, args); break;
+      case 'anxietyhelp':  await lifestyleCommands.anxietyhelp(sock, msg, args); break;
+      case 'focus2':       await lifestyleCommands.focus(sock, msg, args); break;
+      case 'productivity': await lifestyleCommands.productivity(sock, msg, args); break;
+      case 'mindfulness':  await lifestyleCommands.mindfulness(sock, msg, args); break;
+      case 'gratitude':    await lifestyleCommands.gratitude(sock, msg, args); break;
+      case 'birthday2':    await lifestyleCommands.birthday2(sock, msg, args); break;
+      case 'anniversary2': await lifestyleCommands.anniversary(sock, msg, args); break;
+      case 'congratz':     await lifestyleCommands.congratz(sock, msg, args); break;
+      case 'condolences':  await lifestyleCommands.condolences(sock, msg, args); break;
+      case 'selfcare':     await lifestyleCommands.selfcare(sock, msg, args); break;
+      case 'fitness2':     await lifestyleCommands.fitness(sock, msg, args); break;
+      case 'journal2':     await lifestyleCommands.journal(sock, msg, args); break;
+      case 'bucket':       await lifestyleCommands.bucket(sock, msg, args); break;
+      case 'resolutions':  await lifestyleCommands.resolutions(sock, msg, args); break;
+      case 'posture':      await lifestyleCommands.posture(sock, msg, args); break;
+      case 'eyeexercise':  await lifestyleCommands.eyeexercise(sock, msg, args); break;
+      case 'stretch':      await lifestyleCommands.stretch(sock, msg, args); break;
+      case 'skincare':     await lifestyleCommands.skincare(sock, msg, args); break;
+      case 'hydration':    await lifestyleCommands.hydration(sock, msg, args); break;
+      case 'stressrelief': await lifestyleCommands.stressrelief(sock, msg, args); break;
+      case 'morningroutine': await lifestyleCommands.morningroutine(sock, msg, args); break;
+      case 'eveningroutine': await lifestyleCommands.eveningroutine(sock, msg, args); break;
+
+      // ── Knowledge & facts commands ─────────────────────────────────────────
+      case 'science':      await knowledgeCommands.science(sock, msg, args); break;
+      case 'biology':      await knowledgeCommands.biology(sock, msg, args); break;
+      case 'chemistry':    await knowledgeCommands.chemistry(sock, msg, args); break;
+      case 'physics2':     await knowledgeCommands.physics2(sock, msg, args); break;
+      case 'math3':        await knowledgeCommands.math3(sock, msg, args); break;
+      case 'history3':     await knowledgeCommands.history3(sock, msg, args); break;
+      case 'geography':    await knowledgeCommands.geography(sock, msg, args); break;
+      case 'economics':    await knowledgeCommands.economics(sock, msg, args); break;
+      case 'philosophy2':  await knowledgeCommands.philosophy2(sock, msg, args); break;
+      case 'lawfact':      await knowledgeCommands.lawfact(sock, msg, args); break;
+      case 'techfact':     await knowledgeCommands.techfact(sock, msg, args); break;
+      case 'medicine':     await knowledgeCommands.medicine(sock, msg, args); break;
+      case 'nutritionfact': await knowledgeCommands.nutritionfact(sock, msg, args); break;
+      case 'sportsfact':   await knowledgeCommands.sportsfact(sock, msg, args); break;
+      case 'musicfact':    await knowledgeCommands.musicfact(sock, msg, args); break;
+      case 'artfact':      await knowledgeCommands.artfact(sock, msg, args); break;
+      case 'literature':   await knowledgeCommands.literature(sock, msg, args); break;
+      case 'spacefact':    await knowledgeCommands.spacefact(sock, msg, args); break;
+      case 'oceanfact':    await knowledgeCommands.oceanfact(sock, msg, args); break;
+      case 'climatefact':  await knowledgeCommands.climatefact(sock, msg, args); break;
+      case 'animalfact2':  await knowledgeCommands.animalfact2(sock, msg, args); break;
+      case 'plantfact':    await knowledgeCommands.plantfact(sock, msg, args); break;
+      case 'inventionfact': await knowledgeCommands.inventionfact(sock, msg, args); break;
+      case 'languagefact': await knowledgeCommands.languagefact(sock, msg, args); break;
+      case 'culturefact':  await knowledgeCommands.culturefact(sock, msg, args); break;
+      case 'psych':        await knowledgeCommands.psych(sock, msg, args); break;
+      case 'mythologyfact': await knowledgeCommands.mythologyfact(sock, msg, args); break;
+      case 'architecturefact': await knowledgeCommands.architecturefact(sock, msg, args); break;
+      case 'cryptofact':   await knowledgeCommands.cryptofact(sock, msg, args); break;
+      case 'aifact':       await knowledgeCommands.aifact(sock, msg, args); break;
+      case 'politicsfact': await knowledgeCommands.politicsfact(sock, msg, args); break;
+
+      // ── Generator commands ─────────────────────────────────────────────────
+      case 'randomname':   await generatorCommands.randomname(sock, msg, args); break;
+      case 'randomword':   await generatorCommands.randomword(sock, msg, args); break;
+      case 'randomsentence': await generatorCommands.randomsentence(sock, msg, args); break;
+      case 'randomcolor':  await generatorCommands.randomcolor(sock, msg, args); break;
+      case 'randomemoji':  await generatorCommands.randomemoji(sock, msg, args); break;
+      case 'randomadvice2': await generatorCommands.randomadvice2(sock, msg, args); break;
+      case 'randomcountry': await generatorCommands.randomcountry(sock, msg, args); break;
+      case 'randomanimal': await generatorCommands.randomanimaI(sock, msg, args); break;
+      case 'randomfood2':  await generatorCommands.randomfood2(sock, msg, args); break;
+      case 'randomjob':    await generatorCommands.randomjob(sock, msg, args); break;
+      case 'randomhobby':  await generatorCommands.randomhobby(sock, msg, args); break;
+      case 'randomdream':  await generatorCommands.randomdream(sock, msg, args); break;
+      case 'randomsuperpower': await generatorCommands.randomsuperpower(sock, msg, args); break;
+      case 'randomquote2': await generatorCommands.randomquote2(sock, msg, args); break;
+      case 'randomfact3':  await generatorCommands.randomfact3(sock, msg, args); break;
+      case 'randomchallenge2': await generatorCommands.randomchallenge2(sock, msg, args); break;
+      case 'randomteam':   await generatorCommands.randomteam(sock, msg, args); break;
+      case 'randomnumber2': await generatorCommands.randomnumber2(sock, msg, args); break;
+      case 'dice2':        await generatorCommands.dice2(sock, msg, args); break;
+      case 'coin2':        await generatorCommands.coin2(sock, msg, args); break;
+      case 'uuid':         await generatorCommands.uuid(sock, msg, args); break;
+      case 'randompassword': await generatorCommands.randompassword(sock, msg, args); break;
+      case 'randomdate':   await generatorCommands.randomdate(sock, msg, args); break;
+      case 'would2':       await generatorCommands.would2(sock, msg, args); break;
+      case 'spinwheel2':   await generatorCommands.spinwheel2(sock, msg, args); break;
+      case 'bracket':      await generatorCommands.bracket(sock, msg, args); break;
 
       // ── Handle custom commands (setcmd/getcmd system) ──────────────────────
       default: {

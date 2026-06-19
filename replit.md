@@ -28,13 +28,18 @@ A powerful WhatsApp bot with AI chat, group management, games, fun commands, and
 - `artifacts/dollarbot/src/lib/pollinations.js` — Pollinations + Groq AI wrapper
 - `artifacts/dollarbot/src/lib/store.js` — persistent key/value store
 
-## Commands
+## Commands (750+ total)
 
 - **User:** .ping .alive .owner .stats .info .details .time .jid .runtime .uptime
 - **Owner only:** .say .sendto .react .delete .autoreply .vv .broadcast .shutdown
 - **AI:** .cortex .mera .ask .codeai .roast .complimentai .weather .imagine .translate .story .poem .motivate .summarize .clear .summary .vision .stt .manhwa
 - **V7 AI Personas:** .brie .jarvis .alan .kerrick .beejay .clearv7
 - **V7 Fun:** .vibe .catchphrase .plottwist .excuses .redflags .greenflags .predict .gm .gn .worstcase .bestcase .expose .hatermode .fanboy .cancelreason .roastai .complimentwar .dailychallenge .rizzwar .situation .review .contract .debate2
+- **Text FX (43):** .uwu .owo .mock .vaporwave .leet .piglatin .clap .zalgo .flip2 .mirror .aesthetic2 .caesar .atbash .morse .unmorse .braille .tiny .bold2 .italic2 .double2 .fraktur .sansbold .jumble .shout .whisper .rainbow2 .repeat2 .backwards .charcount .upper .lower .titlecase .base64e .base64d .hexify .unhex .binarytext .unbinary .cursed .monospacetext .findreplace .shuffle2 .stutter .emspace
+- **Creative Writing (32):** .sonnet .limerick .haiku2 .acrostic .story2 .plothole .characterbio .worldbuild .dialogue2 .tagline .slogan .jingle .breakup .apology .lovemsg .email2 .pitch .thread .manifesto .lyrics2 .speech .toast .eulogy .weddingvow .headline .blurb .bio2 .resume2 .coverlettertpl .interviewq .pressrelease .productdesc
+- **Lifestyle & Wellness (33):** .recipe2 .cocktail .coffee2 .snack .mealplan .meditation .affirmation .breathing .workout .diet2 .sleeptips .anxietyhelp .focus2 .productivity .mindfulness .gratitude .birthday2 .anniversary2 .congratz .condolences .selfcare .fitness2 .journal2 .bucket .resolutions .posture .eyeexercise .stretch .skincare .hydration .stressrelief .morningroutine .eveningroutine
+- **Knowledge & Facts (31):** .science .biology .chemistry .physics2 .math3 .history3 .geography .economics .philosophy2 .lawfact .techfact .medicine .nutritionfact .sportsfact .musicfact .artfact .literature .spacefact .oceanfact .climatefact .animalfact2 .plantfact .inventionfact .languagefact .culturefact .psych .mythologyfact .architecturefact .cryptofact .aifact .politicsfact
+- **Generators (26):** .randomname .randomword .randomsentence .randomcolor .randomemoji .randomadvice2 .randomcountry .randomanimal .randomfood2 .randomjob .randomhobby .randomdream .randomsuperpower .randomquote2 .randomfact3 .randomchallenge2 .randomteam .randomnumber2 .dice2 .coin2 .uuid .randompassword .randomdate .would2 .spinwheel2 .bracket
 - **Fun:** .joke .dadjoke .fact .advice .compliment .8ball .truth .dare .reverse .hotcheck .brainlevel .wouldyourather .neverhavei .paranoia .iq .cringe .simp .rizzmeter .slay .bully .pickup .rap .genz .villain .hero .emojify
 - **Shocking (New):** .aura .battle .deeproast .spy .couple .powerup .bomb .stalk .astrology .lastwords .obituary .hype .verdict .fakeid
 - **Social:** .gaycheck .lesbiancheck .chad .sigma .npc .karen .toxic .demon .angel .goat .king .queen .baddie .savage .nerd .clout .swag .drip .luck .karma .crush .stancheck .celeb .phone .video .actor
