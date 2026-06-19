@@ -100,7 +100,7 @@ setInterval(() => {
 const PORT = process.env.PORT || 3000;
 const server = http.createServer((req, res) => {
   res.writeHead(200, { 'Content-Type': 'text/plain' });
-  res.end('DollarBot V6is Alive & Running!');
+  res.end('DollarBot V7 is Alive & Running!');
 });
 server.on('error', (err) => {
   if (err.code === 'EADDRINUSE') {
@@ -121,12 +121,12 @@ function ask(prompt) {
 
 function banner() {
   console.log('\n\x1b[33m╔══════════════════════════════╗\x1b[0m');
-  console.log('\x1b[33m║    💵  DOLLARBOT  V5  💵     ║\x1b[0m');
+  console.log('\x1b[33m║    💵  DOLLARBOT  V7  💵     ║\x1b[0m');
   console.log('\x1b[33m╠══════════════════════════════╣\x1b[0m');
   console.log('\x1b[33m║\x1b[0m  Owner  : Dollar              \x1b[33m║\x1b[0m');
   console.log('\x1b[33m║\x1b[0m  Country: Canada 🇨🇦           \x1b[33m║\x1b[0m');
-  console.log('\x1b[33m║\x1b[0m  Engine : Cortex AI           \x1b[33m║\x1b[0m');
-  console.log('\x1b[33m║\x1b[0m  Version: 5.0.0               \x1b[33m║\x1b[0m');
+  console.log('\x1b[33m║\x1b[0m  Engine : Dollar Engine V7    \x1b[33m║\x1b[0m');
+  console.log('\x1b[33m║\x1b[0m  Version: 7.0.0               \x1b[33m║\x1b[0m');
   console.log('\x1b[33m╚══════════════════════════════╝\x1b[0m\n');
 }
 
@@ -241,7 +241,7 @@ async function startBot(method, phone) {
     if (connection === 'open') {
       reconnectDelay = 3000;
       console.log('\x1b[32m╔══════════════════════════════╗\x1b[0m');
-      console.log('\x1b[32m║   DollarBot V6 ONLINE!       ║\x1b[0m');
+      console.log('\x1b[32m║   DollarBot V7 ONLINE!       ║\x1b[0m');
       console.log('\x1b[32m╚══════════════════════════════╝\x1b[0m\n');
       try {
         const groups = await sock.groupFetchAllParticipating();
@@ -258,7 +258,7 @@ async function startBot(method, phone) {
         try {
           await sock.sendMessage(`${num}@s.whatsapp.net`, {
             text:
-              `*DollarBot V6 is Online*\n\n` +
+              `*DollarBot V7 is Online*\n\n` +
               `- Engine: ${config.engine}\n` +
               `- Version: ${config.version}\n` +
               `- Status: Ready\n\n` +

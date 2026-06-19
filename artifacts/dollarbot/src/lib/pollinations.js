@@ -246,6 +246,73 @@ function getImageUrl(prompt) {
   return `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=1024&height=1024&nologo=true&enhance=true&seed=${Math.floor(Math.random() * 99999)}`;
 }
 
+// ── V7 AI Personas ────────────────────────────────────────────────────────
+
+async function brie(jid, question) {
+  const history = memory.getHistory(jid, 'brie');
+  const messages = [
+    { role: 'system', content: config.brieSystemPrompt },
+    ...history,
+    { role: 'user', content: question },
+  ];
+  const reply = await textGenerate(messages);
+  memory.addMessage(jid, 'brie', 'user', question);
+  memory.addMessage(jid, 'brie', 'assistant', reply);
+  return reply;
+}
+
+async function jarvis(jid, question) {
+  const history = memory.getHistory(jid, 'jarvis');
+  const messages = [
+    { role: 'system', content: config.jarvisSystemPrompt },
+    ...history,
+    { role: 'user', content: question },
+  ];
+  const reply = await textGenerate(messages);
+  memory.addMessage(jid, 'jarvis', 'user', question);
+  memory.addMessage(jid, 'jarvis', 'assistant', reply);
+  return reply;
+}
+
+async function alan(jid, question) {
+  const history = memory.getHistory(jid, 'alan');
+  const messages = [
+    { role: 'system', content: config.alanSystemPrompt },
+    ...history,
+    { role: 'user', content: question },
+  ];
+  const reply = await textGenerate(messages);
+  memory.addMessage(jid, 'alan', 'user', question);
+  memory.addMessage(jid, 'alan', 'assistant', reply);
+  return reply;
+}
+
+async function kerrick(jid, question) {
+  const history = memory.getHistory(jid, 'kerrick');
+  const messages = [
+    { role: 'system', content: config.kerrickSystemPrompt },
+    ...history,
+    { role: 'user', content: question },
+  ];
+  const reply = await textGenerate(messages);
+  memory.addMessage(jid, 'kerrick', 'user', question);
+  memory.addMessage(jid, 'kerrick', 'assistant', reply);
+  return reply;
+}
+
+async function beejay(jid, question) {
+  const history = memory.getHistory(jid, 'beejay');
+  const messages = [
+    { role: 'system', content: config.beejaySystemPrompt },
+    ...history,
+    { role: 'user', content: question },
+  ];
+  const reply = await textGenerate(messages);
+  memory.addMessage(jid, 'beejay', 'user', question);
+  memory.addMessage(jid, 'beejay', 'assistant', reply);
+  return reply;
+}
+
 // ── Auto-Reply AI (human-like, concise, WhatsApp-formatted) ───────────────
 async function autoReplyAI(jid, text) {
   const history = memory.getHistory(jid, 'autoreply');
@@ -372,4 +439,5 @@ module.exports = {
   cortex, mera, codeAI, roast, complimentAI,
   getWeather, translate, getImageUrl, tts,
   textGenerate, autoReplyAI, searchWithAI,
+  brie, jarvis, alan, kerrick, beejay,
 };

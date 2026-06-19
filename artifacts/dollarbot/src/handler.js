@@ -32,6 +32,9 @@ const { safeSend } = require('./lib/safe-send');
 const socialCommands  = require('./commands/social');
 const { handleAntilinkViolation } = require('./commands/group');
 
+// ── V7 new modules ────────────────────────────────────────────────────────────
+const v7aiCommands = require('./commands/v7ai');
+
 // ── V6 new modules ────────────────────────────────────────────────────────────
 const audioFxCommands    = require('./commands/audio_fx');
 const textmakerCommands  = require('./commands/textmaker');
@@ -268,6 +271,14 @@ const CMD_EMOJIS = {
   setname:'✏️', setdesc:'📝', antilink:'🚫', welcome:'👋', delete:'🗑️',
   // Premium / Extra
   song:'🎵', video:'🎥', enhance:'✨', ship:'💞', waifu:'🌸', neko:'🐱', crypto:'💰',
+  // V7 AI Personas
+  brie:'✨', jarvis:'🤖', alan:'🧿', kerrick:'🔥', beejay:'🔮',
+  // V7 Fun & Social
+  vibe:'🎯', catchphrase:'🎤', plottwist:'🎭', excuses:'😅', redflags:'🚩',
+  greenflags:'✅', predict:'🔮', gm:'🌅', gn:'🌙', worstcase:'😱',
+  bestcase:'🌟', expose:'👀', hatermode:'😤', fanboy:'😍', cancelreason:'📵',
+  debate2:'⚔️', review:'⭐', contract:'📜', roastai:'🔥', complimentwar:'💕',
+  dailychallenge:'🎯', rizzwar:'💅', situation:'💬', clearv7:'🧹',
 };
 
 function getCmdEmoji(cmd) {
@@ -344,9 +355,10 @@ async function sendMenu(sock, jid, speedMs, quotedMsg, holiday) {
   const uptimeStr = _uptH > 0 ? `${_uptH}h ${_uptM}m ${_uptS}s` : `${_uptM}m ${_uptS}s`;
   const th6 = holiday ? HOLIDAY_THEMES[holiday.toLowerCase()] : null;
   const themeLabel = th6 ? holiday.charAt(0).toUpperCase() + holiday.slice(1) + ` ${th6.e}` : 'Default';
+  const isGroupChat = jid.endsWith('@g.us');
 
-  const caption =
-    `╭═══ 𝗗𝗼𝗹𝗹𝗮𝗿𝗕𝗼𝘁 𝗩𝟲 ═══⊷\n` +
+  const dmCaption =
+    `╭═══ 𝗗𝗼𝗹𝗹𝗮𝗿𝗕𝗼𝘁 𝗩𝟳 ═══⊷\n` +
     `┃❃╭──────────────\n` +
     `┃❃│ Prefix : ${p}\n` +
     `┃❃│ Owner : ${config.ownerName}\n` +
@@ -354,7 +366,7 @@ async function sendMenu(sock, jid, speedMs, quotedMsg, holiday) {
     `┃❃│ Day : ${dayStr}\n` +
     `┃❃│ Date : ${dateStr}\n` +
     `┃❃│ Version : ${config.version}\n` +
-    `┃❃│ Plugins : 225\n` +
+    `┃❃│ Plugins : 500+\n` +
     `┃❃│ Ram : ${usedMB}/${totalMB}MB\n` +
     `┃❃│ Uptime : ${uptimeStr}\n` +
     `┃❃│ Platform : vps (Linux amd64)\n` +
@@ -362,7 +374,7 @@ async function sendMenu(sock, jid, speedMs, quotedMsg, holiday) {
     `┃❃│ Theme: ${themeLabel}\n` +
     `┃❃╰───────────────\n` +
     `╰═════════════════⊷\n` +
-    ` ╭─❏ ᴀɪ ❏\n │ Cortex\n │ Mera\n │ 𝙶𝙴𝙼𝙸𝙽𝙸\n │ 𝙶𝙿𝚃\n │ Lumen\n │ Deepseek\n ╰─────────────────\n` +
+    ` ╭─❏ ᴀɪ ❏\n │ 𝙲𝙾𝚁𝚃𝙴𝚇\n │ 𝙼𝙴𝚁𝙰\n │ 𝙶𝙴𝙼𝙸𝙽𝙸\n │ 𝙶𝙿𝚃\n │ 𝙻𝚄𝙼𝙴𝙽\n │ 𝙳𝙴𝙴𝙿𝚂𝙴𝙴𝙺\n │ 𝙱𝚁𝙸𝙴\n │ 𝙹𝙰𝚁𝚅𝙸𝚂\n │ 𝙰𝙻𝙰𝙽\n │ 𝙺𝙴𝚁𝚁𝙸𝙲𝙺\n │ 𝙱𝙴𝙴𝙹𝙰𝚈\n ╰─────────────────\n` +
     ` ╭─❏ ᴀᴜᴅɪᴏ ❏\n │ 𝙰𝚅𝙴𝙲\n │ 𝙱𝙰𝚂𝚂\n │ 𝙱𝙻𝙰𝙲𝙺\n │ 𝙱𝙻𝙾𝚆𝙽\n │ 𝙲𝚄𝚃\n │ 𝙳𝙴𝙴𝙿\n │ 𝙴𝙰𝚁𝚁𝙰𝙿𝙴\n │ 𝙵𝙰𝚂𝚃\n │ 𝙵𝙰𝚃\n │ 𝙷𝙸𝚂𝚃𝙾\n │ 𝙻𝙾𝚆\n │ 𝙽𝙸𝙶𝙷𝚃𝙲𝙾𝚁𝙴\n │ 𝙿𝙸𝚃𝙲𝙷\n │ 𝚁𝙾𝙱𝙾𝚃\n │ 𝚂𝙻𝙾𝚆\n │ 𝚂𝙼𝙾𝙾𝚃𝙷\n │ 𝚃𝚁𝙴𝙱𝙻𝙴\n │ 𝚃𝚄𝙿𝙰𝙸\n │ 𝚅𝙴𝙲𝚃𝙾𝚁\n ╰─────────────────\n` +
     ` ╭─❏ ᴀᴜᴛᴏʀᴇᴘʟʏ ❏\n │ 𝙵𝙸𝙻𝚃𝙴𝚁\n │ 𝙶𝙵𝙸𝙻𝚃𝙴𝚁\n │ 𝙶𝚂𝚃𝙾𝙿\n │ 𝙿𝙵𝙸𝙻𝚃𝙴𝚁\n │ 𝙿𝚂𝚃𝙾𝙿\n │ 𝚂𝚃𝙾𝙿\n ╰─────────────────\n` +
     ` ╭─❏ ʙᴏᴛ ❏\n │ 𝙱𝙰𝙲𝙺𝚄𝙿\n │ 𝙶𝙰𝚄𝚃𝙷\n │ 𝙶𝚄𝙿𝙻𝙾𝙰𝙳\n │ 𝚁𝙴𝙼𝙸𝙽𝙳𝙴𝚁\n │ 𝚃𝙰𝚂𝙺\n │ 𝚃𝙾𝙶\n │ 𝚄𝙿𝙳𝙰𝚃𝙴\n │ 𝚄𝙿𝙳𝙰𝚃𝙴 𝙽𝙾𝚆\n ╰─────────────────\n` +
@@ -384,6 +396,33 @@ async function sendMenu(sock, jid, speedMs, quotedMsg, holiday) {
     ` ╭─❏ ᴠᴀʀs ❏\n │ 𝙰𝙻𝙻𝚅𝙰𝚁\n │ 𝙳𝙴𝙻𝚂𝚄𝙳𝙾\n │ 𝙳𝙴𝙻𝚅𝙰𝚁\n │ 𝙶𝙴𝚃𝚂𝚄𝙳𝙾\n │ 𝙶𝙴𝚃𝚅𝙰𝚁\n │ 𝚂𝙴𝚃𝚂𝚄𝙳𝙾\n │ 𝚂𝙴𝚃𝚅𝙰𝚁\n ╰─────────────────\n` +
     ` ╭─❏ ᴠɪᴅᴇᴏ ❏\n │ 𝙲𝙾𝙼𝙿𝚁𝙴𝚂𝚂\n │ 𝙲𝚁𝙾𝙿\n │ 𝙼𝙴𝚁𝙶𝙴\n │ 𝙼𝙿𝟹\n │ 𝚁𝙴𝚅𝙴𝚁𝚂𝙴\n │ 𝚁𝙾𝚃𝙰𝚃𝙴\n │ 𝚃𝚁𝙸𝙼\n ╰─────────────────\n` +
     ` ╭─❏ ᴡʜᴀᴛsᴀᴘᴘ ❏\n │ 𝙰𝙽𝚃𝙸𝙴𝙳𝙸𝚃\n │ 𝙲𝙰𝙻𝙻\n │ 𝙲𝙰𝙿𝚃𝙸𝙾𝙽\n │ 𝙲𝙸𝙽𝙵𝙾\n │ 𝙲𝙻𝙴𝙰𝚁\n │ 𝙲𝚁𝙴𝙰𝙲𝚃\n │ 𝙳𝙴𝙻𝙴𝚃𝙴\n │ 𝙳𝙻𝚃\n │ 𝙳𝙾𝙲\n │ 𝙾𝙽𝙻𝙸𝙽𝙴\n │ 𝙿𝙾𝙻𝙻\n │ 𝚁𝙴𝙰𝙲𝚃\n │ 𝚁𝙴𝙰𝙳\n │ 𝚂𝙲𝚂𝚃𝙰𝚃𝚄𝚂\n │ 𝚂𝙴𝚃𝚂𝚃𝙰𝚃𝚄𝚂\n │ 𝚂𝚃𝙰𝚃𝚄𝚂\n │ 𝚅𝚅\n ╰─────────────────`;
+
+  const groupCaption =
+    `╭═══ 𝗗𝗼𝗹𝗹𝗮𝗿𝗕𝗼𝘁 𝗩𝟳 • 𝗚𝗿𝗼𝘂𝗽 𝗠𝗲𝗻𝘂 ═══⊷\n` +
+    `┃❃╭──────────────\n` +
+    `┃❃│ Prefix : ${p}\n` +
+    `┃❃│ Owner : ${config.ownerName}\n` +
+    `┃❃│ Version : ${config.version}\n` +
+    `┃❃│ Plugins : 200+ Group Plugins\n` +
+    `┃❃│ Ram : ${usedMB}/${totalMB}MB\n` +
+    `┃❃│ Uptime : ${uptimeStr}\n` +
+    `┃❃│ Time : ${timeStr}\n` +
+    `┃❃╰───────────────\n` +
+    `╰═════════════════⊷\n` +
+    ` ╭─❏ 👑 ᴀᴅᴍɪɴ ᴄᴏɴᴛʀᴏʟ ❏\n │ 𝙺𝙸𝙲𝙺  𝙰𝙳𝙳  𝙿𝚁𝙾𝙼𝙾𝚃𝙴  𝙳𝙴𝙼𝙾𝚃𝙴\n │ 𝙼𝚄𝚃𝙴  𝚄𝙽𝙼𝚄𝚃𝙴  𝙾𝙿𝙴𝙽  𝙲𝙻𝙾𝚂𝙴\n │ 𝚂𝙴𝚃𝙽𝙰𝙼𝙴  𝚂𝙴𝚃𝙳𝙴𝚂𝙲  𝚁𝙴𝙱𝙾𝙾𝚃\n ╰─────────────────\n` +
+    ` ╭─❏ 🛡️ ᴘʀᴏᴛᴇᴄᴛɪᴏɴ ❏\n │ 𝙰𝙽𝚃𝙸𝙻𝙸𝙽𝙺  𝙰𝙽𝚃𝙸𝚂𝙿𝙰𝙼  𝙰𝙽𝚃𝙸𝙱𝙾𝚃\n │ 𝙰𝙽𝚃𝙸𝚆𝙾𝚁𝙳  𝙰𝙽𝚃𝙸𝙵𝙰𝙺𝙴  𝙰𝙽𝚃𝙸𝙶𝙼\n │ 𝙰𝙽𝚃𝙸𝙴𝙳𝙸𝚃  𝙰𝙽𝚃𝙸𝙳𝙴𝙻𝙴𝚃𝙴  𝙻𝙾𝙲𝙺\n │ 𝙰𝙼𝚄𝚃𝙴  𝙰𝚄𝙽𝙼𝚄𝚃𝙴  𝙱𝚈𝙿𝙰𝚂𝚂\n ╰─────────────────\n` +
+    ` ╭─❏ ⚠️ ᴡᴀʀɴɪɴɢ ❏\n │ 𝚆𝙰𝚁𝙽  𝚆𝙰𝚁𝙽𝚂  𝙲𝙻𝙴𝙰𝚁𝚆𝙰𝚁𝙽\n │ 𝙵𝙸𝙻𝚃𝙴𝚁  𝚂𝙴𝚃𝚁𝚄𝙻𝙴𝚂  𝚁𝚄𝙻𝙴𝚂\n ╰─────────────────\n` +
+    ` ╭─❏ 📢 ᴛᴀɢɢɪɴɢ ❏\n │ 𝚃𝙰𝙶𝙰𝙻𝙻  𝙴𝚅𝙴𝚁𝚈𝙾𝙽𝙴  𝙷𝙸𝙳𝙴𝚃𝙰𝙶\n │ 𝚃𝙰𝙶  𝙰𝙳𝙼𝙸𝙽𝚂  𝙶𝚁𝙾𝚄𝙿𝙻𝙸𝙽𝙺\n │ 𝙿𝙳𝙼  𝙼𝙴𝙽𝚃𝙸𝙾𝙽\n ╰─────────────────\n` +
+    ` ╭─❏ 👋 ᴡᴇʟᴄᴏᴍᴇ ❏\n │ 𝚆𝙴𝙻𝙲𝙾𝙼𝙴  𝙶𝙾𝙾𝙳𝙱𝚈𝙴  𝚁𝙴𝚅𝙾𝙺𝙴\n │ 𝙸𝙽𝚅𝙸𝚃𝙴  𝙹𝙾𝙸𝙽\n ╰─────────────────\n` +
+    ` ╭─❏ 📊 ɢʀᴏᴜᴘ ɪɴꜰᴏ ❏\n │ 𝙶𝙸𝙽𝙵𝙾  𝙶𝚂𝚃𝙰𝚃𝚄𝚂  𝙶𝙿𝙿  𝙰𝙳𝙼𝙸𝙽𝚂\n │ 𝙸𝙽𝙰𝙲𝚃𝙸𝚅𝙴  𝙼𝚂𝙶𝚂  𝙲𝙾𝙼𝙼𝙾𝙽\n │ 𝙶𝚁𝙾𝚄𝙿𝙸𝙽𝙵𝙾  𝙶𝙰𝚄𝚃𝙷  𝙿𝙳𝙼\n ╰─────────────────\n` +
+    ` ╭─❏ 🔧 ɢʀᴏᴜᴘ ꜱᴇᴛᴛɪɴɢꜱ ❏\n │ 𝙰𝙽𝚃𝙸𝙶𝚂𝚃𝙰𝚃𝚄𝚂  𝚁𝙴𝚂𝙴𝚃  𝙳𝙴𝙻𝙴𝚃𝙴\n │ 𝙶𝙵𝙸𝙻𝚃𝙴𝚁  𝙶𝚂𝚃𝙾𝙿  𝙿𝙵𝙸𝙻𝚃𝙴𝚁  𝙿𝚂𝚃𝙾𝙿\n │ 𝚂𝙰𝚅𝙴  𝚅𝙾𝚃𝙴  𝚄𝙽𝙻𝙾𝙲𝙺\n ╰─────────────────\n` +
+    ` ╭─❏ 🤖 ᴀɪ ɪɴ ɢʀᴏᴜᴘ ❏\n │ 𝙲𝙾𝚁𝚃𝙴𝚇  𝙼𝙴𝚁𝙰  𝙶𝙴𝙼𝙸𝙽𝙸  𝙶𝙿𝚃\n │ 𝙱𝚁𝙸𝙴  𝙹𝙰𝚁𝚅𝙸𝚂  𝙰𝙻𝙰𝙽  𝙺𝙴𝚁𝚁𝙸𝙲𝙺\n │ 𝙻𝚄𝙼𝙴𝙽  𝙱𝙴𝙴𝙹𝙰𝚈  𝙳𝙴𝙴𝙿𝚂𝙴𝙴𝙺\n │ 𝙸𝙼𝙰𝙶𝙸𝙽𝙴  𝚂𝚃𝙾𝚁𝚈  𝙿𝙾𝙴𝙼  𝚃𝚁𝙰𝙽𝚂𝙻𝙰𝚃𝙴\n ╰─────────────────\n` +
+    ` ╭─❏ 🎮 ɢʀᴏᴜᴘ ɢᴀᴍᴇꜱ ❏\n │ 𝚃𝚁𝙸𝚅𝙸𝙰  𝙷𝙰𝙽𝙶𝙼𝙰𝙽  𝚂𝙲𝚁𝙰𝙼𝙱𝙻𝙴\n │ 𝚃𝙸𝙲𝚃𝙰𝙲𝚃𝙾𝙴  𝙼𝙰𝚃𝙷  𝙶𝚄𝙴𝚂𝚂\n │ 𝚁𝙿𝚂  𝙻𝙾𝚃𝚃𝙴𝚁𝚈  𝚁𝙾𝚄𝙻𝙴𝚃𝚃𝙴\n ╰─────────────────\n` +
+    ` ╭─❏ 🎭 ɢʀᴏᴜᴘ ꜰᴜɴ ❏\n │ 𝙹𝙾𝙺𝙴  𝚃𝚁𝚄𝚃𝙷  𝙳𝙰𝚁𝙴  𝚆𝚈𝚁\n │ 𝚁𝙾𝙰𝚂𝚃  𝙱𝙰𝚃𝚃𝙻𝙴  𝚁𝙸𝚉𝚉𝙼𝙴𝚃𝙴𝚁\n │ 𝙷𝙾𝚃𝙲𝙷𝙴𝙲𝙺  𝙸𝚀  𝙲𝙷𝙰𝙳  𝚂𝙸𝙶𝙼𝙰\n │ 𝙻𝙾𝚅𝙴𝙲𝙰𝙻𝙲  𝙲𝙾𝚄𝙿𝙻𝙴  𝚅𝙸𝙱𝙴\n ╰─────────────────\n` +
+    ` ╭─❏ 🔍 ꜱᴇᴀʀᴄʜ & ᴜᴛɪʟɪᴛʏ ❏\n │ 𝚂𝚃𝙸𝙲𝙺𝙴𝚁  𝚃𝚃𝚂  𝚃𝚁𝙰𝙽𝚂𝙻𝙰𝚃𝙴  𝚀𝚁\n │ 𝚆𝙴𝙰𝚃𝙷𝙴𝚁  𝙽𝙴𝚆𝚂  𝙵𝙰𝙲𝚃  𝙻𝙾𝙶𝙸𝙰\n │ 𝙶𝙴𝙽𝙿𝙰𝚂𝚂  𝚀𝚁  𝙻𝚈𝚁𝙸𝙲𝚂  𝙼𝙾𝚅𝙸𝙴\n ╰─────────────────\n` +
+    `\n_💡 Use .menu for the full plugin list (DM or group)_`;
+
+  const caption = isGroupChat ? groupCaption : dmCaption;
 
   const imgPath6 = config.menuImages[menuImageIndex++ % config.menuImages.length];
   try {
@@ -1691,7 +1730,40 @@ async function handleMessage(sock, msg) {
         }
         break;
       }
-      case 'plugin': { await sock.sendMessage(jid, { text: `🔌 *Plugins*\n\n*Total:* 225 commands loaded\n*Engine:* ${config.engine}\n*Version:* ${config.version}` }, { quoted: msg }); break; }
+      case 'plugin': { await sock.sendMessage(jid, { text: `🔌 *Plugins*\n\n*Total:* 500+ commands loaded\n*Engine:* ${config.engine}\n*Version:* ${config.version}` }, { quoted: msg }); break; }
+
+      // ── V7 AI Personas ────────────────────────────────────────────────────
+      case 'brie':    await v7aiCommands.brie(sock, msg, args, jid); break;
+      case 'jarvis':  await v7aiCommands.jarvis(sock, msg, args, jid); break;
+      case 'alan':    await v7aiCommands.alan(sock, msg, args, jid); break;
+      case 'kerrick': await v7aiCommands.kerrick(sock, msg, args, jid); break;
+      case 'beejay':  await v7aiCommands.beejay(sock, msg, args, jid); break;
+
+      // ── V7 Fun & Social ───────────────────────────────────────────────────
+      case 'vibe':         await v7aiCommands.vibe(sock, msg, args, jid); break;
+      case 'catchphrase':  await v7aiCommands.catchphrase(sock, msg, args, jid); break;
+      case 'plottwist':    await v7aiCommands.plottwist(sock, msg, args, jid); break;
+      case 'excuses':      await v7aiCommands.excuses(sock, msg, args, jid); break;
+      case 'redflags':     await v7aiCommands.redflags(sock, msg, args, jid); break;
+      case 'greenflags':   await v7aiCommands.greenflags(sock, msg, args, jid); break;
+      case 'predict':      await v7aiCommands.predict(sock, msg, args, jid); break;
+      case 'gm':           await v7aiCommands.gm(sock, msg, args, jid); break;
+      case 'gn':           await v7aiCommands.gn(sock, msg, args, jid); break;
+      case 'worstcase':    await v7aiCommands.worstcase(sock, msg, args, jid); break;
+      case 'bestcase':     await v7aiCommands.bestcase(sock, msg, args, jid); break;
+      case 'expose':       await v7aiCommands.expose(sock, msg, args, jid); break;
+      case 'hatermode':    await v7aiCommands.hater(sock, msg, args, jid); break;
+      case 'fanboy':       await v7aiCommands.fanboy(sock, msg, args, jid); break;
+      case 'cancelreason': await v7aiCommands.cancelreason(sock, msg, args, jid); break;
+      case 'debate2':      await v7aiCommands.debate2(sock, msg, args, jid); break;
+      case 'review':       await v7aiCommands.review(sock, msg, args, jid); break;
+      case 'contract':     await v7aiCommands.contract(sock, msg, args, jid); break;
+      case 'roastai':      await v7aiCommands.roastai(sock, msg, args, jid); break;
+      case 'complimentwar': await v7aiCommands.complimentwar(sock, msg, args, jid); break;
+      case 'dailychallenge': await v7aiCommands.dailychallenge(sock, msg, args, jid); break;
+      case 'rizzwar':      await v7aiCommands.rizzwar(sock, msg, args, jid); break;
+      case 'situation':    await v7aiCommands.situation(sock, msg, args, jid); break;
+      case 'clearv7':      await v7aiCommands.clearv7(sock, msg, args, jid); break;
 
       // ── Handle custom commands (setcmd/getcmd system) ──────────────────────
       default: {

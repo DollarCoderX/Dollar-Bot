@@ -1,4 +1,4 @@
-# DollarBot V6
+# DollarBot V7
 
 A powerful WhatsApp bot with AI chat, group management, games, fun commands, and utilities. Built with Baileys and Pollinations AI.
 
@@ -33,6 +33,8 @@ A powerful WhatsApp bot with AI chat, group management, games, fun commands, and
 - **User:** .ping .alive .owner .stats .info .details .time .jid .runtime .uptime
 - **Owner only:** .say .sendto .react .delete .autoreply .vv .broadcast .shutdown
 - **AI:** .cortex .mera .ask .codeai .roast .complimentai .weather .imagine .translate .story .poem .motivate .summarize .clear .summary .vision .stt .manhwa
+- **V7 AI Personas:** .brie .jarvis .alan .kerrick .beejay .clearv7
+- **V7 Fun:** .vibe .catchphrase .plottwist .excuses .redflags .greenflags .predict .gm .gn .worstcase .bestcase .expose .hatermode .fanboy .cancelreason .roastai .complimentwar .dailychallenge .rizzwar .situation .review .contract .debate2
 - **Fun:** .joke .dadjoke .fact .advice .compliment .8ball .truth .dare .reverse .hotcheck .brainlevel .wouldyourather .neverhavei .paranoia .iq .cringe .simp .rizzmeter .slay .bully .pickup .rap .genz .villain .hero .emojify
 - **Shocking (New):** .aura .battle .deeproast .spy .couple .powerup .bomb .stalk .astrology .lastwords .obituary .hype .verdict .fakeid
 - **Social:** .gaycheck .lesbiancheck .chad .sigma .npc .karen .toxic .demon .angel .goat .king .queen .baddie .savage .nerd .clout .swag .drip .luck .karma .crush .stancheck .celeb .phone .video .actor
@@ -73,7 +75,7 @@ DollarBot V5 is a full-featured public WhatsApp bot that runs 24/7. Users intera
 - Prefix: `.`
 - Mode: Public
 - Engine branding: Cortex AI + Mera AI (Powered by Pollinations)
-- Version: 6.1.2
+- Version: 7.0.0
 
 ## Gotchas
 
