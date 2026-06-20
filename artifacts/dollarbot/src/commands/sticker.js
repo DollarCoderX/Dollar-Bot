@@ -121,9 +121,114 @@ const stickerCommands = {
       });
 
       await sock.sendMessage(jid, { sticker: branded }, { quoted: msg });
-      await msg.reply(`✅ *Sticker stolen & branded!*\n\n📦 Pack: *${customPack}*\n✍️ Author: *${author}*\n\n_Save it from your sticker tray!_`);
+      await msg.reply(`✅ *Sticker stolen & branded!*\n\n📦 Pack: *${customPack}*\n✍️ Author: *Dollar | DollarBot V7*\n\n_Save it from your sticker tray!_`);
     } catch (e) {
       await msg.reply(`❌ Steal error: ${e.message}`);
+    }
+  },
+
+  // ── .savestatus — save replied media (view-once or normal) as regular media ─
+  async savestatus(sock, msg) {
+    const jid = msg.key.remoteJid;
+    await msg.reply('_💾 Saving media..._');
+    try {
+      const ctx = getContextInfo(msg);
+      const quoted = ctx?.quotedMessage;
+      if (!quoted) {
+        return msg.reply('❌ Reply to an *image*, *video*, *audio*, or *view-once* message with *.savestatus*');
+      }
+      const mediaTypes = ['imageMessage', 'videoMessage', 'audioMessage', 'stickerMessage',
+        'viewOnceMessage', 'viewOnceMessageV2', 'viewOnceMessageV2Extension'];
+      let mediaType = mediaTypes.find(t => quoted[t]);
+      let actualMsg = quoted;
+      if (!mediaType) {
+        return msg.reply('❌ No media found in the replied message.');
+      }
+      // Unwrap view-once
+      if (mediaType === 'viewOnceMessage' || mediaType === 'viewOnceMessageV2' || mediaType === 'viewOnceMessageV2Extension') {
+        const inner = quoted[mediaType]?.message;
+        actualMsg = inner;
+        mediaType = ['imageMessage', 'videoMessage', 'audioMessage'].find(t => inner?.[t]);
+        if (!mediaType || !actualMsg) return msg.reply('❌ Could not extract view-once media.');
+      }
+      const fakeMsg = {
+        key: { remoteJid: jid, id: ctx.stanzaId || msg.key.id, fromMe: false, participant: ctx.participant },
+        message: { [mediaType]: actualMsg[mediaType] || actualMsg },
+      };
+      const { downloadMediaMessage } = require('@whiskeysockets/baileys');
+      const SILENT = { level:'silent', fatal:()=>{}, error:()=>{}, warn:()=>{}, info:()=>{}, debug:()=>{}, trace:()=>{}, child:()=>SILENT };
+      const buffer = await downloadMediaMessage(fakeMsg, 'buffer', {}, { logger: SILENT });
+      if (mediaType === 'imageMessage') {
+        await sock.sendMessage(jid, { image: buffer, caption: '✅ *Saved!* — DollarBot V7 💵' }, { quoted: msg });
+      } else if (mediaType === 'videoMessage') {
+        await sock.sendMessage(jid, { video: buffer, caption: '✅ *Saved!* — DollarBot V7 💵' }, { quoted: msg });
+      } else if (mediaType === 'audioMessage') {
+        await sock.sendMessage(jid, { audio: buffer, mimetype: 'audio/mp4' }, { quoted: msg });
+      } else if (mediaType === 'stickerMessage') {
+        await sock.sendMessage(jid, { sticker: buffer }, { quoted: msg });
+      } else {
+        await sock.sendMessage(jid, { document: buffer, mimetype: 'application/octet-stream', fileName: 'saved_media' }, { quoted: msg });
+      }
+    } catch (e) {
+      await msg.reply(`❌ Save error: ${e.message}`);
+    }
+  },
+
+  // ── .xemoji — convert emoji to sticker ───────────────────────────────────
+  async xemoji(sock, msg, args) {
+    const jid = msg.key.remoteJid;
+    if (!args.length) return msg.reply('❌ Usage: .xemoji <emoji>\nExample: .xemoji 😂');
+    const emoji = args[0];
+    await msg.reply('_🎨 Creating emoji sticker..._');
+    try {
+      const fetch = require('node-fetch');
+      // Encode emoji as codepoint for CDN
+      const cp = [...emoji].map(c => c.codePointAt(0).toString(16).padStart(4,'0')).join('-');
+      const cdnUrl = `https://emojicdn.elk.sh/${encodeURIComponent(emoji)}?style=apple`;
+      const res = await fetch(cdnUrl, {
+        headers: { 'User-Agent': 'Mozilla/5.0' },
+        timeout: 15000,
+      });
+      if (!res.ok) throw new Error('Emoji not found on CDN');
+      const buf = await res.buffer();
+      const stickerBuf = await imageToSticker(buf, 'DollarBot V7 🇨🇦', 'Dollar');
+      await sock.sendMessage(jid, { sticker: stickerBuf }, { quoted: msg });
+    } catch (e) {
+      // Fallback: use Pollinations to generate emoji art image
+      try {
+        const fetch = require('node-fetch');
+        const prompt = `${emoji} emoji, flat design, clean, transparent background, high quality sticker art`;
+        const imgRes = await fetch(`https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=512&height=512&nologo=true`, { timeout: 30000 });
+        if (!imgRes.ok) throw new Error('Image generation failed');
+        const buf2 = await imgRes.buffer();
+        const stickerBuf2 = await imageToSticker(buf2, 'DollarBot V7 🇨🇦', 'Dollar');
+        await sock.sendMessage(jid, { sticker: stickerBuf2 }, { quoted: msg });
+      } catch (e2) {
+        await msg.reply(`❌ Could not create emoji sticker: ${e2.message}`);
+      }
+    }
+  },
+
+  // ── .attp — animated text sticker ────────────────────────────────────────
+  async attp(sock, msg, args) {
+    const jid = msg.key.remoteJid;
+    if (!args.length) return msg.reply('❌ Usage: .attp <text>\nExample: .attp DollarBot V7');
+    const text = args.join(' ').slice(0, 40);
+    await msg.reply('_✨ Creating text sticker..._');
+    try {
+      const fetch = require('node-fetch');
+      // Use Pollinations to generate stylized text as sticker image
+      const prompt = `stylized text sticker saying "${text}", bold colorful typography, graffiti style, transparent background, high quality, clean`;
+      const imgRes = await fetch(
+        `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=512&height=512&nologo=true`,
+        { timeout: 30000 }
+      );
+      if (!imgRes.ok) throw new Error('Image generation failed');
+      const buf = await imgRes.buffer();
+      const stickerBuf = await imageToSticker(buf, 'DollarBot V7 🇨🇦', 'Dollar');
+      await sock.sendMessage(jid, { sticker: stickerBuf }, { quoted: msg });
+    } catch (e) {
+      await msg.reply(`❌ ATTP error: ${e.message}`);
     }
   },
 };

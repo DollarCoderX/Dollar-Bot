@@ -38,7 +38,12 @@ const textfxCommands   = require('./commands/textfx');
 const creativeCommands = require('./commands/creative');
 const lifestyleCommands = require('./commands/lifestyle');
 const knowledgeCommands = require('./commands/knowledge');
-const generatorCommands = require('./commands/generators');
+const generatorCommands  = require('./commands/generators');
+const sportsCommands     = require('./commands/sports');
+const financeCommands    = require('./commands/finance');
+const music2Commands     = require('./commands/music2');
+const education2Commands = require('./commands/education2');
+const morefun2Commands   = require('./commands/morefun2');
 
 // ── V6 new modules ────────────────────────────────────────────────────────────
 const audioFxCommands    = require('./commands/audio_fx');
@@ -371,7 +376,7 @@ async function sendMenu(sock, jid, speedMs, quotedMsg, holiday) {
     `┃❃│ Day : ${dayStr}\n` +
     `┃❃│ Date : ${dateStr}\n` +
     `┃❃│ Version : ${config.version}\n` +
-    `┃❃│ Plugins : 750+\n` +
+    `┃❃│ Plugins : 1000+\n` +
     `┃❃│ Ram : ${usedMB}/${totalMB}MB\n` +
     `┃❃│ Uptime : ${uptimeStr}\n` +
     `┃❃│ Platform : vps (Linux amd64)\n` +
@@ -400,7 +405,19 @@ async function sendMenu(sock, jid, speedMs, quotedMsg, holiday) {
     ` ╭─❏ ᴜsᴇʀ ❏\n │ 𝙱𝙻𝙾𝙲𝙺\n │ 𝙵𝚄𝙻𝙻𝙿𝙿\n │ 𝙶𝙹𝙸𝙳\n │ 𝙹𝙸𝙳\n │ 𝙻𝙴𝙵𝚃\n │ 𝙿𝙿\n │ 𝚄𝙽𝙱𝙻𝙾𝙲𝙺\n ╰─────────────────\n` +
     ` ╭─❏ ᴠᴀʀs ❏\n │ 𝙰𝙻𝙻𝚅𝙰𝚁\n │ 𝙳𝙴𝙻𝚂𝚄𝙳𝙾\n │ 𝙳𝙴𝙻𝚅𝙰𝚁\n │ 𝙶𝙴𝚃𝚂𝚄𝙳𝙾\n │ 𝙶𝙴𝚃𝚅𝙰𝚁\n │ 𝚂𝙴𝚃𝚂𝚄𝙳𝙾\n │ 𝚂𝙴𝚃𝚅𝙰𝚁\n ╰─────────────────\n` +
     ` ╭─❏ ᴠɪᴅᴇᴏ ❏\n │ 𝙲𝙾𝙼𝙿𝚁𝙴𝚂𝚂\n │ 𝙲𝚁𝙾𝙿\n │ 𝙼𝙴𝚁𝙶𝙴\n │ 𝙼𝙿𝟹\n │ 𝚁𝙴𝚅𝙴𝚁𝚂𝙴\n │ 𝚁𝙾𝚃𝙰𝚃𝙴\n │ 𝚃𝚁𝙸𝙼\n ╰─────────────────\n` +
-    ` ╭─❏ ᴡʜᴀᴛsᴀᴘᴘ ❏\n │ 𝙰𝙽𝚃𝙸𝙴𝙳𝙸𝚃\n │ 𝙲𝙰𝙻𝙻\n │ 𝙲𝙰𝙿𝚃𝙸𝙾𝙽\n │ 𝙲𝙸𝙽𝙵𝙾\n │ 𝙲𝙻𝙴𝙰𝚁\n │ 𝙲𝚁𝙴𝙰𝙲𝚃\n │ 𝙳𝙴𝙻𝙴𝚃𝙴\n │ 𝙳𝙻𝚃\n │ 𝙳𝙾𝙲\n │ 𝙾𝙽𝙻𝙸𝙽𝙴\n │ 𝙿𝙾𝙻𝙻\n │ 𝚁𝙴𝙰𝙲𝚃\n │ 𝚁𝙴𝙰𝙳\n │ 𝚂𝙲𝚂𝚃𝙰𝚃𝚄𝚂\n │ 𝚂𝙴𝚃𝚂𝚃𝙰𝚃𝚄𝚂\n │ 𝚂𝚃𝙰𝚃𝚄𝚂\n │ 𝚅𝚅\n ╰─────────────────`;
+    ` ╭─❏ ᴡʜᴀᴛsᴀᴘᴘ ❏\n │ 𝙰𝙽𝚃𝙸𝙴𝙳𝙸𝚃\n │ 𝙲𝙰𝙻𝙻\n │ 𝙲𝙰𝙿𝚃𝙸𝙾𝙽\n │ 𝙲𝙸𝙽𝙵𝙾\n │ 𝙲𝙻𝙴𝙰𝚁\n │ 𝙲𝚁𝙴𝙰𝙲𝚃\n │ 𝙳𝙴𝙻𝙴𝚃𝙴\n │ 𝙳𝙻𝚃\n │ 𝙳𝙾𝙲\n │ 𝙾𝙽𝙻𝙸𝙽𝙴\n │ 𝙿𝙾𝙻𝙻\n │ 𝚁𝙴𝙰𝙲𝚃\n │ 𝚁𝙴𝙰𝙳\n │ 𝚂𝙲𝚂𝚃𝙰𝚃𝚄𝚂\n │ 𝚂𝙴𝚃𝚂𝚃𝙰𝚃𝚄𝚂\n │ 𝚂𝚃𝙰𝚃𝚄𝚂\n │ 𝚅𝚅\n ╰─────────────────\n` +
+    ` ╭─❏ ᴛᴇxᴛ ꜰx (43) ❏\n │ 𝚄𝚆𝚄  𝙾𝚆𝙾  𝙼𝙾𝙲𝙺  𝚅𝙰𝙿𝙾𝚁𝚆𝙰𝚅𝙴\n │ 𝙻𝙴𝙴𝚃  𝙿𝙸𝙶𝙻𝙰𝚃𝙸𝙽  𝙲𝙻𝙰𝙿  𝚉𝙰𝙻𝙶𝙾\n │ 𝙱𝚁𝙰𝙸𝙻𝙻𝙴  𝙼𝙾𝚁𝚂𝙴  𝙱𝙸𝙽𝙰𝚁𝚈𝚃𝙴𝚇𝚃\n │ 𝙲𝙰𝙴𝚂𝙰𝚁  𝚁𝙰𝙸𝙽𝙱𝙾𝚆𝟸  𝚄𝙿𝙿𝙴𝚁  𝙻𝙾𝚆𝙴𝚁\n ╰─────────────────\n` +
+    ` ╭─❏ ᴄʀᴇᴀᴛɪᴠᴇ (32) ❏\n │ 𝚂𝙾𝙽𝙽𝙴𝚃  𝙻𝙸𝙼𝙴𝚁𝙸𝙲𝙺  𝙷𝙰𝙸𝙺𝚄𝟸\n │ 𝚂𝚃𝙾𝚁𝚈𝟸  𝙻𝚈𝚁𝙸𝙲𝚂𝟸  𝚂𝙿𝙴𝙴𝙲𝙷\n │ 𝙻𝙾𝚅𝙴𝙼𝚂𝙶  𝙴𝙼𝙰𝙸𝙻𝟸  𝙿𝙸𝚃𝙲𝙷\n ╰─────────────────\n` +
+    ` ╭─❏ ʟɪꜰᴇꜱᴛʏʟᴇ (33) ❏\n │ 𝚁𝙴𝙲𝙸𝙿𝙴𝟸  𝙲𝙾𝙵𝙵𝙴𝙴𝟸  𝙼𝙴𝙰𝙻𝙿𝙻𝙰𝙽\n │ 𝙼𝙴𝙳𝙸𝚃𝙰𝚃𝙸𝙾𝙽  𝙰𝙵𝙵𝙸𝚁𝙼𝙰𝚃𝙸𝙾𝙽\n │ 𝚂𝙺𝙸𝙽𝙲𝙰𝚁𝙴  𝙵𝙸𝚃𝙽𝙴𝚂𝚂𝟸  𝙱𝚄𝙲𝙺𝙴𝚃\n ╰─────────────────\n` +
+    ` ╭─❏ ᴋɴᴏᴡʟᴇᴅɢᴇ (31) ❏\n │ 𝚂𝙲𝙸𝙴𝙽𝙲𝙴  𝙱𝙸𝙾𝙻𝙾𝙶𝚈  𝙿𝙷𝚈𝚂𝙸𝙲𝚂𝟸\n │ 𝙷𝙸𝚂𝚃𝙾𝚁𝚈𝟹  𝙼𝙰𝚃𝙷𝟹  𝙻𝙰𝚆𝙵𝙰𝙲𝚃\n │ 𝚂𝙿𝙰𝙲𝙴𝙵𝙰𝙲𝚃  𝙿𝚂𝚈𝙲𝙷  𝙼𝙴𝙳𝙸𝙲𝙸𝙽𝙴\n ╰─────────────────\n` +
+    ` ╭─❏ ɢᴇɴᴇʀᴀᴛᴏʀs (26) ❏\n │ 𝚁𝙰𝙽𝙳𝙾𝙼𝙽𝙰𝙼𝙴  𝚁𝙰𝙽𝙳𝙾𝙼𝚆𝙾𝚁𝙳\n │ 𝙳𝙸𝙲𝙴𝟸  𝙲𝙾𝙸𝙽𝟸  𝚄𝚄𝙸𝙳\n │ 𝙱𝚁𝙰𝙲𝙺𝙴𝚃  𝚂𝙿𝙸𝙽𝚆𝙷𝙴𝙴𝙻𝟸  𝚆𝙾𝚄𝙻𝙳𝟸\n ╰─────────────────\n` +
+    ` ╭─❏ ꜱᴘᴏʀᴛꜱ (49) ❏\n │ 𝚂𝙿𝙾𝚁𝚃𝙽𝙴𝚆𝚂  𝙽𝙱𝙰  𝙽𝙵𝙻  𝚂𝙾𝙲𝙲𝙴𝚁\n │ 𝙲𝚁𝙸𝙲𝙺𝙴𝚃  𝙵𝟷  𝙾𝙻𝚈𝙼𝙿𝙸𝙲𝚂  𝙼𝙼𝙰\n │ 𝚆𝙰𝚁𝙼𝚄𝙿  𝙲𝙰𝚁𝙳𝙸𝙾  𝙼𝚅𝙿  𝙵𝙸𝚃𝙲𝙷𝙴𝙲𝙺\n ╰─────────────────\n` +
+    ` ╭─❏ ꜰɪɴᴀɴᴄᴇ (48) ❏\n │ 𝙲𝚁𝚈𝙿𝚃𝙾  𝙱𝙸𝚃𝙲𝙾𝙸𝙽  𝙴𝚃𝙷𝙴𝚁𝙴𝚄𝙼\n │ 𝙸𝙽𝚅𝙴𝚂𝚃  𝚂𝙰𝚅𝙸𝙽𝙶𝚂  𝙲𝚁𝙴𝙳𝙸𝚃𝙲𝙰𝚁𝙳\n │ 𝙱𝙻𝙾𝙲𝙺𝙲𝙷𝙰𝙸𝙽  𝙴𝚃𝙵  𝙵𝚁𝚄𝙶𝙰𝙻\n ╰─────────────────\n` +
+    ` ╭─❏ ᴍᴜꜱɪᴄ (49) ❏\n │ 𝙻𝚈𝚁𝙸𝙲𝚂  𝙰𝚁𝚃𝙸𝚂𝚃  𝙶𝙴𝙽𝚁𝙴\n │ 𝙱𝙴𝙰𝚃𝙼𝙰𝙺𝙴𝚁  𝙶𝚄𝙸𝚃𝙰𝚁𝚃𝙸𝙿𝚂\n │ 𝙺𝙿𝙾𝙿  𝚁𝙴𝙶𝙶𝙰𝙴  𝙰𝙵𝚁𝙾𝙱𝙴𝙰𝚃𝚂\n ╰─────────────────\n` +
+    ` ╭─❏ ᴇᴅᴜᴄᴀᴛɪᴏɴ (48) ❏\n │ 𝙴𝚇𝙿𝙻𝙰𝙸𝙽  𝙳𝙴𝙵𝙸𝙽𝙴  𝚂𝚈𝙽𝙾𝙽𝚈𝙼\n │ 𝚂𝚃𝚄𝙳𝚈𝚃𝙸𝙿𝚂  𝙶𝙾𝙰𝙻𝚂𝙴𝚃  𝙻𝙾𝙶𝙸𝙲\n │ 𝚁𝙸𝙳𝙳𝙻𝙴  𝙶𝚁𝙰𝙼𝙼𝙰𝚁  𝙲𝙾𝙳𝙸𝙽𝙶𝙿𝙰𝚃𝙷\n ╰─────────────────\n` +
+    ` ╭─❏ ꜰᴜɴ 𝟐.𝟎 (49) ❏\n │ 𝚁𝙸𝚉𝚉𝚄𝙿  𝚃𝙰𝚁𝙾𝚃  𝙲𝚁𝚈𝚂𝚃𝙰𝙻𝙱𝙰𝙻𝙻\n │ 𝙷𝙾𝚁𝙾𝚂𝙲𝙾𝙿𝙴𝟸  𝙲𝙾𝙽𝚂𝙿𝙸𝚁𝙰𝙲𝚈\n │ 𝙾𝚅𝙴𝚁𝚃𝙷𝙸𝙽𝙺  𝙱𝙾𝙾𝙼𝙴𝚁  𝚅𝙸𝙱𝙴𝟸\n ╰─────────────────\n` +
+    ` ╭─❏ ᴅᴇᴠ ᴛᴏᴏʟꜱ (29) ❏\n │ 𝙹𝚂𝙾𝙽𝙼𝙸𝙽𝙸𝙵𝚈  𝙹𝚂𝙾𝙽𝚅𝙰𝙻𝙸𝙳𝙰𝚃𝙴\n │ 𝙳𝙾𝙲𝙺𝙴𝚁𝙵𝙸𝙻𝙴  𝙶𝙸𝚃𝙸𝙶𝙽𝙾𝚁𝙴\n │ 𝙷𝙰𝚂𝙷𝚃𝙴𝚇𝚃  𝚂𝙴𝙼𝚅𝙴𝚁  𝙰𝙿𝙸𝚃𝙴𝚂𝚃\n ╰─────────────────\n` +
+    ` ╭─❏ 🎨 sᴛɪᴄᴋᴇʀ (6) ❏\n │ 𝚂𝚃𝙸𝙲𝙺𝙴𝚁  𝚃𝙾𝙸𝙼𝙰𝙶𝙴  𝚂𝚃𝙴𝙰𝙻\n │ 𝚇𝙴𝙼𝙾𝙹𝙸  𝙰𝚃𝚃𝙿  𝚂𝙰𝚅𝙴𝚂𝚃𝙰𝚃𝚄𝚂\n ╰─────────────────`;
 
   const groupCaption =
     `╭═══ 𝗗𝗼𝗹𝗹𝗮𝗿𝗕𝗼𝘁 𝗩𝟳 • 𝗚𝗿𝗼𝘂𝗽 𝗠𝗲𝗻𝘂 ═══⊷\n` +
@@ -408,7 +425,7 @@ async function sendMenu(sock, jid, speedMs, quotedMsg, holiday) {
     `┃❃│ Prefix : ${p}\n` +
     `┃❃│ Owner : ${config.ownerName}\n` +
     `┃❃│ Version : ${config.version}\n` +
-    `┃❃│ Plugins : 200+ Group Plugins\n` +
+    `┃❃│ Plugins : 1000+\n` +
     `┃❃│ Ram : ${usedMB}/${totalMB}MB\n` +
     `┃❃│ Uptime : ${uptimeStr}\n` +
     `┃❃│ Time : ${timeStr}\n` +
@@ -1029,7 +1046,10 @@ async function handleMessage(sock, msg) {
       case 'sticker': await stickerCommands.sticker(sock, msg, args); break;
       case 'toimage':
       case 'toimg':   await stickerCommands.toimage(sock, msg); break;
-      case 'steal':   await stickerCommands.steal(sock, msg, args); break;
+      case 'steal':      await stickerCommands.steal(sock, msg, args); break;
+      case 'savestatus': await stickerCommands.savestatus(sock, msg); break;
+      case 'xemoji':     await stickerCommands.xemoji(sock, msg, args); break;
+      case 'attp':       await stickerCommands.attp(sock, msg, args); break;
 
       // ── Wild Features ─────────────────────────────────────────────────────
       case 'roastwar':   await wildCommands.roastwar(sock, msg, args); break;
@@ -1232,7 +1252,21 @@ async function handleMessage(sock, msg) {
       case 'randomport': await devCommands.randomport(sock, msg); break;
       case 'npmpkg':     await devCommands.npmpkg(sock, msg, args); break;
       case 'mdpreview':  await devCommands.mdpreview(sock, msg, args); break;
-      case 'gitcommit':  await devCommands.gitcommit(sock, msg, args); break;
+      case 'gitcommit':    await devCommands.gitcommit(sock, msg, args); break;
+      case 'apitest':      await devCommands.apitest(sock, msg, args); break;
+      case 'colorhex':     await devCommands.colorhex(sock, msg, args); break;
+      case 'crontab':      await devCommands.crontab(sock, msg, args); break;
+      case 'dockerfile':   await devCommands.dockerfile(sock, msg, args); break;
+      case 'gitignore':    await devCommands.gitignore(sock, msg, args); break;
+      case 'jsonvalidate': await devCommands.jsonvalidate(sock, msg, args); break;
+      case 'sqlformat':    await devCommands.sqlformat(sock, msg, args); break;
+      case 'markdowntable': await devCommands.markdowntable(sock, msg, args); break;
+      case 'hashtext':     await devCommands.hashtext(sock, msg, args); break;
+      case 'csvparse':     await devCommands.csvparse(sock, msg, args); break;
+      case 'portcheck':    await devCommands.portcheck(sock, msg, args); break;
+      case 'devfact':      await devCommands.devfact(sock, msg); break;
+      case 'complexity':   await devCommands.complexity(sock, msg, args); break;
+      case 'semver':       await devCommands.semver(sock, msg, args); break;
 
       // ── V6 Logia Personas ─────────────────────────────────────────────────
       case 'ope':   await logiaCommands.ope(sock, msg, args); break;
@@ -1735,7 +1769,7 @@ async function handleMessage(sock, msg) {
         }
         break;
       }
-      case 'plugin': { await sock.sendMessage(jid, { text: `🔌 *Plugins*\n\n*Total:* 750+ commands loaded\n*Engine:* ${config.engine}\n*Version:* ${config.version}` }, { quoted: msg }); break; }
+      case 'plugin': { await sock.sendMessage(jid, { text: `🔌 *DollarBot V7 Plugins*\n\n*Total:* 1000+ commands loaded\n*Engine:* ${config.engine}\n*Version:* ${config.version}\n\n📂 Categories: AI, Fun, Sports, Finance, Music, Education, Text FX, Creative, Lifestyle, Knowledge, Games, Group, Sticker, Utility, Dev, Social, and more!` }, { quoted: msg }); break; }
 
       // ── V7 AI Personas ────────────────────────────────────────────────────
       case 'brie':    await v7aiCommands.brie(sock, msg, args, jid); break;
@@ -1945,6 +1979,259 @@ async function handleMessage(sock, msg) {
       case 'would2':       await generatorCommands.would2(sock, msg, args); break;
       case 'spinwheel2':   await generatorCommands.spinwheel2(sock, msg, args); break;
       case 'bracket':      await generatorCommands.bracket(sock, msg, args); break;
+
+      // ── Sports & Fitness commands ──────────────────────────────────────────
+      case 'sportnews':    await sportsCommands.sportnews(sock, msg, args); break;
+      case 'nba':          await sportsCommands.nba(sock, msg, args); break;
+      case 'nfl':          await sportsCommands.nfl(sock, msg, args); break;
+      case 'soccer':       await sportsCommands.soccer(sock, msg, args); break;
+      case 'cricket':      await sportsCommands.cricket(sock, msg, args); break;
+      case 'tennis':       await sportsCommands.tennis(sock, msg, args); break;
+      case 'golf':         await sportsCommands.golf(sock, msg, args); break;
+      case 'boxing':       await sportsCommands.boxing(sock, msg, args); break;
+      case 'mma':          await sportsCommands.mma(sock, msg, args); break;
+      case 'f1':           await sportsCommands.f1(sock, msg, args); break;
+      case 'athletics':    await sportsCommands.athletics(sock, msg, args); break;
+      case 'swimming':     await sportsCommands.swimming(sock, msg, args); break;
+      case 'cycling':      await sportsCommands.cycling(sock, msg, args); break;
+      case 'baseball':     await sportsCommands.baseball(sock, msg, args); break;
+      case 'hockey':       await sportsCommands.hockey(sock, msg, args); break;
+      case 'rugby':        await sportsCommands.rugby(sock, msg, args); break;
+      case 'volleyball':   await sportsCommands.volleyball(sock, msg, args); break;
+      case 'basketball':   await sportsCommands.basketball(sock, msg, args); break;
+      case 'esports':      await sportsCommands.esports(sock, msg, args); break;
+      case 'olympics':     await sportsCommands.olympics(sock, msg, args); break;
+      case 'sportsquiz':   await sportsCommands.sportsquiz(sock, msg, args); break;
+      case 'stadiumfact':  await sportsCommands.stadiumfact(sock, msg, args); break;
+      case 'sporthistory': await sportsCommands.sporthistory(sock, msg, args); break;
+      case 'playertrivia': await sportsCommands.playertrivia(sock, msg, args); break;
+      case 'teamrival':    await sportsCommands.teamrival(sock, msg, args); break;
+      case 'sportmotivate': await sportsCommands.sportmotivate(sock, msg, args); break;
+      case 'coachquote':   await sportsCommands.coachquote(sock, msg, args); break;
+      case 'extremesport': await sportsCommands.extremesport(sock, msg, args); break;
+      case 'watersport':   await sportsCommands.watersport(sock, msg, args); break;
+      case 'wintersport':  await sportsCommands.wintersport(sock, msg, args); break;
+      case 'sportsidol':   await sportsCommands.sportsidol(sock, msg, args); break;
+      case 'recordbreak':  await sportsCommands.recordbreak(sock, msg, args); break;
+      case 'sportscience': await sportsCommands.sportscience(sock, msg, args); break;
+      case 'recoveryplan': await sportsCommands.recoveryplan(sock, msg, args); break;
+      case 'nutrition3':   await sportsCommands.nutrition3(sock, msg, args); break;
+      case 'warmup':       await sportsCommands.warmup(sock, msg, args); break;
+      case 'cooldown':     await sportsCommands.cooldown(sock, msg, args); break;
+      case 'marathon':     await sportsCommands.marathon(sock, msg, args); break;
+      case 'yoga2':        await sportsCommands.yoga2(sock, msg, args); break;
+      case 'pilates':      await sportsCommands.pilates(sock, msg, args); break;
+      case 'crossfit':     await sportsCommands.crossfit(sock, msg, args); break;
+      case 'strengthtrain': await sportsCommands.strengthtrain(sock, msg, args); break;
+      case 'cardio':       await sportsCommands.cardio(sock, msg, args); break;
+      case 'bodyweight':   await sportsCommands.bodyweight(sock, msg, args); break;
+      case 'fitcheck':     await sportsCommands.fitcheck(sock, msg, args); break;
+      case 'sportsmeme':   await sportsCommands.sportsmeme(sock, msg, args); break;
+      case 'mvp':          await sportsCommands.mvp(sock, msg, args); break;
+      case 'sportbet':     await sportsCommands.sportbet(sock, msg, args); break;
+      case 'draftpick':    await sportsCommands.draftpick(sock, msg, args); break;
+
+      // ── Finance & Crypto commands ──────────────────────────────────────────
+      case 'crypto':       await financeCommands.crypto(sock, msg, args); break;
+      case 'bitcoin':      await financeCommands.bitcoin(sock, msg, args); break;
+      case 'ethereum':     await financeCommands.ethereum(sock, msg, args); break;
+      case 'nft':          await financeCommands.nft(sock, msg, args); break;
+      case 'defi':         await financeCommands.defi(sock, msg, args); break;
+      case 'stockmarket':  await financeCommands.stockmarket(sock, msg, args); break;
+      case 'invest':       await financeCommands.invest(sock, msg, args); break;
+      case 'savings':      await financeCommands.savings(sock, msg, args); break;
+      case 'budget2':      await financeCommands.budget2(sock, msg, args); break;
+      case 'debt':         await financeCommands.debt(sock, msg, args); break;
+      case 'retirement':   await financeCommands.retirement(sock, msg, args); break;
+      case 'taxidea':      await financeCommands.taxidea(sock, msg, args); break;
+      case 'moneytip':     await financeCommands.moneytip(sock, msg, args); break;
+      case 'frugal':       await financeCommands.frugal(sock, msg, args); break;
+      case 'sidehustle':   await financeCommands.sidehustle(sock, msg, args); break;
+      case 'passiveincome': await financeCommands.passiveincome(sock, msg, args); break;
+      case 'creditcard':   await financeCommands.creditcard(sock, msg, args); break;
+      case 'loan':         await financeCommands.loan(sock, msg, args); break;
+      case 'insurance':    await financeCommands.insurance(sock, msg, args); break;
+      case 'compound':     await financeCommands.compound(sock, msg, args); break;
+      case 'dividends':    await financeCommands.dividends(sock, msg, args); break;
+      case 'realestate':   await financeCommands.realestate(sock, msg, args); break;
+      case 'portfolio':    await financeCommands.portfolio(sock, msg, args); break;
+      case 'tradingterms': await financeCommands.tradingterms(sock, msg, args); break;
+      case 'inflation':    await financeCommands.inflation(sock, msg, args); break;
+      case 'interestrate': await financeCommands.interestrate(sock, msg, args); break;
+      case 'gdp':          await financeCommands.gdp(sock, msg, args); break;
+      case 'forex':        await financeCommands.forex(sock, msg, args); break;
+      case 'gold':         await financeCommands.gold(sock, msg, args); break;
+      case 'etf':          await financeCommands.etf(sock, msg, args); break;
+      case 'mutualfund':   await financeCommands.mutualfund(sock, msg, args); break;
+      case 'emergency':    await financeCommands.emergency(sock, msg, args); break;
+      case 'networth':     await financeCommands.networth(sock, msg, args); break;
+      case 'cashflow':     await financeCommands.cashflow(sock, msg, args); break;
+      case 'leverage':     await financeCommands.leverage(sock, msg, args); break;
+      case 'bond':         await financeCommands.bond(sock, msg, args); break;
+      case 'ipo':          await financeCommands.ipo(sock, msg, args); break;
+      case 'fintech':      await financeCommands.fintech(sock, msg, args); break;
+      case 'stablecoin':   await financeCommands.stablecoin(sock, msg, args); break;
+      case 'blockchain':   await financeCommands.blockchain(sock, msg, args); break;
+      case 'cbdc':         await financeCommands.cbdc(sock, msg, args); break;
+      case 'wallet':       await financeCommands.wallet(sock, msg, args); break;
+      case 'exchange':     await financeCommands.exchange(sock, msg, args); break;
+      case 'stocktip':     await financeCommands.stocktip(sock, msg, args); break;
+      case 'moneygoal':    await financeCommands.moneygoal(sock, msg, args); break;
+      case 'econofact':    await financeCommands.econofact(sock, msg, args); break;
+      case 'wealthmind':   await financeCommands.wealthmind(sock, msg, args); break;
+      case 'moneyquiz':    await financeCommands.moneyquiz(sock, msg, args); break;
+
+      // ── Music commands ─────────────────────────────────────────────────────
+      case 'lyrics':       await music2Commands.lyrics(sock, msg, args); break;
+      case 'artist':       await music2Commands.artist(sock, msg, args); break;
+      case 'genre':        await music2Commands.genre(sock, msg, args); break;
+      case 'recommend':    await music2Commands.recommend(sock, msg, args); break;
+      case 'musicfact2':   await music2Commands.musicfact2(sock, msg, args); break;
+      case 'albuminfo':    await music2Commands.albuminfo(sock, msg, args); break;
+      case 'songhistory':  await music2Commands.songhistory(sock, msg, args); break;
+      case 'concertidea':  await music2Commands.concertidea(sock, msg, args); break;
+      case 'playlist':     await music2Commands.playlist(sock, msg, args); break;
+      case 'musictheory':  await music2Commands.musictheory(sock, msg, args); break;
+      case 'chord':        await music2Commands.chord(sock, msg, args); break;
+      case 'scale':        await music2Commands.scale(sock, msg, args); break;
+      case 'tempo':        await music2Commands.tempo(sock, msg, args); break;
+      case 'beatmaker':    await music2Commands.beatmaker(sock, msg, args); break;
+      case 'rap2':         await music2Commands.rap2(sock, msg, args); break;
+      case 'freestyle':    await music2Commands.freestyle(sock, msg, args); break;
+      case 'singbattle':   await music2Commands.singbattle(sock, msg, args); break;
+      case 'musicquiz':    await music2Commands.musicquiz(sock, msg, args); break;
+      case 'rockfact':     await music2Commands.rockfact(sock, msg, args); break;
+      case 'popfact':      await music2Commands.popfact(sock, msg, args); break;
+      case 'jazzfact':     await music2Commands.jazzfact(sock, msg, args); break;
+      case 'hiphopfact':   await music2Commands.hiphopfact(sock, msg, args); break;
+      case 'classicalfact': await music2Commands.classicalfact(sock, msg, args); break;
+      case 'guitartips':   await music2Commands.guitartips(sock, msg, args); break;
+      case 'pianotips':    await music2Commands.pianotips(sock, msg, args); break;
+      case 'djterms':      await music2Commands.djterms(sock, msg, args); break;
+      case 'mixingtip':    await music2Commands.mixingtip(sock, msg, args); break;
+      case 'producer':     await music2Commands.producer(sock, msg, args); break;
+      case 'vocalwarmup':  await music2Commands.vocalwarmup(sock, msg, args); break;
+      case 'songwrite':    await music2Commands.songwrite(sock, msg, args); break;
+      case 'musicbiz':     await music2Commands.musicbiz(sock, msg, args); break;
+      case 'streaming':    await music2Commands.streaming(sock, msg, args); break;
+      case 'bandname':     await music2Commands.bandname(sock, msg, args); break;
+      case 'albumname':    await music2Commands.albumname(sock, msg, args); break;
+      case 'songname':     await music2Commands.songname(sock, msg, args); break;
+      case 'musiccollab':  await music2Commands.musiccollab(sock, msg, args); break;
+      case 'copyrightmusic': await music2Commands.copyrightmusic(sock, msg, args); break;
+      case 'karaoke':      await music2Commands.karaoke(sock, msg, args); break;
+      case 'drumfact':     await music2Commands.drumfact(sock, msg, args); break;
+      case 'bassfact':     await music2Commands.bassfact(sock, msg, args); break;
+      case 'synthesizer':  await music2Commands.synthesizer(sock, msg, args); break;
+      case 'musiccolors':  await music2Commands.musiccolors(sock, msg, args); break;
+      case 'soundtrack':   await music2Commands.soundtrack(sock, msg, args); break;
+      case 'musicsoul':    await music2Commands.musicsoul(sock, msg, args); break;
+      case 'afrobeats':    await music2Commands.afrobeats(sock, msg, args); break;
+      case 'reggae':       await music2Commands.reggae(sock, msg, args); break;
+      case 'kpop':         await music2Commands.kpop(sock, msg, args); break;
+      case 'musicpsych':   await music2Commands.musicpsych(sock, msg, args); break;
+      case 'concertgoer':  await music2Commands.concertgoer(sock, msg, args); break;
+
+      // ── Education commands ─────────────────────────────────────────────────
+      case 'explain':      await education2Commands.explain(sock, msg, args); break;
+      case 'define':       await education2Commands.define(sock, msg, args); break;
+      case 'synonym':      await education2Commands.synonym(sock, msg, args); break;
+      case 'antonym':      await education2Commands.antonym(sock, msg, args); break;
+      case 'etymology':    await education2Commands.etymology(sock, msg, args); break;
+      case 'grammar':      await education2Commands.grammar(sock, msg, args); break;
+      case 'punctuation':  await education2Commands.punctuation(sock, msg, args); break;
+      case 'vocab':        await education2Commands.vocab(sock, msg, args); break;
+      case 'summarize2':   await education2Commands.summarize2(sock, msg, args); break;
+      case 'studytips':    await education2Commands.studytips(sock, msg, args); break;
+      case 'memorytips':   await education2Commands.memorytips(sock, msg, args); break;
+      case 'flashcard2':   await education2Commands.flashcard2(sock, msg, args); break;
+      case 'mindmap':      await education2Commands.mindmap(sock, msg, args); break;
+      case 'debate3':      await education2Commands.debate3(sock, msg, args); break;
+      case 'essay':        await education2Commands.essay(sock, msg, args); break;
+      case 'thesis':       await education2Commands.thesis(sock, msg, args); break;
+      case 'citation':     await education2Commands.citation(sock, msg, args); break;
+      case 'research':     await education2Commands.research(sock, msg, args); break;
+      case 'criticalthink': await education2Commands.criticalthink(sock, msg, args); break;
+      case 'problemsolve': await education2Commands.problemsolve(sock, msg, args); break;
+      case 'creativity2':  await education2Commands.creativity2(sock, msg, args); break;
+      case 'leadership2':  await education2Commands.leadership2(sock, msg, args); break;
+      case 'communication2': await education2Commands.communication2(sock, msg, args); break;
+      case 'publicspeaking': await education2Commands.publicspeaking(sock, msg, args); break;
+      case 'timemanage':   await education2Commands.timemanage(sock, msg, args); break;
+      case 'goalset':      await education2Commands.goalset(sock, msg, args); break;
+      case 'careeradvice': await education2Commands.careeradvice(sock, msg, args); break;
+      case 'collegetips':  await education2Commands.collegetips(sock, msg, args); break;
+      case 'examprep':     await education2Commands.examprep(sock, msg, args); break;
+      case 'homework':     await education2Commands.homework(sock, msg, args); break;
+      case 'scholarship':  await education2Commands.scholarship(sock, msg, args); break;
+      case 'internship':   await education2Commands.internship(sock, msg, args); break;
+      case 'networking':   await education2Commands.networking(sock, msg, args); break;
+      case 'resume3':      await education2Commands.resume3(sock, msg, args); break;
+      case 'linkedin':     await education2Commands.linkedin(sock, msg, args); break;
+      case 'interview2':   await education2Commands.interview2(sock, msg, args); break;
+      case 'codingpath':   await education2Commands.codingpath(sock, msg, args); break;
+      case 'mathtutor':    await education2Commands.mathtutor(sock, msg, args); break;
+      case 'scienceexplain': await education2Commands.scienceexplain(sock, msg, args); break;
+      case 'historyexplain': await education2Commands.historyexplain(sock, msg, args); break;
+      case 'arthistory':   await education2Commands.arthistory(sock, msg, args); break;
+      case 'language2':    await education2Commands.language2(sock, msg, args); break;
+      case 'philosophy3':  await education2Commands.philosophy3(sock, msg, args); break;
+      case 'ethics':       await education2Commands.ethics(sock, msg, args); break;
+      case 'logic':        await education2Commands.logic(sock, msg, args); break;
+      case 'iq2':          await education2Commands.iq2(sock, msg, args); break;
+      case 'riddle':       await education2Commands.riddle(sock, msg, args); break;
+      case 'funfact2':     await education2Commands.funfact2(sock, msg, args); break;
+
+      // ── More Fun commands ──────────────────────────────────────────────────
+      case 'rizzup':       await morefun2Commands.rizzup(sock, msg, args); break;
+      case 'pickupline2':  await morefun2Commands.pickupline2(sock, msg, args); break;
+      case 'cheesypun':    await morefun2Commands.cheesypun(sock, msg, args); break;
+      case 'darkjoke':     await morefun2Commands.darkjoke(sock, msg, args); break;
+      case 'antihumor':    await morefun2Commands.antihumor(sock, msg, args); break;
+      case 'complimentchain': await morefun2Commands.complimentchain(sock, msg, args); break;
+      case 'roastchain':   await morefun2Commands.roastchain(sock, msg, args); break;
+      case 'bragmode':     await morefun2Commands.bragmode(sock, msg, args); break;
+      case 'flexcheck':    await morefun2Commands.flexcheck(sock, msg, args); break;
+      case 'simp2':        await morefun2Commands.simp2(sock, msg, args); break;
+      case 'fangirl':      await morefun2Commands.fangirl(sock, msg, args); break;
+      case 'cringe2':      await morefun2Commands.cringe2(sock, msg, args); break;
+      case 'embarrass':    await morefun2Commands.embarrass(sock, msg, args); break;
+      case 'regret':       await morefun2Commands.regret(sock, msg, args); break;
+      case 'overthink':    await morefun2Commands.overthink(sock, msg, args); break;
+      case 'anxiety2':     await morefun2Commands.anxiety2(sock, msg, args); break;
+      case 'existential':  await morefun2Commands.existential(sock, msg, args); break;
+      case 'boomer':       await morefun2Commands.boomer(sock, msg, args); break;
+      case 'zoomer':       await morefun2Commands.zoomer(sock, msg, args); break;
+      case 'alpha':        await morefun2Commands.alpha(sock, msg, args); break;
+      case 'introvert':    await morefun2Commands.introvert(sock, msg, args); break;
+      case 'extrovert':    await morefun2Commands.extrovert(sock, msg, args); break;
+      case 'empath':       await morefun2Commands.empath(sock, msg, args); break;
+      case 'conspiracy':   await morefun2Commands.conspiracy(sock, msg, args); break;
+      case 'flatearther':  await morefun2Commands.flatearther(sock, msg, args); break;
+      case 'npc2':         await morefun2Commands.npc2(sock, msg, args); break;
+      case 'maincharacter': await morefun2Commands.maincharacter(sock, msg, args); break;
+      case 'philosopher2': await morefun2Commands.philosopher2(sock, msg, args); break;
+      case 'fortune2':     await morefun2Commands.fortune2(sock, msg, args); break;
+      case 'horoscope2':   await morefun2Commands.horoscope2(sock, msg, args); break;
+      case 'tarot':        await morefun2Commands.tarot(sock, msg, args); break;
+      case 'crystalball':  await morefun2Commands.crystalball(sock, msg, args); break;
+      case 'palmreading':  await morefun2Commands.palmreading(sock, msg, args); break;
+      case 'spiritanimal': await morefun2Commands.spiritanimal(sock, msg, args); break;
+      case 'universe':     await morefun2Commands.universe(sock, msg, args); break;
+      case 'vibe2':        await morefun2Commands.vibe2(sock, msg, args); break;
+      case 'energy':       await morefun2Commands.energy(sock, msg, args); break;
+      case 'gifted':       await morefun2Commands.gifted(sock, msg, args); break;
+      case 'previouslife': await morefun2Commands.previouslife(sock, msg, args); break;
+      case 'soulmate':     await morefun2Commands.soulmate(sock, msg, args); break;
+      case 'auracolor':    await morefun2Commands.auracolor(sock, msg, args); break;
+      case 'lifepurpose':  await morefun2Commands.lifepurpose(sock, msg, args); break;
+      case 'lovestatus':   await morefun2Commands.lovestatus(sock, msg, args); break;
+      case 'moneyenergy':  await morefun2Commands.moneyenergy(sock, msg, args); break;
+      case 'toxicrating':  await morefun2Commands.toxicrating(sock, msg, args); break;
+      case 'nglcheck':     await morefun2Commands.nglcheck(sock, msg, args); break;
+      case 'thinkpiece':   await morefun2Commands.thinkpiece(sock, msg, args); break;
+      case 'unpopular':    await morefun2Commands.unpopular(sock, msg, args); break;
+      case 'hotthrow':     await morefun2Commands.hotthrow(sock, msg, args); break;
 
       // ── Handle custom commands (setcmd/getcmd system) ──────────────────────
       default: {

@@ -36,6 +36,11 @@
       "noSticker": false,
       "noSaveSticker": false,
       "silenced": []
+    },
+    "120363428326082878@g.us": {
+      "noSticker": false,
+      "noSaveSticker": false,
+      "silenced": []
     }
   },
   "antideleteGroups": {
@@ -53,7 +58,8 @@
     "mad"
   ],
   "welcomeGroups": {
-    "120363426985134376@g.us": true
+    "120363426985134376@g.us": true,
+    "120363428326082878@g.us": true
   },
   "antilink_warn_120363426985134376@g.us": {
     "80793233842185": 5
