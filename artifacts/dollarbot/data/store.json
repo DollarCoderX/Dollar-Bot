@@ -8,7 +8,7 @@
       "silenced": []
     },
     "120363405533425174@g.us": {
-      "noSticker": true,
+      "noSticker": false,
       "noSaveSticker": false,
       "silenced": []
     },
@@ -38,6 +38,11 @@
       "silenced": []
     },
     "120363428326082878@g.us": {
+      "noSticker": false,
+      "noSaveSticker": false,
+      "silenced": []
+    },
+    "120363407523800887@g.us": {
       "noSticker": false,
       "noSaveSticker": false,
       "silenced": []

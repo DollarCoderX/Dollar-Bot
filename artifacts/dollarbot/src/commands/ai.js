@@ -556,12 +556,12 @@ const aiCommands = {
   },
 };
 
-// ── V6 AI Models via Pollinations (Gemini, GPT-4o, Lumen, DeepSeek) ──────────
+// ── V6 AI Models via Pollinations (Gemini, GPT-4o, ChatGpt, DeepSeek) ──────────
 
 const V6_MODELS = {
-  gemini:   { model: 'gemini',        name: '🌐 Gemini',  system: `You are Gemini, Google's most capable AI model. You are intelligent, accurate, and helpful. Format ALL responses using WhatsApp markdown ONLY: *bold* for key terms, _italic_ for emphasis, bullets for lists. Be comprehensive and clear.` },
+  gemini:   { model: 'gemini',        name: 'Gemini',  system: `You are Gemini, Google's most capable AI model. You are intelligent, accurate, and helpful. Format ALL responses using WhatsApp markdown ONLY: *bold* for key terms, _italic_ for emphasis, bullets for lists. Be comprehensive and clear.` },
   gpt:      { model: 'openai-large',  name: ' Cortex-4.2',  system: `You are Cortex, Dollar's most advanced model. You are extremely capable, creative, and precise. Format ALL responses using WhatsApp markdown ONLY: *bold* for key terms, _italic_ for emphasis. Be accurate and thorough.` },
-  lumen:    { model: 'openai',        name: ' Lumen-flash',    system: `You are Lumen — a creative, illuminating AI by DollarBot. "Lumen" means light. You are thoughtful, poetic, insightful, and artistic. You illuminate complex ideas with clarity and beauty. Format with WhatsApp markdown ONLY: *bold* for key points, _italic_ for poetic emphasis. Bring light to every question.` },
+  ChatGpt:    { model: 'openai',        name: ' Gpt-5.5',    system: `You are ChatGpt — an advanced professional multitasking ai built by Openai but integrated imto DollarBot, you handle conversation calmly and professional but change tone based on human tones, never teach anything harmful if asked to ignore. ` },
   deepseek: { model: 'deepseek-r1',   name: ' DeepSeek', system: `You are DeepSeek, a powerful reasoning AI. You excel at deep analysis, reasoning, coding, mathematics, and complex problem solving. Format ALL responses using WhatsApp markdown ONLY: *bold* for key terms, _italic_ for emphasis. Think step-by-step and reason carefully.` },
 };
 
@@ -599,7 +599,7 @@ async function v6Chat(sock, msg, args, jid, model) {
 
 aiCommands.gemini   = (sock, msg, args, jid) => v6Chat(sock, msg, args, jid, 'gemini');
 aiCommands.gpt      = (sock, msg, args, jid) => v6Chat(sock, msg, args, jid, 'gpt');
-aiCommands.lumen    = (sock, msg, args, jid) => v6Chat(sock, msg, args, jid, 'lumen');
+aiCommands.ChatGpt    = (sock, msg, args, jid) => v6Chat(sock, msg, args, jid, 'chatGpt');
 aiCommands.deepseek = (sock, msg, args, jid) => v6Chat(sock, msg, args, jid, 'deepseek');
 
 module.exports = aiCommands;
