@@ -107,13 +107,12 @@ const utilityCommands = {
     if (text.length > 500) {
       return msg.reply('❌ Text too long. Maximum 500 characters for TTS.');
     }
-    await msg.reply('🔊 *Generating voice message...*');
+    await msg.reply('🔊 *Generating audio...*');
     try {
       const { buffer, mime } = await pollinations.tts(text);
       await sock.sendMessage(msg.key.remoteJid, {
         audio: buffer,
-        mimetype: mime,
-        ptt: true,
+        mimetype: mime || 'audio/mpeg',
       }, { quoted: msg });
     } catch (e) {
       await msg.reply(`TTS Error: ${e.message}`);

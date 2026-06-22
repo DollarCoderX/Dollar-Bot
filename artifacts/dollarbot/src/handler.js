@@ -45,6 +45,13 @@ const music2Commands     = require('./commands/music2');
 const education2Commands = require('./commands/education2');
 const morefun2Commands   = require('./commands/morefun2');
 
+// ── V-Ultra Mega Command Packs ────────────────────────────────────────────────
+const megapack1          = require('./commands/megapack1');
+const megapack2          = require('./commands/megapack2');
+const megapack3          = require('./commands/megapack3');
+const megapack4          = require('./commands/megapack4');
+const getBotCommands     = require('./commands/getbot');
+
 // ── V6 new modules ────────────────────────────────────────────────────────────
 const audioFxCommands    = require('./commands/audio_fx');
 const textmakerCommands  = require('./commands/textmaker');
@@ -368,7 +375,7 @@ async function sendMenu(sock, jid, speedMs, quotedMsg, holiday) {
   const isGroupChat = jid.endsWith('@g.us');
 
   const dmCaption =
-    `╭═══ 𝗗𝗼𝗹𝗹𝗮𝗿𝗕𝗼𝘁 𝗩𝟳 ═══⊷\n` +
+    `╭═══ 𝗗𝗼𝗹𝗹𝗮𝗿𝗕𝗼𝘁 𝗩-𝗨𝗹𝘁𝗿𝗮 ═══⊷\n` +
     `┃❃╭──────────────\n` +
     `┃❃│ Prefix : ${p}\n` +
     `┃❃│ Owner : ${config.ownerName}\n` +
@@ -376,7 +383,7 @@ async function sendMenu(sock, jid, speedMs, quotedMsg, holiday) {
     `┃❃│ Day : ${dayStr}\n` +
     `┃❃│ Date : ${dateStr}\n` +
     `┃❃│ Version : ${config.version}\n` +
-    `┃❃│ Plugins : 1000+\n` +
+    `┃❃│ Plugins : 3010+\n` +
     `┃❃│ Ram : ${usedMB}/${totalMB}MB\n` +
     `┃❃│ Uptime : ${uptimeStr}\n` +
     `┃❃│ Platform : vps (Linux amd64)\n` +
@@ -442,7 +449,7 @@ async function sendMenu(sock, jid, speedMs, quotedMsg, holiday) {
     ` ╭─❏ 🔍 ꜱᴇᴀʀᴄʜ & ᴜᴛɪʟɪᴛʏ ❏\n │ 𝚂𝚃𝙸𝙲𝙺𝙴𝚁\n │ 𝚃𝚃𝚂\n │ 𝚃𝚁𝙰𝙽𝚂𝙻𝙰𝚃𝙴\n │ 𝚀𝚁\n │ 𝚆𝙴𝙰𝚃𝙷𝙴𝚁\n │ 𝙽𝙴𝚆𝚂\n │ 𝙵𝙰𝙲𝚃\n │ 𝙻𝙾𝙶𝙸𝙰\n │ 𝙶𝙴𝙽𝙿𝙰𝚂𝚂\n │ 𝚀𝚁\n │ 𝙻𝚈𝚁𝙸𝙲𝚂\n │ 𝙼𝙾𝚅𝙸𝙴\n ╰─────────────────\n` +
     `\n_💡 Use .menu for the full plugin list (DM or group)_`;
 
-  const caption = isGroupChat ? groupCaption : dmCaption;
+  const caption = dmCaption;
 
   const imgPath6 = config.menuImages[menuImageIndex++ % config.menuImages.length];
   try {
@@ -458,13 +465,12 @@ async function sendMenu(sock, jid, speedMs, quotedMsg, holiday) {
     await safeSend(sock, jid, { text: caption }, replyOptions(quotedMsg));
   }
   try {
-    const oggPath = path.join(__dirname, '..', 'assets', 'menu_song.ogg');
     const mp3Path = path.join(__dirname, '..', 'assets', 'menu_song.mp3');
-    if (fs.existsSync(oggPath)) {
-      await sock.sendMessage(jid, { audio: fs.readFileSync(oggPath), mimetype: 'audio/ogg; codecs=opus', ptt: true });
-    } else if (fs.existsSync(mp3Path)) {
-      const oggBuffer = await convertToOggOpus(fs.readFileSync(mp3Path), 'mp3');
-      await sock.sendMessage(jid, { audio: oggBuffer, mimetype: 'audio/ogg; codecs=opus', ptt: true });
+    const oggPath = path.join(__dirname, '..', 'assets', 'menu_song.ogg');
+    if (fs.existsSync(mp3Path)) {
+      await sock.sendMessage(jid, { audio: fs.readFileSync(mp3Path), mimetype: 'audio/mpeg' });
+    } else if (fs.existsSync(oggPath)) {
+      await sock.sendMessage(jid, { audio: fs.readFileSync(oggPath), mimetype: 'audio/ogg; codecs=opus' });
     }
   } catch (_) {}
   // V6 menu complete

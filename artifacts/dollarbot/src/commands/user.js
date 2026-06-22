@@ -217,7 +217,7 @@ Object.assign(userCommands, {
       || (args[0] ? args[0].replace(/[^0-9]/g, '') + '@s.whatsapp.net' : null)
       || msg.key.participant || jid;
     try {
-      const ppUrl = await sock.profilePictureUrl(target, 'preview');
+      const ppUrl = await sock.profilePictureUrl(target, 'image');
       const fetch2 = require('node-fetch');
       const buf = await (await fetch2(ppUrl, { timeout: 15000 })).buffer();
       await sock.sendMessage(jid, {
