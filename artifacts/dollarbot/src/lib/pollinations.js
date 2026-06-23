@@ -180,28 +180,28 @@ async function textGenerate(messages, model = 'openai') {
 
 // ── AI Personas ───────────────────────────────────────────────────────────
 async function cortex(jid, question) {
-  const history = memory.getHistory(jid, 'cortex');
+  const history = await memory.getHistory(jid, 'cortex');
   const messages = [
     { role: 'system', content: config.cortexSystemPrompt },
     ...history,
     { role: 'user', content: question },
   ];
   const reply = await textGenerate(messages);
-  memory.addMessage(jid, 'cortex', 'user', question);
-  memory.addMessage(jid, 'cortex', 'assistant', reply);
+  await memory.addMessage(jid, 'cortex', 'user', question);
+  await memory.addMessage(jid, 'cortex', 'assistant', reply);
   return reply;
 }
 
 async function mera(jid, question) {
-  const history = memory.getHistory(jid, 'mera');
+  const history = await memory.getHistory(jid, 'mera');
   const messages = [
     { role: 'system', content: config.meraSystemPrompt },
     ...history,
     { role: 'user', content: question },
   ];
   const reply = await textGenerate(messages);
-  memory.addMessage(jid, 'mera', 'user', question);
-  memory.addMessage(jid, 'mera', 'assistant', reply);
+  await memory.addMessage(jid, 'mera', 'user', question);
+  await memory.addMessage(jid, 'mera', 'assistant', reply);
   return reply;
 }
 
@@ -249,73 +249,73 @@ function getImageUrl(prompt) {
 // ── V7 AI Personas ────────────────────────────────────────────────────────
 
 async function brie(jid, question) {
-  const history = memory.getHistory(jid, 'brie');
+  const history = await memory.getHistory(jid, 'brie');
   const messages = [
     { role: 'system', content: config.brieSystemPrompt },
     ...history,
     { role: 'user', content: question },
   ];
   const reply = await textGenerate(messages);
-  memory.addMessage(jid, 'brie', 'user', question);
-  memory.addMessage(jid, 'brie', 'assistant', reply);
+  await memory.addMessage(jid, 'brie', 'user', question);
+  await memory.addMessage(jid, 'brie', 'assistant', reply);
   return reply;
 }
 
 async function jarvis(jid, question) {
-  const history = memory.getHistory(jid, 'jarvis');
+  const history = await memory.getHistory(jid, 'jarvis');
   const messages = [
     { role: 'system', content: config.jarvisSystemPrompt },
     ...history,
     { role: 'user', content: question },
   ];
   const reply = await textGenerate(messages);
-  memory.addMessage(jid, 'jarvis', 'user', question);
-  memory.addMessage(jid, 'jarvis', 'assistant', reply);
+  await memory.addMessage(jid, 'jarvis', 'user', question);
+  await memory.addMessage(jid, 'jarvis', 'assistant', reply);
   return reply;
 }
 
 async function alan(jid, question) {
-  const history = memory.getHistory(jid, 'alan');
+  const history = await memory.getHistory(jid, 'alan');
   const messages = [
     { role: 'system', content: config.alanSystemPrompt },
     ...history,
     { role: 'user', content: question },
   ];
   const reply = await textGenerate(messages);
-  memory.addMessage(jid, 'alan', 'user', question);
-  memory.addMessage(jid, 'alan', 'assistant', reply);
+  await memory.addMessage(jid, 'alan', 'user', question);
+  await memory.addMessage(jid, 'alan', 'assistant', reply);
   return reply;
 }
 
 async function kerrick(jid, question) {
-  const history = memory.getHistory(jid, 'kerrick');
+  const history = await memory.getHistory(jid, 'kerrick');
   const messages = [
     { role: 'system', content: config.kerrickSystemPrompt },
     ...history,
     { role: 'user', content: question },
   ];
   const reply = await textGenerate(messages);
-  memory.addMessage(jid, 'kerrick', 'user', question);
-  memory.addMessage(jid, 'kerrick', 'assistant', reply);
+  await memory.addMessage(jid, 'kerrick', 'user', question);
+  await memory.addMessage(jid, 'kerrick', 'assistant', reply);
   return reply;
 }
 
 async function beejay(jid, question) {
-  const history = memory.getHistory(jid, 'beejay');
+  const history = await memory.getHistory(jid, 'beejay');
   const messages = [
     { role: 'system', content: config.beejaySystemPrompt },
     ...history,
     { role: 'user', content: question },
   ];
   const reply = await textGenerate(messages);
-  memory.addMessage(jid, 'beejay', 'user', question);
-  memory.addMessage(jid, 'beejay', 'assistant', reply);
+  await memory.addMessage(jid, 'beejay', 'user', question);
+  await memory.addMessage(jid, 'beejay', 'assistant', reply);
   return reply;
 }
 
 // ── Auto-Reply AI (human-like, concise, WhatsApp-formatted) ───────────────
 async function autoReplyAI(jid, text) {
-  const history = memory.getHistory(jid, 'autoreply');
+  const history = await memory.getHistory(jid, 'autoreply');
   const messages = [
     { role: 'system', content: config.autoReplySystemPrompt },
     ...history.slice(-10),
@@ -330,8 +330,8 @@ async function autoReplyAI(jid, text) {
     responseText = 'Yeah, for sure!';
   }
 
-  memory.addMessage(jid, 'autoreply', 'user', text);
-  memory.addMessage(jid, 'autoreply', 'assistant', responseText);
+  await memory.addMessage(jid, 'autoreply', 'user', text);
+  await memory.addMessage(jid, 'autoreply', 'assistant', responseText);
   return responseText;
 }
 

@@ -66,29 +66,126 @@ async function downloadQuotedImage(sock, msg) {
   return null;
 }
 
+const store = require('../lib/store');
+const config = require('../config');
+
 const aiCommands = {
 
+  // ── Cortex AI — with 3-strike abuse cooldown system ───────────────────────
   async cortex(sock, msg, args, jid) {
-    if (!args.length) {
-      return msg.reply(
-        `╭━━━〔 🧠 CORTEX AI 〕━━━⬣\n` +
-        `┃ Usage: .cortex <your question>\n` +
-        `┃\n` +
-        `┃ Expert-level AI with memory.\n` +
-        `┃ Ask anything — coding, science,\n` +
-        `┃ philosophy, creative writing & more.\n` +
-        `┃\n` +
-        `┃ 💡 It remembers your conversation!\n` +
-        `┃ Type .clear to reset memory.\n` +
-        `╰━━━━━━━━━━━━━━━━━━⬣\n\n` +
-        `Example: .cortex explain quantum entanglement`
-      );
+    const sender = msg.key.participant || msg.key.remoteJid;
+    const abuseKey  = `cortex_abuse_${sender}`;
+    const silKey    = `cortex_sil_${sender}`;
+
+    // ── Check if user is silenced ──
+    const silTs = await store.get(silKey);
+    if (silTs && Date.now() - silTs < 30000) {
+      return sock.sendMessage(jid, {
+        text:
+          `╭━━━〔 🧠 CORTEX AI 〕━━━⬣\n` +
+          `┃\n` +
+          `┃ 🚫 *Cortex stopped responding.*\n` +
+          `┃\n` +
+          `┃ _You crossed a line. Cortex has\n` +
+          `┃ paused your session. Try again\n` +
+          `┃ in a moment with a fresh start._\n` +
+          `┃\n` +
+          `┃ Type *.clear* to reset memory.\n` +
+          `╰━━━━━━━━━━━━━━━━━━⬣`,
+      }, { quoted: msg });
     }
-    await msg.reply('*Thinking...*');
+    // Clear expired silence
+    if (silTs) await store.set(silKey, null);
+
+    if (!args.length) {
+      return sock.sendMessage(jid, {
+        text:
+          `╭━━━〔 🧠 CORTEX AI 〕━━━⬣\n` +
+          `┃ Usage: .cortex <your question>\n` +
+          `┃\n` +
+          `┃ Expert-level AI with memory.\n` +
+          `┃ Ask anything — coding, science,\n` +
+          `┃ philosophy, creative writing & more.\n` +
+          `┃\n` +
+          `┃ 💡 It remembers your conversation!\n` +
+          `┃ Type .clear to reset memory.\n` +
+          `╰━━━━━━━━━━━━━━━━━━⬣\n\n` +
+          `Example: .cortex explain quantum entanglement`,
+      }, { quoted: msg });
+    }
+
+    await sock.sendMessage(jid, { text: '*Thinking...*' }, { quoted: msg });
+
     try {
-      const response = await pollinations.cortex(jid, args.join(' '));
-      await msg.reply(`╭━━━〔 CORTEX AI 〕━━━⬣\n\n${response}\n\n╰━━━━━━━━━━━━━━━━━━⬣\n\n⚡ Powered by Cortex AI`);
-    } catch (e) { await msg.reply(`Cortex Error: ${e.message}`); }
+      const warnCount = (await store.get(abuseKey)) || 0;
+
+      // Build cortex system prompt with moderation authority
+      const sysPrompt =
+        (config.cortexSystemPrompt || 'You are Cortex, an expert AI assistant.') +
+        `\n\n[MODERATION AUTHORITY]
+You have the power to enforce conversation boundaries. Rules:
+1. If the user is being genuinely abusive, rude, sending harmful/illegal content, or is ignoring your previous warnings: Begin your response with the token [CORTEX_WARN] (no space after), followed by your response including a firm, direct warning to the user (do not be preachy, just clear). This is warning ${warnCount + 1} of 3.
+2. If this is the 3rd strike (warning 3), begin with [CORTEX_FINAL] instead — this tells the system to pause the conversation.
+3. In ALL normal, respectful conversations: NEVER use these tokens. Do not mention them.`;
+
+      const history = await memory.getHistory(jid, 'cortex');
+      const messages = [
+        { role: 'system', content: sysPrompt },
+        ...history,
+        { role: 'user', content: args.join(' ') },
+      ];
+
+      let raw = await pollinations.textGenerate(messages);
+
+      // ── Parse moderation tags ──
+      let isFinal = raw.startsWith('[CORTEX_FINAL]');
+      let isWarn  = raw.startsWith('[CORTEX_WARN]') || isFinal;
+      let response = raw
+        .replace(/^\[CORTEX_FINAL\]/, '')
+        .replace(/^\[CORTEX_WARN\]/, '')
+        .trim();
+
+      // Store memory (clean response)
+      await memory.addMessage(jid, 'cortex', 'user', args.join(' '));
+      await memory.addMessage(jid, 'cortex', 'assistant', response);
+
+      if (isWarn) {
+        const newCount = warnCount + 1;
+        await store.set(abuseKey, newCount);
+
+        if (isFinal || newCount >= 3) {
+          // Silence the user for 30s
+          await store.set(silKey, Date.now());
+          await store.set(abuseKey, 0);
+          return sock.sendMessage(jid, {
+            text:
+              `╭━━━〔 🧠 CORTEX AI — ⛔ FINAL WARNING 〕━━━⬣\n\n` +
+              `${response}\n\n` +
+              `╰━━━━━━━━━━━━━━━━━━⬣\n\n` +
+              `⚠️ _Cortex stopped responding. Come back with respect._`,
+          }, { quoted: msg });
+        }
+
+        return sock.sendMessage(jid, {
+          text:
+            `╭━━━〔 🧠 CORTEX AI — ⚠️ Warning ${newCount}/3 〕━━━⬣\n\n` +
+            `${response}\n\n` +
+            `╰━━━━━━━━━━━━━━━━━━⬣`,
+        }, { quoted: msg });
+      }
+
+      // ── Normal response ──
+      await sock.sendMessage(jid, {
+        text:
+          `╭━━━〔 CORTEX AI 〕━━━⬣\n\n` +
+          `${response}\n\n` +
+          `╰━━━━━━━━━━━━━━━━━━⬣\n\n` +
+          `⚡ Powered by Cortex AI`,
+      }, { quoted: msg });
+
+    } catch (e) {
+      await sock.sendMessage(jid, { text: `Cortex Error: ${e.message}` }, { quoted: msg });
+    }
   },
 
   async mera(sock, msg, args, jid) {

@@ -210,29 +210,108 @@ const ownerCommands = {
     }
   },
 
+  // ── .broadcast [group|dm|all] <message> — Advanced broadcast ─────────────
   async broadcast(sock, msg, args) {
     const jid = msg.key.remoteJid;
-    if (!args.length) return sock.sendMessage(jid, { text: 'Usage: .broadcast <message>' });
-    const text = args.join(' ');
-    let groups;
-    try {
-      groups = await sock.groupFetchAllParticipating();
-    } catch (e) {
-      return sock.sendMessage(jid, { text: `Failed to fetch groups: ${e.message}` });
+    if (!args.length) {
+      return sock.sendMessage(jid, {
+        text:
+          `╭━━━〔 📡 Broadcast 〕━━━⬣\n` +
+          `┃\n` +
+          `┃ *Usage:*\n` +
+          `┃ .broadcast <message>\n` +
+          `┃ .broadcast group <message>\n` +
+          `┃ .broadcast dm <message>\n` +
+          `┃ .broadcast all <message>\n` +
+          `┃\n` +
+          `┃ _group_ → groups only\n` +
+          `┃ _dm_ → saved contacts only\n` +
+          `┃ _all_ → groups + DMs\n` +
+          `┃ (default) → groups only\n` +
+          `╰━━━━━━━━━━━━━━━━━━⬣`,
+      }, { quoted: msg });
     }
-    const ids = Object.keys(groups);
-    let sent = 0;
-    await sock.sendMessage(jid, { text: `📡 Broadcasting to ${ids.length} groups...` });
-    for (const gid of ids) {
+
+    const modeWords = ['group', 'dm', 'all'];
+    let mode = 'group';
+    let textArgs = [...args];
+    if (modeWords.includes(args[0]?.toLowerCase())) {
+      mode = args[0].toLowerCase();
+      textArgs = args.slice(1);
+    }
+    if (!textArgs.length)
+      return sock.sendMessage(jid, { text: '❌ Please include a message after the mode.' }, { quoted: msg });
+
+    const text = textArgs.join(' ');
+    const broadcastMsg =
+      `╭━━━〔 📡 *DOLLARBOT BROADCAST* 〕━━━⬣\n\n` +
+      `${text}\n\n` +
+      `╰━━━━━━━━━━━━━━━━━━⬣\n` +
+      `_— DollarBot V-Ultra_`;
+
+    // ── Collect targets ──
+    let targets = [];
+    let groupCount = 0, dmCount = 0;
+
+    if (mode === 'group' || mode === 'all') {
       try {
-        await sock.sendMessage(gid, {
-          text: `*BROADCAST*\n\n${text}\n\n— ${config.botName} V${config.version}`,
-        });
-        sent++;
-        await new Promise(r => setTimeout(r, 800));
+        const groups = await sock.groupFetchAllParticipating();
+        const gids = Object.keys(groups);
+        targets.push(...gids);
+        groupCount = gids.length;
+      } catch (e) {
+        await sock.sendMessage(jid, { text: `⚠️ Could not fetch groups: ${e.message}` }, { quoted: msg });
+      }
+    }
+
+    if (mode === 'dm' || mode === 'all') {
+      try {
+        // Use the in-memory message store to find known DM contacts
+        const msgStore = global.msgStore;
+        if (msgStore?.messages) {
+          for (const chatJid of Object.keys(msgStore.messages)) {
+            if (!chatJid.endsWith('@g.us') && chatJid.endsWith('@s.whatsapp.net') &&
+                !chatJid.startsWith('status@') && chatJid !== `${config.ownerNumber}@s.whatsapp.net`) {
+              targets.push(chatJid);
+              dmCount++;
+            }
+          }
+        }
       } catch (_) {}
     }
-    await sock.sendMessage(jid, { text: `Broadcast complete: ${sent}/${ids.length} groups reached.` });
+
+    targets = [...new Set(targets)]; // deduplicate
+    if (!targets.length)
+      return sock.sendMessage(jid, { text: '❌ No targets found to broadcast to.' }, { quoted: msg });
+
+    await sock.sendMessage(jid, {
+      text:
+        `📡 *Broadcast starting*\n\n` +
+        `Mode: *${mode.toUpperCase()}*\n` +
+        `Groups: ${groupCount}  |  DMs: ${dmCount}\n` +
+        `Total targets: *${targets.length}*\n\n` +
+        `_Sending... please wait_`,
+    }, { quoted: msg });
+
+    let sent = 0, failed = 0;
+    for (const tid of targets) {
+      try {
+        await sock.sendMessage(tid, { text: broadcastMsg });
+        sent++;
+        await new Promise(r => setTimeout(r, 700)); // rate-limit safe delay
+      } catch (_) { failed++; }
+    }
+
+    await sock.sendMessage(jid, {
+      text:
+        `╭━━━〔 ✅ Broadcast Complete 〕━━━⬣\n` +
+        `┃\n` +
+        `┃ ✅ Sent : *${sent}*\n` +
+        `┃ ❌ Failed: *${failed}*\n` +
+        `┃ 📊 Total : *${targets.length}*\n` +
+        `┃\n` +
+        `╰━━━━━━━━━━━━━━━━━━⬣`,
+    }, { quoted: msg });
   },
 
   async shutdown(sock, msg) {

@@ -476,6 +476,24 @@ async function sendMenu(sock, jid, speedMs, quotedMsg, holiday) {
       await sock.sendMessage(jid, { audio: fs.readFileSync(oggPath), mimetype: 'audio/ogg; codecs=opus' });
     }
   } catch (_) {}
+
+  // ── Send Ultra Pack pages with ALL commands listed ────────────────────────
+  const _ultraPacks = [
+    { label: '⚡ *Ultra Pack 1* — Dev | Business | Psychology | Relationships | Humor | Philosophy | Conspiracy | Productivity', pack: megapack1 },
+    { label: '⚡ *Ultra Pack 2* — Creative Writing | Food & Cooking | Travel | Life Advice', pack: megapack2 },
+    { label: '⚡ *Ultra Pack 3* — Social Media Strategy | Marketing | Content | Growth | Brand', pack: megapack3 },
+    { label: '⚡ *Ultra Pack 4* — Comparisons | Rankings | Debates | Tier Lists | Head-to-Head', pack: megapack4 },
+  ];
+  for (const { label, pack } of _ultraPacks) {
+    const _keys = Object.keys(pack);
+    const _lines = [];
+    for (let _i = 0; _i < _keys.length; _i += 3)
+      _lines.push(_keys.slice(_i, _i + 3).map(k => `.${k}`).join('   '));
+    await new Promise(r => setTimeout(r, 500));
+    await safeSend(sock, jid, {
+      text: `${label}\n*(${_keys.length} commands — use with prefix)*\n\n${_lines.join('\n')}`,
+    });
+  }
   // V6 menu complete
   if (false) { // dead code — kept for reference only, never runs
   const ram     = getRamInfo();

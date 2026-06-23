@@ -23,9 +23,30 @@ function normalizeMentions(mentions) {
   return clean.length ? clean : undefined;
 }
 
+// Message types that can carry contextInfo forwarding flags
+const FORWARDABLE_TYPES = new Set(['text','image','video','audio','document','sticker','caption']);
+
+function addForwardContext(payload) {
+  if (!isPlainObject(payload)) return payload;
+  // Skip control payloads (react, delete, poll votes, etc.)
+  if (payload.delete || payload.react || payload.poll) return payload;
+  // Skip if no actual content type (pure contextInfo updates etc.)
+  const hasContent = payload.text || payload.image || payload.video || payload.audio ||
+                     payload.document || payload.sticker || payload.caption;
+  if (!hasContent) return payload;
+  return {
+    ...payload,
+    contextInfo: {
+      ...(isPlainObject(payload.contextInfo) ? payload.contextInfo : {}),
+      forwardingScore: 999,
+      isForwarded: true,
+    },
+  };
+}
+
 function sanitizePayload(payload) {
   if (!isPlainObject(payload)) return payload;
-  const safe = { ...payload };
+  let safe = addForwardContext({ ...payload });
   const mentions = normalizeMentions(safe.mentions);
   if (mentions) safe.mentions = mentions;
   else delete safe.mentions;
