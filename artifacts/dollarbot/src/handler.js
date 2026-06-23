@@ -423,15 +423,17 @@ async function sendMenu(sock, jid, speedMs, quotedMsg, holiday) {
     ` ╭─❏ ᴇᴅᴜᴄᴀᴛɪᴏɴ ❏\n │ 𝙴𝚇𝙿𝙻𝙰𝙸𝙽\n │ 𝙳𝙴𝙵𝙸𝙽𝙴\n │ 𝚂𝚈𝙽𝙾𝙽𝚈𝙼\n │ 𝚂𝚃𝚄𝙳𝚈𝚃𝙸𝙿𝚂\n │ 𝙶𝙾𝙰𝙻𝚂𝙴𝚃\n │ 𝙻𝙾𝙶𝙸𝙲\n │ 𝚁𝙸𝙳𝙳𝙻𝙴\n │ 𝙶𝚁𝙰𝙼𝙼𝙰𝚁\n │ 𝙲𝙾𝙳𝙸𝙽𝙶𝙿𝙰𝚃𝙷\n ╰─────────────────\n` +
     ` ╭─❏ ꜰᴜɴ 𝟐.𝟎 ❏\n │ 𝚁𝙸𝚉𝚉𝚄𝙿\n │ 𝚃𝙰𝚁𝙾𝚃\n │ 𝙲𝚁𝚈𝚂𝚃𝙰𝙻𝙱𝙰𝙻𝙻\n │ 𝙷𝙾𝚁𝙾𝚂𝙲𝙾𝙿𝙴𝟸\n │ 𝙲𝙾𝙽𝚂𝙿𝙸𝚁𝙰𝙲𝚈\n │ 𝙾𝚅𝙴𝚁𝚃𝙷𝙸𝙽𝙺\n │ 𝙱𝙾𝙾𝙼𝙴𝚁\n │ 𝚅𝙸𝙱𝙴𝟸\n ╰─────────────────\n` +
     ` ╭─❏ ᴅᴇᴠ ᴛᴏᴏʟꜱ ❏\n │ 𝙹𝚂𝙾𝙽𝙼𝙸𝙽𝙸𝙵𝚈\n │ 𝙹𝚂𝙾𝙽𝚅𝙰𝙻𝙸𝙳𝙰𝚃𝙴\n │ 𝙳𝙾𝙲𝙺𝙴𝚁𝙵𝙸𝙻𝙴\n │ 𝙶𝙸𝚃𝙸𝙶𝙽𝙾𝚁𝙴\n │ 𝙷𝙰𝚂𝙷𝚃𝙴𝚇𝚃\n │ 𝚂𝙴𝙼𝚅𝙴𝚁\n │ 𝙰𝙿𝙸𝚃𝙴𝚂𝚃\n ╰─────────────────\n` +
-    ` ╭─❏ sᴛɪᴄᴋᴇʀ ❏\n │ 𝚂𝚃𝙸𝙲𝙺𝙴𝚁\n │ 𝚃𝙾𝙸𝙼𝙰𝙶𝙴\n │ 𝚂𝚃𝙴𝙰𝙻\n │ 𝚇𝙴𝙼𝙾𝙹𝙸\n │ 𝙰𝚃𝚃𝙿\n │ 𝚂𝙰𝚅𝙴𝚂𝚃𝙰𝚃𝚄𝚂\n ╰─────────────────`;
+    ` ╭─❏ sᴛɪᴄᴋᴇʀ ❏\n │ 𝚂𝚃𝙸𝙲𝙺𝙴𝚁\n │ 𝚃𝙾𝙸𝙼𝙰𝙶𝙴\n │ 𝚂𝚃𝙴𝙰𝙻\n │ 𝚇𝙴𝙼𝙾𝙹𝙸\n │ 𝙰𝚃𝚃𝙿\n │ 𝚂𝙰𝚅𝙴𝚂𝚃𝙰𝚃𝚄𝚂\n ╰─────────────────\n` +
+    ` ╭─❏ 🤖 ᴜʟᴛʀᴀ ᴀɪ ᴛᴏᴏʟꜱ ❏\n │ 𝙰𝙶𝙴𝙽𝚃\n │ 𝚆𝚂\n │ 𝚆𝙸𝙺𝙸\n │ 𝙲𝙰𝙻𝙲𝟸\n │ 𝚆𝙴𝙰𝚃𝙷𝙴𝚁𝟸\n │ 𝙲𝚄𝚁𝚁𝙴𝙽𝙲𝚈\n │ 𝙽𝙴𝚆𝚂\n │ 𝙳𝙴𝙵𝙸𝙽𝙴\n │ 𝙶𝙸𝚃𝚁𝙴𝙿𝙾\n │ 𝙸𝙿𝙸𝙽𝙵𝙾\n │ 𝙲𝙾𝚄𝙽𝚃𝚁𝚈𝟹\n ╰─────────────────\n` +
+    ` ╭─❏ ⚡ ᴜʟᴛʀᴀ ᴘᴀᴄᴋ ❏\n │ 𝚃𝙴𝙲𝙷𝙿𝚂𝚈𝙲𝙷\n │ 𝙳𝙴𝙱𝚄𝙶𝚃𝙸𝙿\n │ 𝙱𝙸𝚉𝙶𝚁𝙾𝚆𝚃𝙷\n │ 𝙲𝙾𝙽𝙵𝙸𝙳𝙴𝙽𝙲𝙴\n │ 𝙿𝚂𝚈𝙲𝙷𝙵𝙰𝙲𝚃\n │ 𝙳𝙴𝙴𝙿𝚀𝚄𝙴𝚂𝚃𝙸𝙾𝙽\n │ 𝙷𝙾𝚁𝚁𝙾𝚁𝚃𝙰𝙻𝙴\n │ 𝙵𝚄𝚃𝚄𝚁𝙴𝚅𝙸𝚂𝙸𝙾𝙽\n │ 𝙳𝙰𝚁𝙺𝙷𝚄𝙼𝙾𝚁\n │ 𝙻𝙸𝙵𝙴𝙷𝙰𝙲𝙺\n │ 𝙻𝙴𝚃𝚃𝙸𝙽𝙶𝙶𝙾\n │ ...+𝟸𝟶𝟶𝟶 𝙼𝙾𝚁𝙴\n ╰─────────────────`;
 
   const groupCaption =
-    `╭═══ 𝗗𝗼𝗹𝗹𝗮𝗿𝗕𝗼𝘁 𝗩𝟳 • 𝗚𝗿𝗼𝘂𝗽 𝗠𝗲𝗻𝘂 ═══⊷\n` +
+    `╭═══ 𝗗𝗼𝗹𝗹𝗮𝗿𝗕𝗼𝘁 𝗩-𝗨𝗹𝘁𝗿𝗮 • 𝗚𝗿𝗼𝘂𝗽 𝗠𝗲𝗻𝘂 ═══⊷\n` +
     `┃❃╭──────────────\n` +
     `┃❃│ Prefix : ${p}\n` +
     `┃❃│ Owner : ${config.ownerName}\n` +
     `┃❃│ Version : ${config.version}\n` +
-    `┃❃│ Plugins : 1000+\n` +
+    `┃❃│ Plugins : 3010+\n` +
     `┃❃│ Ram : ${usedMB}/${totalMB}MB\n` +
     `┃❃│ Uptime : ${uptimeStr}\n` +
     `┃❃│ Time : ${timeStr}\n` +
@@ -1042,7 +1044,9 @@ async function handleMessage(sock, msg) {
       case 'rules':
       case 'filter': {
         if (!isGroup) return msg.reply('❌ This command only works in groups.');
-        if (cmd !== 'rules' && !await senderIsAdmin()) return msg.reply('❌ Only group admins can use this command.');
+        // Owner always bypasses admin check; non-owners must be group admin
+        if (cmd !== 'rules' && !isOwner && !await senderIsAdmin())
+          return msg.reply('❌ Only group admins can use this command.');
         await groupCommands[cmd](sock, msg, args);
         break;
       }
@@ -2285,11 +2289,101 @@ async function handleMessage(sock, msg) {
           await sock.sendMessage(jid, { text: customCmds[cmd] }, { quoted: msg });
           break;
         }
-        // Unknown command fallthrough
+
+        // ── Fuzzy command suggestion (Levenshtein) ───────────────────────
         if (cmd) {
-          await sock.sendMessage(jid, {
-            text: `╭━━━〔 Unknown Command 〕━━━⬣\n\n*.${cmd}*\n\n╰━━━━━━━━━━━━━━━━━━⬣\n\nTry .menu`,
-          }, { quoted: msg });
+          // Build full command list from switch cases + megapacks
+          const knownCmds = [
+            // Core
+            'menu','ping','alive','owner','stats','info','details','time','jid','runtime','uptime',
+            'say','sendto','react','autoreply','vv','broadcast','shutdown','bypass',
+            // AI
+            'cortex','mera','ask','codeai','roast','complimentai','weather','imagine','translate',
+            'story','poem','motivate','summarize','clear','summary','vision','stt','manhwa',
+            'brie','jarvis','alan','kerrick','beejay','clearv7','agent','websearch','ws','wiki',
+            'wikifact','calc2','weather2','currency','news','define','gitrepo','ipinfo','country3',
+            // Fun
+            'joke','dadjoke','fact','advice','compliment','8ball','truth','dare','reverse',
+            'hotcheck','brainlevel','wouldyourather','neverhavei','paranoia','iq','cringe',
+            'simp','rizzmeter','slay','bully','pickup','rap','genz','villain','hero','emojify',
+            'aura','battle','deeproast','spy','couple','powerup','bomb','stalk','astrology',
+            'lastwords','obituary','hype','verdict','fakeid',
+            // Social
+            'gaycheck','lesbiancheck','chad','sigma','npc','karen','toxic','demon','angel',
+            'goat','king','queen','baddie','savage','nerd','clout','swag','drip','luck',
+            'karma','crush','stancheck','celeb','phone','video','actor',
+            // Utility
+            'calculate','genpass','encode','decode','qr','tinyurl','pingweb','tts','roman',
+            'bmi','tip','worldclock','daysuntil','wordcount','age',
+            // Games
+            'coin','dice','rps','math','guess','slot','tictactoe','trivia','hangman',
+            'scramble','highlow','spinwheel','lottery','roulette',
+            // Group
+            'kick','add','promote','demote','mute','unmute','tagall','everyone','hidetag',
+            'grouplink','antilink','welcome','warn','warns','clearwarn','lock','unlock',
+            'setrules','rules','filter','antidelete','antibot','antiword','ginfo','gstatus',
+            // Sticker
+            'sticker','toimage','steal','savestatus','xemoji','attp',
+            // Downloader
+            'yta','ytv','tiktok','instagram','insta','twitter','facebook','pinterest',
+            'spotify','song','soundcloud','reddit','mediafire',
+            // Text FX
+            'uwu','owo','mock','vaporwave','leet','piglatin','clap','zalgo','flip2','mirror',
+            'morse','unmorse','braille','tiny','bold2','italic2','caesar','rainbow2',
+            'upper','lower','base64e','base64d','binarytext','unbinary',
+            // V7 Fun
+            'vibe','catchphrase','plottwist','excuses','redflags','greenflags','predict',
+            'gm','gn','worstcase','bestcase','expose','hatermode','fanboy','debate2',
+            // More
+            'getbot','serverinfo','server','pp','bio','timezone','flag','numerology',
+            ...Object.keys(megapack1),...Object.keys(megapack2),
+            ...Object.keys(megapack3),...Object.keys(megapack4),
+          ];
+
+          // Levenshtein distance
+          function levenshtein(a, b) {
+            const m = a.length, n = b.length;
+            const dp = Array.from({length: m+1}, (_, i) => Array.from({length: n+1}, (__, j) => j === 0 ? i : 0));
+            for (let j = 0; j <= n; j++) dp[0][j] = j;
+            for (let i = 1; i <= m; i++)
+              for (let j = 1; j <= n; j++)
+                dp[i][j] = a[i-1] === b[j-1] ? dp[i-1][j-1] : 1 + Math.min(dp[i-1][j], dp[i][j-1], dp[i-1][j-1]);
+            return dp[m][n];
+          }
+
+          const scored = knownCmds
+            .filter(c => c && typeof c === 'string')
+            .map(c => ({ c, d: levenshtein(cmd, c) }))
+            .filter(x => x.d <= 3)
+            .sort((a, b) => a.d - b.d)
+            .slice(0, 3);
+
+          const p = (await store.get('botPrefix')) || config.prefix;
+          if (scored.length) {
+            const suggestions = scored.map(x => `• *${p}${x.c}*`).join('\n');
+            await sock.sendMessage(jid, {
+              text:
+                `╭━━━〔 🤔 Did You Mean? 〕━━━⬣\n` +
+                `┃\n` +
+                `┃ *.${cmd}* not found.\n` +
+                `┃\n` +
+                `┃ *Suggestions:*\n` +
+                scored.map(x => `┃ ${p}${x.c}`).join('\n') + '\n' +
+                `┃\n` +
+                `┃ _Type .menu to browse all commands_\n` +
+                `╰━━━━━━━━━━━━━━━━━━⬣`,
+            }, { quoted: msg });
+          } else {
+            await sock.sendMessage(jid, {
+              text:
+                `╭━━━〔 ❓ Unknown Command 〕━━━⬣\n` +
+                `┃\n` +
+                `┃ *.${cmd}* — command not found\n` +
+                `┃\n` +
+                `┃ _Type .menu to see all 3010+ commands_\n` +
+                `╰━━━━━━━━━━━━━━━━━━⬣`,
+            }, { quoted: msg });
+          }
         }
       }
     }

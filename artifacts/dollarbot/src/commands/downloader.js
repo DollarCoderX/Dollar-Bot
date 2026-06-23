@@ -337,17 +337,57 @@ module.exports = {
     }
   },
 
-  // .pinterest <url> — download Pinterest image
+  // .pinterest [keyword or url] — download/search Pinterest image
   async pinterest(sock, msg, args) {
     const jid = msg.key.remoteJid;
-    const url = args[0];
-    if (!url || !isUrl(url))
-      return sock.sendMessage(jid, { text: '❌ Usage: .pinterest <pin url>' }, { quoted: msg });
-    await sock.sendMessage(jid, { text: '⬇️ Downloading Pinterest image...' }, { quoted: msg });
+    if (!args.length)
+      return sock.sendMessage(jid, { text: '❌ Usage:\n• .pinterest <keyword> — search Pinterest\n• .pinterest <pin url> — download specific pin' }, { quoted: msg });
+
+    const input = args.join(' ');
+    const isLink = isUrl(input);
+
+    await sock.sendMessage(jid, { text: `🔍 ${isLink ? 'Downloading' : 'Searching Pinterest for'}: _${input}_...` }, { quoted: msg });
+
     try {
-      const d = await dlPinterest(url);
-      const buf = await fetchBuffer(d.url);
-      await sock.sendMessage(jid, { image: buf, caption: '📌 Pinterest Image' }, { quoted: msg });
+      if (isLink) {
+        // Direct URL download
+        const d = await dlPinterest(input);
+        const buf = await fetchBuffer(d.url);
+        await sock.sendMessage(jid, {
+          [d.type === 'video' ? 'video' : 'image']: buf,
+          caption: '📌 Pinterest',
+        }, { quoted: msg });
+      } else {
+        // Keyword search — scrape Pinterest search page
+        const query = encodeURIComponent(input);
+        const r = await fetch(`https://www.pinterest.com/search/pins/?q=${query}&rs=typed`, {
+          headers: {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            'Accept-Language': 'en-US,en;q=0.9',
+            'Accept': 'text/html,application/xhtml+xml',
+          },
+          timeout: 20000,
+        });
+        const html = await r.text();
+
+        // Extract image URLs from search results
+        const imgMatches = [
+          ...html.matchAll(/https:\/\/i\.pinimg\.com\/originals\/[^"'\s\\]+\.(?:jpg|jpeg|png)/gi),
+          ...html.matchAll(/https:\/\/i\.pinimg\.com\/736x\/[^"'\s\\]+\.(?:jpg|jpeg|png)/gi),
+          ...html.matchAll(/https:\/\/i\.pinimg\.com\/564x\/[^"'\s\\]+\.(?:jpg|jpeg|png)/gi),
+        ].map(m => m[0].replace(/\\u002F/g, '/').replace(/\\/g, ''));
+
+        // Deduplicate and pick a random result for variety
+        const unique = [...new Set(imgMatches)];
+        if (!unique.length) throw new Error('No images found for that keyword. Try a different search.');
+
+        const picked = unique[Math.floor(Math.random() * Math.min(unique.length, 5))];
+        const buf = await fetchBuffer(picked);
+        await sock.sendMessage(jid, {
+          image: buf,
+          caption: `📌 *Pinterest:* ${input}\n_Found ${unique.length} results_`,
+        }, { quoted: msg });
+      }
     } catch (e) {
       await sock.sendMessage(jid, { text: `❌ Pinterest failed: ${e.message}` }, { quoted: msg });
     }

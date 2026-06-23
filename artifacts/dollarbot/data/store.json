@@ -75,5 +75,14 @@
   "afk_14378898269:16@s.whatsapp.net": {
     "message": "hungry",
     "ts": 1781674977147
+  },
+  "botSessions": {
+    "2349037855461": {
+      "slot": 1,
+      "number": "2349037855461",
+      "assignedAt": 1782193800850,
+      "status": "pending",
+      "sessionPath": "sessions/slot_1_2349037855461"
+    }
   }
 }

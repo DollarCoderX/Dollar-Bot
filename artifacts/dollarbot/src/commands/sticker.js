@@ -180,32 +180,53 @@ const stickerCommands = {
     if (!args.length) return msg.reply('❌ Usage: .xemoji <emoji>\nExample: .xemoji 😂');
     const emoji = args[0];
     await msg.reply('_🎨 Creating emoji sticker..._');
+
+    const fetch = require('node-fetch');
+
+    // Build Twemoji codepoint string: filter variation selectors (U+FE0F, U+200D handled)
+    function emojiToTwemojiHex(em) {
+      const cps = [...em]
+        .map(c => c.codePointAt(0))
+        .filter(cp => cp !== 0xFE0F); // strip variation selector-16
+      return cps.map(cp => cp.toString(16)).join('-');
+    }
+
+    const hexCode = emojiToTwemojiHex(emoji);
+
+    // CDN sources in priority order — all serve reliable PNG
+    const cdnSources = [
+      `https://cdn.jsdelivr.net/npm/twemoji@14.0.2/assets/72x72/${hexCode}.png`,
+      `https://raw.githubusercontent.com/twitter/twemoji/master/assets/72x72/${hexCode}.png`,
+      `https://twemoji.maxcdn.com/v/latest/72x72/${hexCode}.png`,
+    ];
+
+    let imgBuf = null;
+    for (const url of cdnSources) {
+      try {
+        const r = await fetch(url, { headers: { 'User-Agent': 'Mozilla/5.0' }, timeout: 12000 });
+        if (r.ok) {
+          const b = await r.buffer();
+          if (b.length > 200) { imgBuf = b; break; }
+        }
+      } catch (_) {}
+    }
+
+    // Fallback: AI-generated emoji sticker via Pollinations
+    if (!imgBuf) {
+      try {
+        const prompt = `${emoji} emoji style illustration, flat design, clean white background, high quality`;
+        const r = await fetch(`https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=512&height=512&nologo=true&seed=${Date.now()}`, { timeout: 35000 });
+        if (r.ok) imgBuf = await r.buffer();
+      } catch (_) {}
+    }
+
+    if (!imgBuf) return msg.reply('❌ Could not find or generate this emoji. Try a different one.');
+
     try {
-      const fetch = require('node-fetch');
-      // Encode emoji as codepoint for CDN
-      const cp = [...emoji].map(c => c.codePointAt(0).toString(16).padStart(4,'0')).join('-');
-      const cdnUrl = `https://emojicdn.elk.sh/${encodeURIComponent(emoji)}?style=apple`;
-      const res = await fetch(cdnUrl, {
-        headers: { 'User-Agent': 'Mozilla/5.0' },
-        timeout: 15000,
-      });
-      if (!res.ok) throw new Error('Emoji not found on CDN');
-      const buf = await res.buffer();
-      const stickerBuf = await imageToSticker(buf, 'DollarBot V7 🇨🇦', 'Dollar');
+      const stickerBuf = await imageToSticker(imgBuf, 'DollarBot V-Ultra 💵', 'Dollar 🇨🇦');
       await sock.sendMessage(jid, { sticker: stickerBuf }, { quoted: msg });
     } catch (e) {
-      // Fallback: use Pollinations to generate emoji art image
-      try {
-        const fetch = require('node-fetch');
-        const prompt = `${emoji} emoji, flat design, clean, transparent background, high quality sticker art`;
-        const imgRes = await fetch(`https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=512&height=512&nologo=true`, { timeout: 30000 });
-        if (!imgRes.ok) throw new Error('Image generation failed');
-        const buf2 = await imgRes.buffer();
-        const stickerBuf2 = await imageToSticker(buf2, 'DollarBot V7 🇨🇦', 'Dollar');
-        await sock.sendMessage(jid, { sticker: stickerBuf2 }, { quoted: msg });
-      } catch (e2) {
-        await msg.reply(`❌ Could not create emoji sticker: ${e2.message}`);
-      }
+      await msg.reply(`❌ Sticker conversion failed: ${e.message}`);
     }
   },
 
