@@ -136,7 +136,7 @@ module.exports = {
   gratitude4:   makeCmd('🙏', SYS.life + ' Give gratitude practice advice for:'),
   contentment:  makeCmd('☮️', SYS.life + ' Give contentment advice for:'),
   acceptance4:  makeCmd('🤝', SYS.life + ' Give acceptance advice for:'),
-  letting go:   makeCmd('🕊️', SYS.life + ' Give letting-go advice for:'),
+  lettinggo:    makeCmd('🕊️', SYS.life + ' Give letting-go advice for:'),
   simplify2:    makeCmd('🧘', SYS.life + ' Give simplifying life advice for:'),
   prioritize:   makeCmd('🎯', SYS.life + ' Give prioritization advice for:'),
   declutter:    makeCmd('✨', SYS.life + ' Give decluttering (mental/physical) advice for:'),

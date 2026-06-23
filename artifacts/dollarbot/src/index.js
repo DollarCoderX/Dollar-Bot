@@ -121,12 +121,12 @@ function ask(prompt) {
 
 function banner() {
   console.log('\n\x1b[33m╔══════════════════════════════╗\x1b[0m');
-  console.log('\x1b[33m║    💵  DOLLARBOT  V7  💵     ║\x1b[0m');
+  console.log('\x1b[33m║  💵  DOLLARBOT  V-ULTRA  💵  ║\x1b[0m');
   console.log('\x1b[33m╠══════════════════════════════╣\x1b[0m');
   console.log('\x1b[33m║\x1b[0m  Owner  : Dollar              \x1b[33m║\x1b[0m');
   console.log('\x1b[33m║\x1b[0m  Country: Canada 🇨🇦           \x1b[33m║\x1b[0m');
-  console.log('\x1b[33m║\x1b[0m  Engine : Dollar Engine V7    \x1b[33m║\x1b[0m');
-  console.log('\x1b[33m║\x1b[0m  Version: 7.0.0               \x1b[33m║\x1b[0m');
+  console.log('\x1b[33m║\x1b[0m  Engine : Dollar Engine Ultra \x1b[33m║\x1b[0m');
+  console.log('\x1b[33m║\x1b[0m  Version: Ultra 1.0           \x1b[33m║\x1b[0m');
   console.log('\x1b[33m╚══════════════════════════════╝\x1b[0m\n');
 }
 

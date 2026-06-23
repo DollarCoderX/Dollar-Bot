@@ -51,6 +51,7 @@ const megapack2          = require('./commands/megapack2');
 const megapack3          = require('./commands/megapack3');
 const megapack4          = require('./commands/megapack4');
 const getBotCommands     = require('./commands/getbot');
+const toolCallingCommands = require('./commands/toolcalling');
 
 // ── V6 new modules ────────────────────────────────────────────────────────────
 const audioFxCommands    = require('./commands/audio_fx');
@@ -1808,6 +1809,26 @@ async function handleMessage(sock, msg) {
       case 'situation':    await v7aiCommands.situation(sock, msg, args, jid); break;
       case 'clearv7':      await v7aiCommands.clearv7(sock, msg, args, jid); break;
 
+      // ── GetBot / Multi-session commands ────────────────────────────────────
+      case 'getbot':       await getBotCommands.getbot(sock, msg, args, jid); break;
+      case 'serverinfo':
+      case 'server':       await getBotCommands.serverinfo(sock, msg, args, jid); break;
+
+      // ── AI Tool-Calling (Agent mode) ───────────────────────────────────────
+      case 'agent':        await toolCallingCommands.agent(sock, msg, args, jid); break;
+      case 'websearch':
+      case 'ws':           await toolCallingCommands.websearch(sock, msg, args, jid); break;
+      case 'wikifact':
+      case 'wiki':         await toolCallingCommands.wikifact(sock, msg, args, jid); break;
+      case 'calc2':        await toolCallingCommands.calc2(sock, msg, args, jid); break;
+      case 'weather2':     await toolCallingCommands.weather2(sock, msg, args, jid); break;
+      case 'currency':     await toolCallingCommands.currency(sock, msg, args, jid); break;
+      case 'news':         await toolCallingCommands.news(sock, msg, args, jid); break;
+      case 'define':       await toolCallingCommands.define(sock, msg, args, jid); break;
+      case 'gitrepo':      await toolCallingCommands.gitrepo(sock, msg, args, jid); break;
+      case 'ipinfo':       await toolCallingCommands.ipinfo(sock, msg, args, jid); break;
+      case 'country3':     await toolCallingCommands.country3(sock, msg, args, jid); break;
+
       // ── Text FX commands ───────────────────────────────────────────────────
       case 'uwu':          await textfxCommands.uwu(sock, msg, args); break;
       case 'owo':          await textfxCommands.owo(sock, msg, args); break;
@@ -2239,6 +2260,26 @@ async function handleMessage(sock, msg) {
 
       // ── Handle custom commands (setcmd/getcmd system) ──────────────────────
       default: {
+        // ── Dynamic megapack dispatch ─────────────────────────────────────
+        const packs = [megapack1, megapack2, megapack3, megapack4];
+        let handled = false;
+        for (const pack of packs) {
+          if (pack[cmd]) {
+            const fn = pack[cmd];
+            const input = args.join(' ');
+            try {
+              await sock.sendPresenceUpdate('composing', jid);
+              const result = await fn(input);
+              await sock.sendMessage(jid, { text: result }, { quoted: msg });
+            } catch (e) {
+              await sock.sendMessage(jid, { text: `❌ Command failed: ${e.message}` }, { quoted: msg });
+            }
+            handled = true;
+            break;
+          }
+        }
+        if (handled) break;
+
         const customCmds = (await store.get('customCmds')) || {};
         if (cmd && customCmds[cmd]) {
           await sock.sendMessage(jid, { text: customCmds[cmd] }, { quoted: msg });
