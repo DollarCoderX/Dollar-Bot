@@ -105,12 +105,32 @@ const ownerCommands = {
     const jid = msg.key.remoteJid;
     const val = args[0]?.toLowerCase();
     if (!['on', 'off'].includes(val)) {
-      return sock.sendMessage(jid, { text: '❌ Usage: .autoreply on/off' });
+      const cur = !!(await store.get('autoreply'));
+      return sock.sendMessage(jid, { text: `⚙️ *AutoReply:* ${cur ? 'ON' : 'OFF'}\nUsage: .autoreply on/off` });
     }
     await store.set('autoreply', val === 'on');
     await sock.sendMessage(jid, {
-      text: `*AutoReply is now ${val.toUpperCase()}*\n\n${val === 'on' ? 'Bot will respond to DMs and group mentions automatically.' : 'AutoReply disabled.'}`,
+      text: `*AutoReply is now ${val.toUpperCase()}*\n\n${val === 'on' ? 'Bot will respond to DMs automatically.' : 'AutoReply disabled.'}`,
     });
+  },
+
+  async noprefix(sock, msg, args) {
+    const jid = msg.key.remoteJid;
+    const val = args[0]?.toLowerCase();
+    if (!['on', 'off'].includes(val)) {
+      const cur = !!(await store.get('noPrefixMode'));
+      return sock.sendMessage(jid, {
+        text: `⚙️ *NoPrefix Mode:* ${cur ? 'ON ✅' : 'OFF ❌'}\n\nUsage: *.noprefix on/off*\n\n_When ON, owner can send commands without the ${(await store.get('botPrefix')) || '.'} prefix._`,
+      }, { quoted: msg });
+    }
+    await store.set('noPrefixMode', val === 'on');
+    await sock.sendMessage(jid, {
+      text:
+        `✅ *NoPrefix Mode: ${val.toUpperCase()}*\n\n` +
+        (val === 'on'
+          ? `You can now send commands without the prefix.\n_e.g. just type \`ping\` instead of \`.ping\`_`
+          : 'Prefix is required again for all commands.'),
+    }, { quoted: msg });
   },
 
   async autolike(sock, msg, args) {

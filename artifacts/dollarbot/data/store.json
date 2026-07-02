@@ -1,5 +1,5 @@
 {
-  "autoreply": true,
+  "autoreply": false,
   "autolike": true,
   "bypassState": {
     "120363426777925361@g.us": {
@@ -46,15 +46,27 @@
       "noSticker": false,
       "noSaveSticker": false,
       "silenced": []
+    },
+    "120363409972663522@g.us": {
+      "noSticker": false,
+      "noSaveSticker": false,
+      "silenced": []
+    },
+    "120363206480270995@g.us": {
+      "noSticker": false,
+      "noSaveSticker": false,
+      "silenced": []
     }
   },
   "antideleteGroups": {
     "120363405533425174@g.us": true,
-    "120363426985134376@g.us": true
+    "120363426985134376@g.us": true,
+    "120363409972663522@g.us": true
   },
   "antilinkGroups": {
     "120363405533425174@g.us": false,
-    "120363426985134376@g.us": true
+    "120363426985134376@g.us": true,
+    "120363409972663522@g.us": true
   },
   "botPrefix": "!",
   "filter_120363426985134376@g.us": [
@@ -83,6 +95,59 @@
       "assignedAt": 1782193800850,
       "status": "pending",
       "sessionPath": "sessions/slot_1_2349037855461"
+    },
+    "80793233842185": {
+      "number": "80793233842185",
+      "email": "praiseifeanyix@gmail.com",
+      "name": "80793233842185",
+      "assignedAt": "2026-07-02, 5:54:11 a.m.",
+      "plan": "free",
+      "cmdCount": 0
     }
+  },
+  "getbotUsers": {
+    "80793233842185": {
+      "email": "praiseifeanyix@gmail.com",
+      "name": "80793233842185",
+      "cmdCount": 0,
+      "registeredAt": 1782986051867
+    }
+  },
+  "mem_80793233842185_lid_autoreply": {
+    "messages": [
+      {
+        "role": "user",
+        "content": "2",
+        "ts": 1782991289433
+      },
+      {
+        "role": "assistant",
+        "content": "sure thing! just let me know what you need 😌.",
+        "ts": 1782991289433
+      }
+    ],
+    "totalCount": 2,
+    "lastActive": 1782991289433
+  },
+  "mem_80793233842185_lid_cortex": {
+    "messages": [
+      {
+        "role": "user",
+        "content": "wassup guy",
+        "ts": 1782991433600
+      },
+      {
+        "role": "assistant",
+        "content": "Hey, you *just* pulled me off a coffee break, huh? 😌 What’s the *big* idea today? 🚀",
+        "ts": 1782991433600
+      }
+    ],
+    "totalCount": 2,
+    "lastActive": 1782991433600
+  },
+  "noPrefixMode": true,
+  "antiedit_120363409972663522@g.us": true,
+  "antilink_warn_120363409972663522@g.us": {
+    "80793233842185": 2
   }
 }

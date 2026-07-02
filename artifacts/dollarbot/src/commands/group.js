@@ -150,6 +150,33 @@ async function handleAntilinkViolation(sock, jid, sender, msg) {
 
 const groupCommands = {
 
+  // .antisticker on/off — block all stickers in a group (default: off)
+  async antisticker(sock, msg, args, isOwner) {
+    const jid = msg.key.remoteJid;
+    if (!jid.endsWith('@g.us')) return send(sock, jid, msg, '❌ This command only works in groups.');
+    if (!isOwner && !await isBotGroupAdmin(sock, jid))
+      return send(sock, jid, msg, '🔐 Only the owner or group admins can use this command.');
+
+    const setting = args[0]?.toLowerCase();
+    const all = (await store.get('bypassState')) || {};
+    if (!all[jid]) all[jid] = { noSticker: false, noSaveSticker: false, silenced: [] };
+
+    if (!['on', 'off'].includes(setting)) {
+      const cur = all[jid].noSticker ? 'ON ✅' : 'OFF ❌';
+      return send(sock, jid, msg, `🚫 *Anti-Sticker:* ${cur}\n\nUsage: *.antisticker on/off*`);
+    }
+
+    all[jid].noSticker = setting === 'on';
+    await store.set('bypassState', all);
+
+    await send(sock, jid, msg,
+      `🚫 *Anti-Sticker: ${setting.toUpperCase()}*\n\n` +
+      (setting === 'on'
+        ? 'All stickers sent in this group will be deleted.'
+        : 'Sticker sending is now allowed again.')
+    );
+  },
+
   // .kick — remove member (reply or @mention or number)
   async kick(sock, msg, args) {
     const jid = msg.key.remoteJid;

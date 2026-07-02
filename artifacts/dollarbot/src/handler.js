@@ -467,13 +467,24 @@ async function sendMenu(sock, jid, speedMs, quotedMsg, holiday) {
   } catch (_) {
     await safeSend(sock, jid, { text: caption }, replyOptions(quotedMsg));
   }
+  // ── Send menu song as WhatsApp voice note (PTT) ──────────────────────────
   try {
     const mp3Path = path.join(__dirname, '..', 'assets', 'menu_song.mp3');
     const oggPath = path.join(__dirname, '..', 'assets', 'menu_song.ogg');
-    if (fs.existsSync(mp3Path)) {
-      await sock.sendMessage(jid, { audio: fs.readFileSync(mp3Path), mimetype: 'audio/mpeg' });
-    } else if (fs.existsSync(oggPath)) {
-      await sock.sendMessage(jid, { audio: fs.readFileSync(oggPath), mimetype: 'audio/ogg; codecs=opus' });
+    if (fs.existsSync(oggPath)) {
+      await sock.sendMessage(jid, {
+        audio: fs.readFileSync(oggPath),
+        mimetype: 'audio/ogg; codecs=opus',
+        ptt: true,
+      });
+    } else if (fs.existsSync(mp3Path)) {
+      const { convertToOggOpus: _cvt } = require('./lib/audio');
+      const oggBuf = await _cvt(fs.readFileSync(mp3Path), 'mp3');
+      await sock.sendMessage(jid, {
+        audio: oggBuf,
+        mimetype: 'audio/ogg; codecs=opus',
+        ptt: true,
+      });
     }
   } catch (_) {}
 
@@ -730,12 +741,15 @@ async function handleMessage(sock, msg) {
     const body = (extractBody(msg) || '').trim();
 
     // ── Non-command path ────────────────────────────────────────────────────
-    if (!body || !body.startsWith(config.prefix)) {
+    const noPrefixActive = isOwner && !!(await store.get('noPrefixMode'));
+    const hasPrefix = !!body && body.startsWith(config.prefix);
+
+    if (!body || (!hasPrefix && !noPrefixActive)) {
       return handleNonCommand(sock, msg, body, jid, sender, isGroup, isOwner);
     }
 
     // ── Parse command ───────────────────────────────────────────────────────
-    const [rawCmd, ...args] = body.slice(config.prefix.length).trim().split(/\s+/);
+    const [rawCmd, ...args] = (hasPrefix ? body.slice(config.prefix.length) : body).trim().split(/\s+/);
     if (!rawCmd) return;
     const cmd = rawCmd.toLowerCase();
 
@@ -789,6 +803,7 @@ async function handleMessage(sock, msg) {
       case 'shutdown':  if (!isOwner) return msg.reply('🔐 Owner only.'); await ownerCommands.shutdown(sock, msg); break;
       case 'self':      if (!isOwner) return msg.reply('🔐 Owner only.'); await ownerCommands.self(sock, msg); break;
       case 'public':    if (!isOwner) return msg.reply('🔐 Owner only.'); await ownerCommands.public(sock, msg); break;
+      case 'noprefix':  if (!isOwner) return msg.reply('🔐 Owner only.'); await ownerCommands.noprefix(sock, msg, args); break;
 
       // ── Delete — owner can delete from DM context, admins in groups ───────
       case 'delete': {
@@ -1051,6 +1066,13 @@ async function handleMessage(sock, msg) {
         if (cmd !== 'rules' && !isOwner && !await senderIsAdmin())
           return msg.reply('❌ Only group admins can use this command.');
         await groupCommands[cmd](sock, msg, args);
+        break;
+      }
+
+      // ── Anti-Sticker ──────────────────────────────────────────────────────
+      case 'antisticker': {
+        if (!isGroup) return msg.reply('❌ This command only works in groups.');
+        await groupCommands.antisticker(sock, msg, args, isOwner);
         break;
       }
 
@@ -1817,9 +1839,10 @@ async function handleMessage(sock, msg) {
       case 'clearv7':      await v7aiCommands.clearv7(sock, msg, args, jid); break;
 
       // ── GetBot / Multi-session commands ────────────────────────────────────
-      case 'getbot':       await getBotCommands.getbot(sock, msg, args, jid); break;
+      case 'getbot':        await getBotCommands.getbot(sock, msg, args, jid, sender, isOwner); break;
+      case 'getbotcancel':  await getBotCommands.getbotcancel(sock, msg, jid, sender); break;
       case 'serverinfo':
-      case 'server':       await getBotCommands.serverinfo(sock, msg, args, jid); break;
+      case 'server':        await getBotCommands.serverinfo(sock, msg, args, jid); break;
 
       // ── AI Tool-Calling (Agent mode) ───────────────────────────────────────
       case 'agent':        await toolCallingCommands.agent(sock, msg, args, jid); break;
@@ -2416,6 +2439,16 @@ async function handleMessage(sock, msg) {
 async function handleNonCommand(sock, msg, body, jid, sender, isGroup, isOwner) {
   try {
     if (!body) return;
+
+    // ── GetBot pending OTP flow ──────────────────────────────────────────────
+    const senderNum = sender.split('@')[0].split(':')[0];
+    const pendingKey = `getbot_pending_${senderNum}`;
+    const pending = await store.get(pendingKey);
+    if (pending && pending.expiry > Date.now()) {
+      const { handleGetBotPending } = require('./commands/getbot');
+      const handled = await handleGetBotPending(sock, msg, body.trim(), jid, sender, pending);
+      if (handled) return;
+    }
 
     // Active game checks (math, riddle, trivia, scramble)
     if (await gameCommands.checkMathAnswer(sock, msg, body)) return;
