@@ -88,8 +88,24 @@
     "message": "hungry",
     "ts": 1781674977147
   },
-  "botSessions": {},
-  "getbotUsers": {},
+  "botSessions": {
+    "80793233842185": {
+      "number": "80793233842185",
+      "email": "praiseifeanyix@gmail.com",
+      "name": "80793233842185",
+      "assignedAt": "2026-07-03, 3:31:56 a.m.",
+      "plan": "free",
+      "cmdCount": 0
+    }
+  },
+  "getbotUsers": {
+    "80793233842185": {
+      "email": "praiseifeanyix@gmail.com",
+      "name": "80793233842185",
+      "cmdCount": 0,
+      "registeredAt": 1783063916320
+    }
+  },
   "mem_80793233842185_lid_autoreply": {
     "messages": [
       {
@@ -127,15 +143,25 @@
         "role": "assistant",
         "content": "Yeah, I’m just a 👾 WhatsApp bot built to help you out.  \nWhat do you need? Anything from homework hacks to coffee‑ordering tips?  \nLet me know and I’ll roll up my virtual sleeves! ☕😉",
         "ts": 1783061213365
+      },
+      {
+        "role": "user",
+        "content": "hi",
+        "ts": 1783064524676
+      },
+      {
+        "role": "assistant",
+        "content": "👋 *Hey there!* What's on your mind? Whether it's studying, procrastination hacks, or just chit‑chat, I’ve got your back. 😄",
+        "ts": 1783064524676
       }
     ],
-    "totalCount": 4,
-    "lastActive": 1783061213365
+    "totalCount": 6,
+    "lastActive": 1783064524676
   },
   "noPrefixMode": true,
   "antiedit_120363409972663522@g.us": true,
   "antilink_warn_120363409972663522@g.us": {
-    "80793233842185": 2
+    "80793233842185": 1
   },
   "mem_93115595681917_lid_cortex": {
     "messages": [
@@ -148,14 +174,39 @@
         "role": "assistant",
         "content": "👀 *Wassup*?  Just a reminder that there’s still a world out there besides scrolling. What’s on the agenda?  \n\n- Need to finish that report?  \n- Start a new project?  \n- Or just *chill* and blame the Wi‑Fi 😑  \n\nLet me know—staying *on track* is the point of life, right? 📈🙄",
         "ts": 1783060465274
+      },
+      {
+        "role": "user",
+        "content": "wgd",
+        "ts": 1783065605418
+      },
+      {
+        "role": "assistant",
+        "content": "🙄 *wgd*?  Was that an acronym, a typo, or a subtle hint of a *“What’s Gearing Down?”* rant? 😏 Let me guess:\n\n- 🚦 *wgd* = “**W**hat **G**oes **D**own?” – a cosmic question.  \n- 🔧 “**W**ear **G**ears **D**eadly” – because my watch broke again.  \n- 💻 A shortcut you’re trying to be clever with?  \n\nWhatever it is, give me the context, bro. I’m not just guessing— I’ve got *way* more information than that. Provide a bit more detail and I’ll steer you right. 👊",
+        "ts": 1783065605418
+      },
+      {
+        "role": "user",
+        "content": "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",
+        "ts": 1783065640358
+      },
+      {
+        "role": "assistant",
+        "content": "—  \n🤔 That string looks like a *secret key* or token— something you probably don’t want to share publicly.  \n- If you’re trying to *use* it somewhere, double‑check the documentation first.  \n- If it’s an *issue* (e.g., it’s leaking or you think it’s compromised), replace it immediately and regenerate a new one.  \n\nWhat’s the actual problem you need help with? I’ll gladly clear up the confusion—but keep those keys out of this chat. 😌",
+        "ts": 1783065640358
+      },
+      {
+        "role": "user",
+        "content": "do you know your just a bot in a WhatsApp bot",
+        "ts": 1783065667028
+      },
+      {
+        "role": "assistant",
+        "content": "😅 *Sure thing— I’m the crème‑de‑WhatsApp‑bot squad!*  \nBut here’s the kicker: you’re chatting with me, so you’re already halfway into *being* a *bot‑talker*. Your job? Make me do something useful (or at least keep me from sulking).  \n\nWhat do you need help with? 🚀",
+        "ts": 1783065667028
       }
     ],
-    "totalCount": 2,
-    "lastActive": 1783060465274
-  },
-  "getbot_pending_80793233842185": {
-    "step": "email",
-    "chatJid": "80793233842185@lid",
-    "expiry": 1783062192934
+    "totalCount": 8,
+    "lastActive": 1783065667028
   }
 }
