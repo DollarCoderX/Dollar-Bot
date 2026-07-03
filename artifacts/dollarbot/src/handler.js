@@ -31,6 +31,7 @@ const geminiCommands  = require('./commands/gemini');
 const { safeSend } = require('./lib/safe-send');
 const socialCommands  = require('./commands/social');
 const { handleAntilinkViolation } = require('./commands/group');
+const { isBotGroupAdmin: isBotGroupAdminShared, isParticipantAdmin } = require('./lib/groupAdmin');
 
 // ── V7 new modules ────────────────────────────────────────────────────────────
 const v7aiCommands     = require('./commands/v7ai');
@@ -177,30 +178,12 @@ function isOwnerJid(jid) {
 //  Group admin helpers
 // ─────────────────────────────────────────────────────────────────────────────
 
-async function getBotAdmin(sock, jid) {
-  try {
-    const meta = await sock.groupMetadata(jid);
-    const botNum = bareJid(sock.user?.id || '').split('@')[0];
-    return meta.participants.find(p => {
-      const pNum = bareJid(p.id).split('@')[0];
-      return pNum === botNum && (p.admin === 'admin' || p.admin === 'superadmin');
-    }) || null;
-  } catch { return null; }
-}
-
 async function isBotAdmin(sock, jid) {
-  return !!(await getBotAdmin(sock, jid));
+  return isBotGroupAdminShared(sock, jid);
 }
 
 async function isSenderAdmin(sock, jid, senderJid) {
-  try {
-    const meta = await sock.groupMetadata(jid);
-    const sNum = bareJid(senderJid).split('@')[0];
-    return meta.participants.some(p => {
-      const pNum = bareJid(p.id).split('@')[0];
-      return pNum === sNum && (p.admin === 'admin' || p.admin === 'superadmin');
-    });
-  } catch { return false; }
+  return isParticipantAdmin(sock, jid, senderJid);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -454,15 +437,22 @@ async function sendMenu(sock, jid, speedMs, quotedMsg, holiday) {
 
   const caption = dmCaption;
 
-  const imgPath6 = config.menuImages[menuImageIndex++ % config.menuImages.length];
+  const videoList = config.menuVideos && config.menuVideos.length ? config.menuVideos : [];
+  const vidPath6 = videoList.length ? videoList[menuImageIndex++ % videoList.length] : null;
   try {
-    if (fs.existsSync(imgPath6)) {
+    if (vidPath6 && fs.existsSync(vidPath6)) {
       await Promise.race([
-        safeSend(sock, jid, { image: fs.readFileSync(imgPath6), caption }, replyOptions(quotedMsg)),
-        new Promise((_, r) => setTimeout(() => r(new Error('timeout')), 8000)),
+        safeSend(sock, jid, { video: fs.readFileSync(vidPath6), caption, gifPlayback: false }, replyOptions(quotedMsg)),
+        new Promise((_, r) => setTimeout(() => r(new Error('timeout')), 15000)),
       ]);
     } else {
-      await safeSend(sock, jid, { text: caption }, replyOptions(quotedMsg));
+      // Fallback to static image rotation if no videos are configured
+      const imgPath6 = config.menuImages[menuImageIndex++ % config.menuImages.length];
+      if (fs.existsSync(imgPath6)) {
+        await safeSend(sock, jid, { image: fs.readFileSync(imgPath6), caption }, replyOptions(quotedMsg));
+      } else {
+        await safeSend(sock, jid, { text: caption }, replyOptions(quotedMsg));
+      }
     }
   } catch (_) {
     await safeSend(sock, jid, { text: caption }, replyOptions(quotedMsg));
@@ -678,7 +668,7 @@ async function handleMessage(sock, msg) {
 
     // ── Anti-delete check ───────────────────────────────────────────────────
     const protocolMsg = msg.message?.protocolMessage || msg.message?.ephemeralMessage?.message?.protocolMessage;
-    if (protocolMsg?.type === 3) {
+    if (protocolMsg?.type === 0) { // 0 === REVOKE (Baileys ProtocolMessage.Type.REVOKE)
       const isGroup = jid.endsWith('@g.us');
       if (isGroup) {
         const antideleteGroups = (await store.get('antideleteGroups')) || {};

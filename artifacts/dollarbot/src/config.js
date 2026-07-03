@@ -145,6 +145,14 @@ Act like a smart, slightly sarcastic, helpful friend. Use emojis naturally (😑
     path.join(__dirname, '../assets/menu6.jpg'),
   ],
 
+  menuVideos: [
+    path.join(__dirname, '../assets/menu_videos/menu_video1.mp4'),
+    path.join(__dirname, '../assets/menu_videos/menu_video2.mp4'),
+    path.join(__dirname, '../assets/menu_videos/menu_video3.mp4'),
+    path.join(__dirname, '../assets/menu_videos/menu_video4.mp4'),
+    path.join(__dirname, '../assets/menu_videos/menu_video5.mp4'),
+  ],
+
   get googleApiKey() { return process.env.GOOGLE_API_KEY || ''; },
   googleCseId: process.env.GOOGLE_CSE_ID || '57a3d0370a5894de3',
   get serperApiKey() { return process.env.SERPER_API_KEY || ''; },

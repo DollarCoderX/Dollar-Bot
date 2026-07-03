@@ -1,4 +1,5 @@
 const store = require('../lib/store');
+const { isBotGroupAdmin, isParticipantAdmin } = require('../lib/groupAdmin');
 
 // ── Helpers ───────────────────────────────────────────────────────────────
 
@@ -42,31 +43,6 @@ function resolveTarget(msg, args) {
 
 function getBotJid(sock) {
   return (sock.user?.id || '').replace(/:.*@/, '@');
-}
-
-async function isBotGroupAdmin(sock, jid) {
-  try {
-    const meta = await sock.groupMetadata(jid);
-    const rawBotId = sock.user?.id || '';
-    // Normalize: strip device suffix ":N" → bare number
-    const botNum = rawBotId.replace(/:.*@/, '@').split('@')[0].split(':')[0];
-    return meta.participants.some(p => {
-      const pNum = p.id.split('@')[0].split(':')[0];
-      const isAdmin = p.admin === 'admin' || p.admin === 'superadmin';
-      return isAdmin && (pNum === botNum || p.id.includes(botNum));
-    });
-  } catch {
-    // Second attempt with fresh metadata
-    try {
-      const meta2 = await sock.groupMetadata(jid);
-      const rawBotId = sock.user?.id || '';
-      const botNum = rawBotId.split('@')[0].split(':')[0];
-      return meta2.participants.some(p =>
-        p.id.split('@')[0].split(':')[0] === botNum &&
-        (p.admin === 'admin' || p.admin === 'superadmin')
-      );
-    } catch { return false; }
-  }
 }
 
 async function send(sock, jid, msg, text, opts = {}) {

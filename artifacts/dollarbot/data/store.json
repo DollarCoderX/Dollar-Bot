@@ -68,7 +68,7 @@
     "120363426985134376@g.us": true,
     "120363409972663522@g.us": true
   },
-  "botPrefix": "!",
+  "botPrefix": ".",
   "filter_120363426985134376@g.us": [
     "sex add porn",
     "porn",
@@ -88,31 +88,8 @@
     "message": "hungry",
     "ts": 1781674977147
   },
-  "botSessions": {
-    "2349037855461": {
-      "slot": 1,
-      "number": "2349037855461",
-      "assignedAt": 1782193800850,
-      "status": "pending",
-      "sessionPath": "sessions/slot_1_2349037855461"
-    },
-    "80793233842185": {
-      "number": "80793233842185",
-      "email": "praiseifeanyix@gmail.com",
-      "name": "80793233842185",
-      "assignedAt": "2026-07-02, 5:54:11 a.m.",
-      "plan": "free",
-      "cmdCount": 0
-    }
-  },
-  "getbotUsers": {
-    "80793233842185": {
-      "email": "praiseifeanyix@gmail.com",
-      "name": "80793233842185",
-      "cmdCount": 0,
-      "registeredAt": 1782986051867
-    }
-  },
+  "botSessions": {},
+  "getbotUsers": {},
   "mem_80793233842185_lid_autoreply": {
     "messages": [
       {
@@ -140,10 +117,20 @@
         "role": "assistant",
         "content": "Hey, you *just* pulled me off a coffee break, huh? 😌 What’s the *big* idea today? 🚀",
         "ts": 1782991433600
+      },
+      {
+        "role": "user",
+        "content": "do you know your just a WhatsApp bot",
+        "ts": 1783061213365
+      },
+      {
+        "role": "assistant",
+        "content": "Yeah, I’m just a 👾 WhatsApp bot built to help you out.  \nWhat do you need? Anything from homework hacks to coffee‑ordering tips?  \nLet me know and I’ll roll up my virtual sleeves! ☕😉",
+        "ts": 1783061213365
       }
     ],
-    "totalCount": 2,
-    "lastActive": 1782991433600
+    "totalCount": 4,
+    "lastActive": 1783061213365
   },
   "noPrefixMode": true,
   "antiedit_120363409972663522@g.us": true,
@@ -165,5 +152,10 @@
     ],
     "totalCount": 2,
     "lastActive": 1783060465274
+  },
+  "getbot_pending_80793233842185": {
+    "step": "email",
+    "chatJid": "80793233842185@lid",
+    "expiry": 1783062192934
   }
 }
