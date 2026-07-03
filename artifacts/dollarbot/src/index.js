@@ -16,6 +16,7 @@ const http = require('http');
 
 const { handleMessage, handleGroupParticipants } = require('./handler');
 const config = require('./config');
+const store = require('./lib/store');
 const { extractBody } = require('./lib/messages');
 const { installSafeSend } = require('./lib/safe-send');
 
@@ -100,7 +101,7 @@ setInterval(() => {
 const PORT = process.env.PORT || 3000;
 const server = http.createServer((req, res) => {
   res.writeHead(200, { 'Content-Type': 'text/plain' });
-  res.end('DollarBot V7 is Alive & Running!');
+  res.end('DollarBot V-Ultra is Alive & Running!');
 });
 server.on('error', (err) => {
   if (err.code === 'EADDRINUSE') {
@@ -241,8 +242,12 @@ async function startBot(method, phone) {
     if (connection === 'open') {
       reconnectDelay = 3000;
       console.log('\x1b[32m╔══════════════════════════════╗\x1b[0m');
-      console.log('\x1b[32m║   DollarBot V7 ONLINE!       ║\x1b[0m');
+      console.log('\x1b[32m║   DollarBot V-Ultra ONLINE!   ║\x1b[0m');
       console.log('\x1b[32m╚══════════════════════════════╝\x1b[0m\n');
+      try {
+        const savedPrefix = await store.get('botPrefix');
+        if (savedPrefix) config.prefix = savedPrefix;
+      } catch (_) {}
       try {
         const groups = await sock.groupFetchAllParticipating();
         for (const group of Object.values(groups || {})) {
@@ -258,7 +263,7 @@ async function startBot(method, phone) {
         try {
           await sock.sendMessage(`${num}@s.whatsapp.net`, {
             text:
-              `*DollarBot V7 is Online*\n\n` +
+              `*DollarBot V-Ultra is Online*\n\n` +
               `- Engine: ${config.engine}\n` +
               `- Version: ${config.version}\n` +
               `- Status: Ready\n\n` +

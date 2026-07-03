@@ -216,7 +216,7 @@ const v7aiCommands = {
         { role: 'system', content: 'Write a warm, genuine, uplifting good morning message. Include a motivational thought for the day. 3-4 sentences. Use *bold* for the main message. End with a sunrise emoji. WhatsApp markdown only.' },
         { role: 'user', content: `Good morning message${name ? ` for ${name}` : ''}` },
       ]);
-      await msg.reply(`╭━━━〔 🌅 GOOD MORNING 〕━━━⬣\n\n${r}\n\n╰━━━━━━━━━━━━━━━━━━⬣\n\n_Made with ☀️ by DollarBot V7_`);
+      await msg.reply(`╭━━━〔 🌅 GOOD MORNING 〕━━━⬣\n\n${r}\n\n╰━━━━━━━━━━━━━━━━━━⬣\n\n_Made with ☀️ by DollarBot V-Ultra_`);
     } catch (e) { await msg.reply(`Error: ${e.message}`); }
   },
 
@@ -228,7 +228,7 @@ const v7aiCommands = {
         { role: 'system', content: 'Write a warm, peaceful, comforting good night message. Include a reflection on the day. 3-4 sentences. Use *bold* for the main message. End with a moon emoji. WhatsApp markdown only.' },
         { role: 'user', content: `Good night message${name ? ` for ${name}` : ''}` },
       ]);
-      await msg.reply(`╭━━━〔 🌙 GOOD NIGHT 〕━━━⬣\n\n${r}\n\n╰━━━━━━━━━━━━━━━━━━⬣\n\n_Made with 💤 by DollarBot V7_`);
+      await msg.reply(`╭━━━〔 🌙 GOOD NIGHT 〕━━━⬣\n\n${r}\n\n╰━━━━━━━━━━━━━━━━━━⬣\n\n_Made with 💤 by DollarBot V-Ultra_`);
     } catch (e) { await msg.reply(`Error: ${e.message}`); }
   },
 
@@ -324,7 +324,7 @@ const v7aiCommands = {
         { role: 'system', content: 'Write a detailed, entertaining, honest fake review for the product/thing. Include: Rating (X/10), Pros, Cons, Verdict. Use *bold* for headers. Be funny but informative. WhatsApp markdown only, no tables.' },
         { role: 'user', content: `Review: ${args.join(' ')}` },
       ]);
-      await msg.reply(`╭━━━〔 ⭐ REVIEW 〕━━━⬣\n\n${r}\n\n╰━━━━━━━━━━━━━━━━━━⬣\n\n_By DollarBot V7 Critics_`);
+      await msg.reply(`╭━━━〔 ⭐ REVIEW 〕━━━⬣\n\n${r}\n\n╰━━━━━━━━━━━━━━━━━━⬣\n\n_By DollarBot V-Ultra Critics_`);
     } catch (e) { await msg.reply(`Error: ${e.message}`); }
   },
 
@@ -336,7 +336,7 @@ const v7aiCommands = {
         { role: 'system', content: 'Write a funny, dramatic "official contract" for the request. Include: Party A, Party B (fill with names/roles), Terms & Conditions (3-5 funny ones), Penalties for breaking it, Signature line. Use *bold* for headers. WhatsApp markdown only.' },
         { role: 'user', content: `Contract for: ${args.join(' ')}` },
       ]);
-      await msg.reply(`╭━━━〔 📜 CONTRACT 〕━━━⬣\n\n${r}\n\n╰━━━━━━━━━━━━━━━━━━⬣\n\n_⚖️ DollarBot Legal Dept V7_`);
+      await msg.reply(`╭━━━〔 📜 CONTRACT 〕━━━⬣\n\n${r}\n\n╰━━━━━━━━━━━━━━━━━━⬣\n\n_⚖️ DollarBot Legal Dept V-Ultra_`);
     } catch (e) { await msg.reply(`Error: ${e.message}`); }
   },
 
@@ -409,14 +409,14 @@ const v7aiCommands = {
     const persona = args[0]?.toLowerCase();
     const v7personas = ['brie', 'jarvis', 'alan', 'kerrick', 'beejay'];
     if (persona && !v7personas.includes(persona)) {
-      return msg.reply(`Usage: .clearv7 [${v7personas.join('/')}]\nOmit to clear all V7 AI memory.`);
+      return msg.reply(`Usage: .clearv7 [${v7personas.join('/')}]\nOmit to clear all V-Ultra AI memory.`);
     }
     if (persona) {
       memory.clearHistory(jid, persona);
       await msg.reply(`🧹 Memory cleared for *${persona}*. Fresh start!`);
     } else {
       for (const p of v7personas) memory.clearHistory(jid, p);
-      await msg.reply(`🧹 Memory cleared for all V7 AIs (Brie, Jarvis, Alan, Kerrick, Beejay). Fresh start!`);
+      await msg.reply(`🧹 Memory cleared for all V-Ultra AIs (Brie, Jarvis, Alan, Kerrick, Beejay). Fresh start!`);
     }
   },
 };

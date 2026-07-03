@@ -20,6 +20,7 @@ const store   = require('../lib/store');
 const config  = require('../config');
 const os      = require('os');
 const QRCode  = require('qrcode');
+const { startSubBot, stopSubBot } = require('../lib/subbot');
 
 const MAX_SLOTS       = 30;
 const FREE_CMD_LIMIT  = 100;
@@ -128,7 +129,7 @@ async function handleGetBotPending(sock, msg, body, jid, sender, pending) {
   const pendingJid = pending.chatJid;
   if (jid !== pendingJid && !jid.endsWith('@s.whatsapp.net')) return false;
 
-  const num = senderNum(sender);
+  const num = resolveRealNumber(jid, sender);
 
   // ── Step: awaiting email ──────────────────────────────────────────────────
   if (pending.step === 'email') {
@@ -267,61 +268,100 @@ async function handleGetBotPending(sock, msg, body, jid, sender, pending) {
   return false;
 }
 
-// ── QR delivery ───────────────────────────────────────────────────────────────
+// ── Real display-name capture: once a sub-bot connects, update its slot ────
+async function onSubBotConnected({ number, displayName }) {
+  try {
+    const sessions = await getSessions();
+    if (sessions[number]) {
+      sessions[number].name = displayName || sessions[number].name;
+      sessions[number].status = 'connected';
+      await saveSessions(sessions);
+    }
+    const users = await getRegisteredUsers();
+    if (users[number]) {
+      users[number].name = displayName || users[number].name;
+      await saveRegisteredUsers(users);
+    }
+  } catch (_) {}
+}
+
+// ── QR delivery — spins up a REAL WhatsApp socket for this number and sends
+//    the genuine linking QR straight from WhatsApp ──────────────────────────
 async function deliverQR(sock, jid, msg, number, sender) {
   try {
-    // Generate QR that directs the user to WhatsApp Web for linking
-    const sessionId = `dollarbot_${number}_${Date.now()}`;
-    const qrData = `https://web.whatsapp.com/sessions/qr?id=${sessionId}&bot=DollarBot`;
-    const qrBuf = await makeQRImage(qrData);
-
-    await sock.sendMessage(jid, {
-      image: qrBuf,
-      caption:
-        `📱 *Your DollarBot QR Code*\n\n` +
-        `📋 *How to use:*\n` +
-        `1. Open WhatsApp on your phone\n` +
-        `2. Tap ⋮ → *Linked Devices*\n` +
-        `3. Tap *Link a Device*\n` +
-        `4. Scan this QR code\n\n` +
-        `⏰ _QR expires in 60 seconds — run .getbot again if it expires._\n\n` +
-        `👑 DollarBot V-Ultra by ${config.ownerName}`,
-    }, { quoted: msg });
+    await startSubBot(number, 'qr', {
+      onQR: async (qrText) => {
+        const qrBuf = await makeQRImage(qrText);
+        await sock.sendMessage(jid, {
+          image: qrBuf,
+          caption:
+            `📱 *Your DollarBot QR Code*\n\n` +
+            `📋 *How to use:*\n` +
+            `1. Open WhatsApp on your phone\n` +
+            `2. Tap ⋮ → *Linked Devices*\n` +
+            `3. Tap *Link a Device*\n` +
+            `4. Scan this QR code\n\n` +
+            `⏰ _QR expires in ~60 seconds — run .getbot qr ${number} again if it expires._\n\n` +
+            `👑 DollarBot V-Ultra by ${config.ownerName}`,
+        }, { quoted: msg });
+      },
+      onConnected: async ({ number: n, displayName }) => {
+        await onSubBotConnected({ number: n, displayName });
+        await sock.sendMessage(jid, {
+          text: `✅ *+${n}* is now linked!\n👤 WhatsApp name: *${displayName}*\n\nYour bot slot is live.`,
+        }, { quoted: msg });
+      },
+      onDisconnected: async (reason) => {
+        if (reason === 'logged_out') {
+          await sock.sendMessage(jid, { text: `⚠️ +${number}'s session was logged out. Run .getbot qr ${number} to relink.` }, { quoted: msg });
+        }
+      },
+    });
   } catch (e) {
     await sock.sendMessage(jid, { text: `❌ QR generation failed: ${e.message}` }, { quoted: msg });
   }
 }
 
-// ── Pair code delivery ─────────────────────────────────────────────────────────
+// ── Pair code delivery — spins up a REAL WhatsApp socket for this number and
+//    requests a genuine pairing code straight from WhatsApp ────────────────
 async function deliverPairCode(sock, jid, msg, number, sender) {
   try {
-    let code;
-    try {
-      code = await sock.requestPairingCode(number);
-    } catch (_) {
-      // Fallback: generate a formatted display code
-      const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-      const raw = Array.from({ length: 8 }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
-      code = `${raw.slice(0, 4)}-${raw.slice(4)}`;
-    }
-
-    await sock.sendMessage(jid, {
-      text:
-        `╭━━━〔 🔑 Pairing Code 〕━━━⬣\n` +
-        `┃\n` +
-        `┃ 📱 Number : *+${number}*\n` +
-        `┃\n` +
-        `┃ 🔑 Code   : *${typeof code === 'string' && code.includes('-') ? code : code?.slice(0,4)+'-'+code?.slice(4)}*\n` +
-        `┃\n` +
-        `┃ *How to use:*\n` +
-        `┃ 1. Open WhatsApp on your phone\n` +
-        `┃ 2. ⋮ → Linked Devices → Link a Device\n` +
-        `┃ 3. Tap *Link with phone number instead*\n` +
-        `┃ 4. Enter the code above\n` +
-        `┃\n` +
-        `┃ ⏰ _Expires in 60 seconds_\n` +
-        `╰━━━━━━━━━━━━━━━━━━⬣`,
-    }, { quoted: msg });
+    await startSubBot(number, 'pair', {
+      onPairCode: async (code) => {
+        const fmt = code?.match(/.{1,4}/g)?.join('-') || code;
+        await sock.sendMessage(jid, {
+          text:
+            `╭━━━〔 🔑 Pairing Code 〕━━━⬣\n` +
+            `┃\n` +
+            `┃ 📱 Number : *+${number}*\n` +
+            `┃\n` +
+            `┃ 🔑 Code   : *${fmt}*\n` +
+            `┃\n` +
+            `┃ *How to use:*\n` +
+            `┃ 1. Open WhatsApp on your phone\n` +
+            `┃ 2. ⋮ → Linked Devices → Link a Device\n` +
+            `┃ 3. Tap *Link with phone number instead*\n` +
+            `┃ 4. Enter the code above\n` +
+            `┃\n` +
+            `┃ ⏰ _Expires in ~60 seconds_\n` +
+            `╰━━━━━━━━━━━━━━━━━━⬣`,
+        }, { quoted: msg });
+      },
+      onConnected: async ({ number: n, displayName }) => {
+        await onSubBotConnected({ number: n, displayName });
+        await sock.sendMessage(jid, {
+          text: `✅ *+${n}* is now linked!\n👤 WhatsApp name: *${displayName}*\n\nYour bot slot is live.`,
+        }, { quoted: msg });
+      },
+      onError: async (e) => {
+        await sock.sendMessage(jid, { text: `❌ Couldn't get a pairing code: ${e.message}\n\nTry .getbot qr ${number} instead.` }, { quoted: msg });
+      },
+      onDisconnected: async (reason) => {
+        if (reason === 'logged_out') {
+          await sock.sendMessage(jid, { text: `⚠️ +${number}'s session was logged out. Run .getbot pair ${number} to relink.` }, { quoted: msg });
+        }
+      },
+    });
   } catch (e) {
     await sock.sendMessage(jid, { text: `❌ Pairing code error: ${e.message}` }, { quoted: msg });
   }
@@ -351,7 +391,7 @@ async function getbot(sock, msg, args, jid, sender, isOwner) {
 
   // ── Non-owner: start the self-service OTP flow ────────────────────────────
   if (!isOwner) {
-    const num = senderNum(sender);
+    const num = resolveRealNumber(jid, sender);
 
     // Check if already registered
     const sessions = await getSessions();
@@ -418,6 +458,9 @@ async function getbot(sock, msg, args, jid, sender, isOwner) {
         `┃ .getbot remove <num>  — remove slot\n` +
         `┃ .getbot info <num>    — slot details\n` +
         `┃ .getbot reset <num>   — reset cmd counter\n` +
+        `┃ .getbot clear         — wipe ALL slots\n` +
+        `┃ .upgrade <number>     — set slot to Pro\n` +
+        `┃ .serverinfo           — server + slot stats\n` +
         `┃\n` +
         `┃ _Max slots: ${MAX_SLOTS} | Free limit: ${FREE_CMD_LIMIT} cmds_\n` +
         `╰━━━━━━━━━━━━━━━━━━⬣`,
@@ -451,6 +494,18 @@ async function getbot(sock, msg, args, jid, sender, isOwner) {
     const used = Object.keys(sessions).length;
     return sock.sendMessage(jid, {
       text: `🖥️ *Bot Slots*\n\n✅ Used: ${used}\n🆓 Free: ${MAX_SLOTS - used}\n📊 Total: ${MAX_SLOTS}`,
+    }, { quoted: msg });
+  }
+
+  if (sub === 'clear') {
+    const sessions = await getSessions();
+    const count = Object.keys(sessions).length;
+    for (const num of Object.keys(sessions)) {
+      try { await stopSubBot(num); } catch (_) {}
+    }
+    await clearAllSlots();
+    return sock.sendMessage(jid, {
+      text: `🧹 *All slots cleared.*\n\n${count} slot(s) wiped. All numbers can now register fresh with .getbot.`,
     }, { quoted: msg });
   }
 
@@ -533,6 +588,26 @@ async function getbot(sock, msg, args, jid, sender, isOwner) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+//  .getbot clear — wipe ALL slots (owner only, handled before the number-arg
+//  branch above since it takes no number)
+// ─────────────────────────────────────────────────────────────────────────────
+async function clearAllSlots() {
+  await saveSessions({});
+  await saveRegisteredUsers({});
+}
+
+/** Set a slot's plan (used by .upgrade). Returns { ok, error? }. */
+async function setSlotPlan(number, plan) {
+  const sessions = await getSessions();
+  if (!sessions[number]) return { ok: false, error: `No slot found for +${number}.` };
+  sessions[number].plan = plan;
+  await saveSessions(sessions);
+  const users = await getRegisteredUsers();
+  if (users[number]) { users[number].plan = plan; await saveRegisteredUsers(users); }
+  return { ok: true };
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 //  .serverinfo
 // ─────────────────────────────────────────────────────────────────────────────
 async function serverinfo(sock, msg, args, jid) {
@@ -602,4 +677,6 @@ module.exports = {
   handleGetBotPending,
   checkGetBotLimit,
   FREE_CMD_LIMIT,
+  setSlotPlan,
+  clearAllSlots,
 };

@@ -741,15 +741,16 @@ async function handleMessage(sock, msg) {
     const body = (extractBody(msg) || '').trim();
 
     // ── Non-command path ────────────────────────────────────────────────────
+    const activePrefix = (await store.get('botPrefix')) || config.prefix;
     const noPrefixActive = isOwner && !!(await store.get('noPrefixMode'));
-    const hasPrefix = !!body && body.startsWith(config.prefix);
+    const hasPrefix = !!body && body.startsWith(activePrefix);
 
     if (!body || (!hasPrefix && !noPrefixActive)) {
       return handleNonCommand(sock, msg, body, jid, sender, isGroup, isOwner);
     }
 
     // ── Parse command ───────────────────────────────────────────────────────
-    const [rawCmd, ...args] = (hasPrefix ? body.slice(config.prefix.length) : body).trim().split(/\s+/);
+    const [rawCmd, ...args] = (hasPrefix ? body.slice(activePrefix.length) : body).trim().split(/\s+/);
     if (!rawCmd) return;
     const cmd = rawCmd.toLowerCase();
 
@@ -801,6 +802,8 @@ async function handleMessage(sock, msg) {
       case 'vv':        if (!isOwner) return msg.reply('🔐 Owner only.'); await ownerCommands.vv(sock, msg); break;
       case 'broadcast': if (!isOwner) return msg.reply('🔐 Owner only.'); await ownerCommands.broadcast(sock, msg, args); break;
       case 'shutdown':  if (!isOwner) return msg.reply('🔐 Owner only.'); await ownerCommands.shutdown(sock, msg); break;
+      case 'botupgrade': await ownerCommands.botupgrade(sock, msg); break;
+      case 'upgrade':   if (!isOwner) return msg.reply('🔐 Owner only.'); await ownerCommands.upgrade(sock, msg, args); break;
       case 'self':      if (!isOwner) return msg.reply('🔐 Owner only.'); await ownerCommands.self(sock, msg); break;
       case 'public':    if (!isOwner) return msg.reply('🔐 Owner only.'); await ownerCommands.public(sock, msg); break;
       case 'noprefix':  if (!isOwner) return msg.reply('🔐 Owner only.'); await ownerCommands.noprefix(sock, msg, args); break;
@@ -1803,7 +1806,7 @@ async function handleMessage(sock, msg) {
         }
         break;
       }
-      case 'plugin': { await sock.sendMessage(jid, { text: `🔌 *DollarBot V7 Plugins*\n\n*Total:* 1000+ commands loaded\n*Engine:* ${config.engine}\n*Version:* ${config.version}\n\n📂 Categories: AI, Fun, Sports, Finance, Music, Education, Text FX, Creative, Lifestyle, Knowledge, Games, Group, Sticker, Utility, Dev, Social, and more!` }, { quoted: msg }); break; }
+      case 'plugin': { await sock.sendMessage(jid, { text: `🔌 *DollarBot V-Ultra Plugins*\n\n*Total:* 1000+ commands loaded\n*Engine:* ${config.engine}\n*Version:* ${config.version}\n\n📂 Categories: AI, Fun, Sports, Finance, Music, Education, Text FX, Creative, Lifestyle, Knowledge, Games, Group, Sticker, Utility, Dev, Social, and more!` }, { quoted: msg }); break; }
 
       // ── V7 AI Personas ────────────────────────────────────────────────────
       case 'brie':    await v7aiCommands.brie(sock, msg, args, jid); break;

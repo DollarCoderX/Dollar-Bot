@@ -121,7 +121,7 @@ const stickerCommands = {
       });
 
       await sock.sendMessage(jid, { sticker: branded }, { quoted: msg });
-      await msg.reply(`✅ *Sticker stolen & branded!*\n\n📦 Pack: *${customPack}*\n✍️ Author: *Dollar | DollarBot V7*\n\n_Save it from your sticker tray!_`);
+      await msg.reply(`✅ *Sticker stolen & branded!*\n\n📦 Pack: *${customPack}*\n✍️ Author: *Dollar | DollarBot V-Ultra*\n\n_Save it from your sticker tray!_`);
     } catch (e) {
       await msg.reply(`❌ Steal error: ${e.message}`);
     }
@@ -159,9 +159,9 @@ const stickerCommands = {
       const SILENT = { level:'silent', fatal:()=>{}, error:()=>{}, warn:()=>{}, info:()=>{}, debug:()=>{}, trace:()=>{}, child:()=>SILENT };
       const buffer = await downloadMediaMessage(fakeMsg, 'buffer', {}, { logger: SILENT });
       if (mediaType === 'imageMessage') {
-        await sock.sendMessage(jid, { image: buffer, caption: '✅ *Saved!* — DollarBot V7 💵' }, { quoted: msg });
+        await sock.sendMessage(jid, { image: buffer, caption: '✅ *Saved!* — DollarBot V-Ultra 💵' }, { quoted: msg });
       } else if (mediaType === 'videoMessage') {
-        await sock.sendMessage(jid, { video: buffer, caption: '✅ *Saved!* — DollarBot V7 💵' }, { quoted: msg });
+        await sock.sendMessage(jid, { video: buffer, caption: '✅ *Saved!* — DollarBot V-Ultra 💵' }, { quoted: msg });
       } else if (mediaType === 'audioMessage') {
         await sock.sendMessage(jid, { audio: buffer, mimetype: 'audio/mp4' }, { quoted: msg });
       } else if (mediaType === 'stickerMessage') {
@@ -233,7 +233,7 @@ const stickerCommands = {
   // ── .attp — animated text sticker ────────────────────────────────────────
   async attp(sock, msg, args) {
     const jid = msg.key.remoteJid;
-    if (!args.length) return msg.reply('❌ Usage: .attp <text>\nExample: .attp DollarBot V7');
+    if (!args.length) return msg.reply('❌ Usage: .attp <text>\nExample: .attp DollarBot V-Ultra');
     const text = args.join(' ').slice(0, 40);
     await msg.reply('_✨ Creating text sticker..._');
     try {
@@ -246,7 +246,7 @@ const stickerCommands = {
       );
       if (!imgRes.ok) throw new Error('Image generation failed');
       const buf = await imgRes.buffer();
-      const stickerBuf = await imageToSticker(buf, 'DollarBot V7 🇨🇦', 'Dollar');
+      const stickerBuf = await imageToSticker(buf, 'DollarBot V-Ultra 🇨🇦', 'Dollar');
       await sock.sendMessage(jid, { sticker: stickerBuf }, { quoted: msg });
     } catch (e) {
       await msg.reply(`❌ ATTP error: ${e.message}`);

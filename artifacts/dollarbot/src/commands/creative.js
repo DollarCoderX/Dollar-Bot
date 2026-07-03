@@ -23,7 +23,7 @@ const creativeCommands = {
     const topic = args.join(' ') || 'love and time';
     await send(sock, msg.key.remoteJid, msg, '🎭 _Writing your sonnet..._');
     const r = await aiGen('You are Shakespeare. Write a proper 14-line Shakespearean sonnet (ABAB CDCD EFEF GG rhyme scheme) about the topic. Make it beautiful and authentic. WhatsApp formatting only.', `Topic: ${topic}`);
-    await send(sock, msg.key.remoteJid, msg, box('📜 SONNET', r, '_Written by DollarBot V7_'));
+    await send(sock, msg.key.remoteJid, msg, box('📜 SONNET', r, '_Written by DollarBot V-Ultra_'));
   },
 
   async limerick(sock, msg, args) {

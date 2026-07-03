@@ -27,10 +27,16 @@ getbot.js handles two separate user modes: non-owner self-registration (OTP flow
 - `getbotUsers` store key mirrors for fast lookup: `{ [phoneNum]: { email, name, cmdCount, registeredAt } }`
 - Free plan = 100 commands (`FREE_CMD_LIMIT`), tracked via `slot.cmdCount` incremented by `checkGetBotLimit()`
 
-## What's simulated vs real
-- QR code: generates a QRCode PNG from a URL string (not a real WhatsApp Web session QR) — see `deliverQR()`
-- Pair code: tries `sock.requestPairingCode(number)` first; falls back to a random alphanumeric code — real multi-instance requires separate Baileys sockets per user (follow-up task)
+## Real per-slot connections (`lib/subbot.js`)
+- QR and pairing codes are now genuine — `deliverQR`/`deliverPairCode` in getbot.js call `startSubBot(number, mode, callbacks)` which spins up its own `makeWASocket` + `useMultiFileAuthState` under `artifacts/dollarbot/subbot_auth/<number>/`, mirroring index.js's main-bot connection logic (reconnect backoff, loggedOut wipes auth dir, pairing code requested via `sock.requestPairingCode` a few seconds after socket creation).
+- Real WhatsApp display name/number is captured only in the `connection === 'open'` handler via `sock.user?.name || sock.user?.notify || sock.user?.verifiedName` and `sock.user.id` — never trust the number the user typed until the socket actually connects.
+- Each sub-bot's own `messages.upsert` is routed through the shared `handleMessage` from `handler.js`, so registered numbers get the full command set on their own real connection, not the owner's.
+- `stopSubBot(number)` logs out, ends the socket, and deletes its auth folder — this is what `.getbot clear` calls per-slot before wiping `botSessions`/`getbotUsers`.
+
+## Number resolution gotcha
+- `senderNum(sender)` alone is unreliable for registering the "real" number because Baileys v7+ can hand you a `@lid` in `sender` for group contexts. Use `resolveRealNumber(dmJid, sender)` (prefers the DM `remoteJid`, which is always the true phone-number JID) anywhere a number gets *stored* as a slot's identity — not just internal pending-state keys.
 
 ## How to apply
 - Any future change to registration must update both `botSessions` and `getbotUsers` store keys in sync
 - `.getbotcancel` clears the pending key; always call `clearPending()` after completing or cancelling flow
+- `.upgrade <number>` (owner) and `.botupgrade` (any user, sends owner vcard) live in `owner.js`; `.upgrade` calls `setSlotPlan` exported from `getbot.js`
