@@ -692,11 +692,19 @@ async function handleMessage(sock, msg) {
 
     // ── Status broadcast: only auto-like ────────────────────────────────────
     if (jid === 'status@broadcast') {
-      if ((await store.get('autolike')) && global.isAutoLikeActive) {
+      // Previously gated on a global 60s on/off toggle that silently dropped
+      // any status arriving during the "off" half of the cycle. Auto-like is
+      // now purely driven by the user's on/off setting; a small random delay
+      // (instead of the hard toggle) keeps reactions looking human without
+      // ever missing a status.
+      if (await store.get('autolike')) {
         const emojis = ['🔥', '❤️', '👍', '😍', '👏', '💯', '✨'];
-        sock.sendMessage(msg.key.participant || jid, {
-          react: { text: emojis[Math.floor(Math.random() * emojis.length)], key: msg.key },
-        }).catch(() => {});
+        const delay = 500 + Math.floor(Math.random() * 4000);
+        setTimeout(() => {
+          sock.sendMessage(msg.key.participant || jid, {
+            react: { text: emojis[Math.floor(Math.random() * emojis.length)], key: msg.key },
+          }).catch(() => {});
+        }, delay);
       }
       return;
     }
@@ -2655,12 +2663,13 @@ async function resendDeletedMessage(sock, jid, cached, sender) {
 async function handleGroupParticipants(sock, update) {
   try {
     const { id, participants, action } = update;
-    const welcomeGroups = (await store.get('welcomeGroups')) || {};
-    if (!welcomeGroups[id]) return;
 
-    for (const participant of participants) {
-      const tag = `@${participant.split('@')[0]}`;
-      if (action === 'add') {
+    if (action === 'add') {
+      const welcomeGroups = (await store.get('welcomeGroups')) || {};
+      if (!welcomeGroups[id]) return;
+
+      for (const participant of participants) {
+        const tag = `@${participant.split('@')[0]}`;
         await sock.sendMessage(id, {
           text:
             `╭━━━〔 👋 WELCOME 〕━━━⬣\n` +
@@ -2672,14 +2681,65 @@ async function handleGroupParticipants(sock, update) {
             `╰━━━━━━━━━━━━━━━━━━⬣`,
           mentions: [participant],
         });
-      } else if (action === 'remove') {
-        await sock.sendMessage(id, {
-          text: `👋 ${tag} has left the group. Take care!`,
-          mentions: [participant],
-        });
+      }
+      return;
+    }
+
+    if (action === 'remove') {
+      const goodbyeGroups = (await store.get('goodbyeGroups')) || {};
+      const cfg = goodbyeGroups[id];
+      if (!cfg || cfg.active === false) return;
+
+      for (const participant of participants) {
+        const tag = `@${participant.split('@')[0]}`;
+        const text = cfg.custom
+          ? cfg.custom.replace(/@user/gi, tag)
+          : `👋 ${tag} has left the group. Take care!`;
+        await sock.sendMessage(id, { text, mentions: [participant] });
       }
     }
   } catch (_) {}
 }
 
-module.exports = { handleMessage, handleGroupParticipants };
+// ─────────────────────────────────────────────────────────────────────────────
+//  Anti-edit — resend the original content of a message that got edited
+// ─────────────────────────────────────────────────────────────────────────────
+
+async function handleEditedMessage(sock, update) {
+  try {
+    const jid = update.key?.remoteJid;
+    if (!jid) return;
+
+    const antiEditOn = await store.get(`antiedit_${jid}`);
+    if (!antiEditOn) return;
+
+    const editedContent = update.update?.message?.protocolMessage?.editedMessage
+      || update.update?.editedMessage;
+    if (!editedContent) return; // not an edit event
+
+    const editedId = update.key.id;
+    const cached = global.msgStore?.messages?.[jid]?.array?.find(m => m.key.id === editedId);
+    if (!cached || !cached.message) return;
+
+    const sender = resolveSender(cached, sock);
+    const senderNum = bareJid(sender).split('@')[0];
+    const botJid = (sock.user?.id || '').replace(/:.*@/, '@').split('@')[0];
+    if (senderNum === botJid) return; // don't flag the bot's own edits
+
+    const originalBody = extractBody(cached) || '_(non-text message)_';
+    const newBody = extractBody({ message: editedContent }) || '_(non-text message)_';
+
+    await sock.sendMessage(jid, {
+      text:
+        `✏️ *Anti-Edit Intercepted*\n\n` +
+        `@${senderNum} edited a message:\n\n` +
+        `*Before:* ${originalBody}\n` +
+        `*After:* ${newBody}`,
+      mentions: [sender],
+    });
+  } catch (e) {
+    console.error('[Anti-Edit Error]', e.message);
+  }
+}
+
+module.exports = { handleMessage, handleGroupParticipants, handleEditedMessage, sendMenu };

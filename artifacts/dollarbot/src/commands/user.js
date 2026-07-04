@@ -11,6 +11,42 @@ function getUptime() {
   return `${h}h ${m}m ${sec}s`;
 }
 
+// Baileys 7.x groups often report participants as `@lid` (linked-device
+// identifiers) instead of `@s.whatsapp.net`. profilePictureUrl/many other
+// calls choke on those with "unknown type of number" style errors, so we
+// try to resolve a real `@s.whatsapp.net` JID via onWhatsApp before falling
+// back to using the raw target as-is.
+async function resolvePpTarget(sock, msg, args) {
+  const ctx = msg.message?.extendedTextMessage?.contextInfo;
+  const mentioned = ctx?.mentionedJid || [];
+  let target = mentioned[0] || ctx?.participant
+    || (args[0] ? args[0].replace(/[^0-9]/g, '') + '@s.whatsapp.net' : null)
+    || msg.key.participant || msg.key.remoteJid;
+
+  if (target && target.endsWith('@lid')) {
+    try {
+      const num = target.split('@')[0].replace(/[^0-9]/g, '');
+      const results = await sock.onWhatsApp(num);
+      if (results?.[0]?.jid) target = results[0].jid;
+    } catch (_) { /* fall through, try raw @lid target below */ }
+  }
+  return target;
+}
+
+// profilePictureUrl throws on some @lid JIDs even after resolution attempts;
+// retry once against the bare numeric JID as a last resort.
+async function getProfilePicUrl(sock, target) {
+  try {
+    return await sock.profilePictureUrl(target, 'image');
+  } catch (e) {
+    if (target.endsWith('@lid')) {
+      const num = target.split('@')[0].replace(/[^0-9]/g, '');
+      return await sock.profilePictureUrl(`${num}@s.whatsapp.net`, 'image');
+    }
+    throw e;
+  }
+}
+
 function getRamInfo() {
   const total = os.totalmem();
   const free = os.freemem();
@@ -211,13 +247,10 @@ Object.assign(userCommands, {
 
   async pp(sock, msg, args) {
     const jid = msg.key.remoteJid;
-    const ctx = msg.message?.extendedTextMessage?.contextInfo;
-    const mentioned = ctx?.mentionedJid || [];
-    const target = mentioned[0] || ctx?.participant
-      || (args[0] ? args[0].replace(/[^0-9]/g, '') + '@s.whatsapp.net' : null)
-      || msg.key.participant || jid;
+    const target = await resolvePpTarget(sock, msg, args);
+    if (!target) return sock.sendMessage(jid, { text: '❌ Could not determine a valid WhatsApp number for that user.' }, { quoted: msg });
     try {
-      const ppUrl = await sock.profilePictureUrl(target, 'image');
+      const ppUrl = await getProfilePicUrl(sock, target);
       const fetch2 = require('node-fetch');
       const buf = await (await fetch2(ppUrl, { timeout: 15000 })).buffer();
       await sock.sendMessage(jid, {
@@ -230,13 +263,10 @@ Object.assign(userCommands, {
 
   async fullpp(sock, msg, args) {
     const jid = msg.key.remoteJid;
-    const ctx = msg.message?.extendedTextMessage?.contextInfo;
-    const mentioned = ctx?.mentionedJid || [];
-    const target = mentioned[0] || ctx?.participant
-      || (args[0] ? args[0].replace(/[^0-9]/g, '') + '@s.whatsapp.net' : null)
-      || msg.key.participant || jid;
+    const target = await resolvePpTarget(sock, msg, args);
+    if (!target) return sock.sendMessage(jid, { text: '❌ Could not determine a valid WhatsApp number for that user.' }, { quoted: msg });
     try {
-      const ppUrl = await sock.profilePictureUrl(target, 'image');
+      const ppUrl = await getProfilePicUrl(sock, target);
       const fetch2 = require('node-fetch');
       const buf = await (await fetch2(ppUrl, { timeout: 15000 })).buffer();
       await sock.sendMessage(jid, {

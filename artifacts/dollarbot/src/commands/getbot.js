@@ -184,12 +184,38 @@ async function handleGetBotPending(sock, msg, body, jid, sender, pending) {
       return true;
     }
 
-    // OTP correct — check slot availability
+    // OTP correct — move to phone number step. We no longer trust the JID-
+    // derived number (Baileys can hand us an @lid instead of a real phone
+    // JID, which looks like "an unknown type of number"). Ask the user to
+    // type their own WhatsApp number instead.
+    await setPending(sender, { step: 'phone', email: pending.email, chatJid: jid });
+    await sock.sendMessage(jid, {
+      text:
+        `🎉 *Email verified!*\n\n` +
+        `📱 *Step 2 of 3:*\n` +
+        `What's your *WhatsApp number* (the one you want to link)?\n\n` +
+        `Send it in full international format, digits only, no + sign.\n` +
+        `_Example: 14378898269 (Canada), 2349037855461 (Nigeria)_\n\n` +
+        `_(Type *.getbotcancel* to stop.)_`,
+    }, { quoted: msg });
+    return true;
+  }
+
+  // ── Step: awaiting phone number ──────────────────────────────────────────
+  if (pending.step === 'phone') {
+    const typedNum = body.replace(/\D/g, '');
+    if (typedNum.length < 7 || typedNum.length > 15) {
+      await sock.sendMessage(jid, {
+        text: `❌ That doesn't look like a valid number.\n\nSend your full number in international format, digits only (e.g. *14378898269*), or type *.getbotcancel* to stop.`,
+      }, { quoted: msg });
+      return true;
+    }
+
     const sessions = await getSessions();
-    if (sessions[num]) {
+    if (sessions[typedNum]) {
       await clearPending(sender);
       await sock.sendMessage(jid, {
-        text: `⚠️ +${num} already has a bot slot registered.\n\nContact the owner if you need help: wa.me/${config.ownerNumber}`,
+        text: `⚠️ +${typedNum} already has a bot slot registered.\n\nContact the owner if you need help: wa.me/${config.ownerNumber}`,
       }, { quoted: msg });
       return true;
     }
@@ -201,12 +227,12 @@ async function handleGetBotPending(sock, msg, body, jid, sender, pending) {
       return true;
     }
 
-    // Move to method selection
-    await setPending(sender, { step: 'method', email: pending.email, chatJid: jid });
+    // Move to method selection — keep the typed number, not the JID-derived one
+    await setPending(sender, { step: 'method', email: pending.email, phone: typedNum, chatJid: jid });
     await sock.sendMessage(jid, {
       text:
-        `🎉 *Email verified!*\n\n` +
-        `Great — you're almost set up. One last thing:\n\n` +
+        `✅ Number confirmed: *+${typedNum}*\n\n` +
+        `📦 *Step 3 of 3:*\n` +
         `How would you like to connect?\n\n` +
         `  *1* — 📷 QR Code _(scan with your phone)_\n` +
         `  *2* — 🔑 Pairing Code _(enter on WhatsApp Web)_\n\n` +
@@ -226,12 +252,13 @@ async function handleGetBotPending(sock, msg, body, jid, sender, pending) {
     }
 
     const wantsQR = ['1', 'qr', 'qrcode', 'qr code'].includes(choice.toLowerCase());
+    const targetNum = pending.phone || num;
 
     // Record the slot
     const sessions = await getSessions();
     const displayName = await getDisplayName(sock, sender);
-    sessions[num] = {
-      number: num,
+    sessions[targetNum] = {
+      number: targetNum,
       email: pending.email,
       name: displayName,
       assignedAt: new Date().toLocaleString('en-CA', { timeZone: 'America/Toronto' }),
@@ -242,7 +269,7 @@ async function handleGetBotPending(sock, msg, body, jid, sender, pending) {
 
     // Also record in getbotUsers for command tracking
     const users = await getRegisteredUsers();
-    users[num] = { email: pending.email, name: displayName, cmdCount: 0, registeredAt: Date.now() };
+    users[targetNum] = { email: pending.email, name: displayName, cmdCount: 0, registeredAt: Date.now() };
     await saveRegisteredUsers(users);
 
     await clearPending(sender);
@@ -250,7 +277,7 @@ async function handleGetBotPending(sock, msg, body, jid, sender, pending) {
     await sock.sendMessage(jid, {
       text:
         `✅ *Slot Registered!*\n\n` +
-        `📱 Number : *+${num}*\n` +
+        `📱 Number : *+${targetNum}*\n` +
         `📧 Email  : ${pending.email}\n` +
         `👤 Name   : ${displayName}\n` +
         `📦 Plan   : Free (${FREE_CMD_LIMIT} commands)\n\n` +
@@ -258,9 +285,9 @@ async function handleGetBotPending(sock, msg, body, jid, sender, pending) {
     }, { quoted: msg });
 
     if (wantsQR) {
-      await deliverQR(sock, jid, msg, num, sender);
+      await deliverQR(sock, jid, msg, targetNum, sender);
     } else {
-      await deliverPairCode(sock, jid, msg, num, sender);
+      await deliverPairCode(sock, jid, msg, targetNum, sender);
     }
     return true;
   }

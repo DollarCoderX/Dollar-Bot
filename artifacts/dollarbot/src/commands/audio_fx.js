@@ -65,31 +65,40 @@ async function applyAudioEffect(sock, msg, effectName) {
 
     fs.writeFileSync(tmpIn, buffer);
 
-    await new Promise((resolve, reject) => {
-      const args = [
-        '-y', '-i', tmpIn,
-        '-af', effect.filter,
-        '-c:a', 'libopus',
-        '-b:a', '64k',
-        '-ar', '48000',
-        '-ac', '1',
-        tmpOut,
-      ];
-      execFile('ffmpeg', args, { timeout: 60000 }, (err, stdout, stderr) => {
-        if (err) reject(new Error(stderr || err.message));
-        else resolve();
+    try {
+      await new Promise((resolve, reject) => {
+        const args = [
+          '-y', '-i', tmpIn,
+          '-af', effect.filter,
+          '-c:a', 'libopus',
+          '-b:a', '64k',
+          '-ar', '48000',
+          '-ac', '1',
+          tmpOut,
+        ];
+        // Longer timeout — some effects (aecho/afftfilt) are slow on longer clips.
+        execFile('ffmpeg', args, { timeout: 90000 }, (err, stdout, stderr) => {
+          if (err) reject(new Error(stderr?.slice(-500) || err.message));
+          else resolve();
+        });
       });
-    });
 
-    const outBuf = fs.readFileSync(tmpOut);
-    fs.unlinkSync(tmpIn);
-    fs.unlinkSync(tmpOut);
+      if (!fs.existsSync(tmpOut) || fs.statSync(tmpOut).size < 100) {
+        throw new Error('FFmpeg produced no usable output — the source audio may be corrupt or unsupported');
+      }
 
-    await sock.sendMessage(jid, {
-      audio: outBuf,
-      mimetype: 'audio/ogg; codecs=opus',
-      ptt: true,
-    }, { quoted: msg });
+      const outBuf = fs.readFileSync(tmpOut);
+      await sock.sendMessage(jid, {
+        audio: outBuf,
+        mimetype: 'audio/ogg; codecs=opus',
+        ptt: true,
+      }, { quoted: msg });
+    } finally {
+      // Always clean up temp files, even if ffmpeg or the send failed.
+      for (const f of [tmpIn, tmpOut]) {
+        try { if (fs.existsSync(f)) fs.unlinkSync(f); } catch (_) {}
+      }
+    }
   } catch (e) {
     console.error('[AudioFX]', e.message);
     await sock.sendMessage(jid, { text: `❌ Audio effect failed: ${e.message}` }, { quoted: msg });

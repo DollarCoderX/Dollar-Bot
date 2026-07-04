@@ -2,6 +2,7 @@
 
 const pollinations = require('../lib/pollinations');
 const memory = require('../lib/memory');
+const aiBridge = require('../lib/aiCommandBridge');
 
 // ── V7 AI Persona Commands ─────────────────────────────────────────────────
 
@@ -25,8 +26,10 @@ const v7aiCommands = {
     }
     await msg.reply('_✨ Brie is crafting something magical..._');
     try {
-      const response = await pollinations.brie(jid, args.join(' '));
-      await msg.reply(`╭━━━〔 ✨ BRIE AI 〕━━━⬣\n\n${response}\n\n╰━━━━━━━━━━━━━━━━━━⬣\n\n✨ _Powered by Brie AI_`);
+      const raw = await pollinations.brie(jid, args.join(' '));
+      const { cleanText, command } = aiBridge.parseBridgeResponse(raw);
+      if (command) await aiBridge.runBridgedCommand(sock, msg, jid, command);
+      await msg.reply(`╭━━━〔 ✨ BRIE AI 〕━━━⬣\n\n${cleanText}\n\n╰━━━━━━━━━━━━━━━━━━⬣\n\n✨ _Powered by Brie AI_`);
     } catch (e) { await msg.reply(`Brie Error: ${e.message}`); }
   },
 
@@ -48,8 +51,10 @@ const v7aiCommands = {
     }
     await msg.reply('_🤖 Jarvis is processing your request..._');
     try {
-      const response = await pollinations.jarvis(jid, args.join(' '));
-      await msg.reply(`╭━━━〔 🤖 JARVIS AI 〕━━━⬣\n\n${response}\n\n╰━━━━━━━━━━━━━━━━━━⬣\n\n🤖 _Powered by Jarvis AI_`);
+      const raw = await pollinations.jarvis(jid, args.join(' '));
+      const { cleanText, command } = aiBridge.parseBridgeResponse(raw);
+      if (command) await aiBridge.runBridgedCommand(sock, msg, jid, command);
+      await msg.reply(`╭━━━〔 🤖 JARVIS AI 〕━━━⬣\n\n${cleanText}\n\n╰━━━━━━━━━━━━━━━━━━⬣\n\n🤖 _Powered by Jarvis AI_`);
     } catch (e) { await msg.reply(`Jarvis Error: ${e.message}`); }
   },
 
@@ -71,8 +76,10 @@ const v7aiCommands = {
     }
     await msg.reply('_🧿 Alan is contemplating the depths..._');
     try {
-      const response = await pollinations.alan(jid, args.join(' '));
-      await msg.reply(`╭━━━〔 🧿 ALAN AI 〕━━━⬣\n\n${response}\n\n╰━━━━━━━━━━━━━━━━━━⬣\n\n🧿 _Powered by Alan AI_`);
+      const raw = await pollinations.alan(jid, args.join(' '));
+      const { cleanText, command } = aiBridge.parseBridgeResponse(raw);
+      if (command) await aiBridge.runBridgedCommand(sock, msg, jid, command);
+      await msg.reply(`╭━━━〔 🧿 ALAN AI 〕━━━⬣\n\n${cleanText}\n\n╰━━━━━━━━━━━━━━━━━━⬣\n\n🧿 _Powered by Alan AI_`);
     } catch (e) { await msg.reply(`Alan Error: ${e.message}`); }
   },
 
@@ -94,8 +101,10 @@ const v7aiCommands = {
     }
     await msg.reply('_🔥 Kerrick is keeping it real..._');
     try {
-      const response = await pollinations.kerrick(jid, args.join(' '));
-      await msg.reply(`╭━━━〔 🔥 KERRICK AI 〕━━━⬣\n\n${response}\n\n╰━━━━━━━━━━━━━━━━━━⬣\n\n🔥 _Powered by Kerrick AI_`);
+      const raw = await pollinations.kerrick(jid, args.join(' '));
+      const { cleanText, command } = aiBridge.parseBridgeResponse(raw);
+      if (command) await aiBridge.runBridgedCommand(sock, msg, jid, command);
+      await msg.reply(`╭━━━〔 🔥 KERRICK AI 〕━━━⬣\n\n${cleanText}\n\n╰━━━━━━━━━━━━━━━━━━⬣\n\n🔥 _Powered by Kerrick AI_`);
     } catch (e) { await msg.reply(`Kerrick Error: ${e.message}`); }
   },
 
@@ -117,8 +126,10 @@ const v7aiCommands = {
     }
     await msg.reply('_🔮 Beejay Aura is reading the cosmos..._');
     try {
-      const response = await pollinations.beejay(jid, args.join(' '));
-      await msg.reply(`╭━━━〔 🔮 BEEJAY AURA 〕━━━⬣\n\n${response}\n\n╰━━━━━━━━━━━━━━━━━━⬣\n\n🔮 _Powered by Beejay Aura_`);
+      const raw = await pollinations.beejay(jid, args.join(' '));
+      const { cleanText, command } = aiBridge.parseBridgeResponse(raw);
+      if (command) await aiBridge.runBridgedCommand(sock, msg, jid, command);
+      await msg.reply(`╭━━━〔 🔮 BEEJAY AURA 〕━━━⬣\n\n${cleanText}\n\n╰━━━━━━━━━━━━━━━━━━⬣\n\n🔮 _Powered by Beejay Aura_`);
     } catch (e) { await msg.reply(`Beejay Error: ${e.message}`); }
   },
 

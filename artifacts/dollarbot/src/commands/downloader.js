@@ -138,7 +138,25 @@ async function dlTwitter(url) {
 }
 
 // ─── Pinterest ────────────────────────────────────────────────────────────────
+// btch-downloader ships a maintained Pinterest resolver — try it first since
+// raw scraping gets blocked/served a placeholder ("unknown type") image.
+async function dlPinterestViaLib(url) {
+  const { pinterest } = require('btch-downloader');
+  const res = await pinterest(url);
+  if (!res?.status || !res?.result) throw new Error('btch-downloader had no result');
+  const r = res.result;
+  const link = r.url || r.video || (Array.isArray(r) ? r[0]?.url : null) || r.result?.url;
+  if (!link) throw new Error('btch-downloader returned no media link');
+  const type = /\.mp4($|\?)/i.test(link) ? 'video' : 'image';
+  return { url: link, type };
+}
+
 async function dlPinterest(url) {
+  try {
+    return await dlPinterestViaLib(url);
+  } catch (_) {
+    // fall through to manual scrape below
+  }
   // Resolve shortlinks (pin.it)
   let resolvedUrl = url;
   if (url.includes('pin.it')) {
@@ -261,7 +279,17 @@ async function fetchBuffer(url, maxMB = 50) {
   if (!r.ok) throw new Error(`HTTP ${r.status}`);
   const cl = r.headers.get('content-length');
   if (cl && parseInt(cl) > maxMB * 1048576) throw new Error(`File too large (>${maxMB}MB)`);
-  return r.buffer();
+  const ct = (r.headers.get('content-type') || '').toLowerCase();
+  if (ct && !/image|video|audio|octet-stream|webp/.test(ct)) {
+    throw new Error(`Unexpected content type (${ct || 'unknown'}) — the source likely returned an error page instead of media`);
+  }
+  const buf = await r.buffer();
+  // Sites often serve a tiny placeholder/"unavailable" image instead of a real
+  // 404 — reject obviously-too-small buffers so callers can fall back cleanly.
+  if (buf.length < 300) {
+    throw new Error('Media too small — likely a broken/placeholder image, not real content');
+  }
+  return buf;
 }
 
 module.exports = {
@@ -377,12 +405,26 @@ module.exports = {
           ...html.matchAll(/https:\/\/i\.pinimg\.com\/564x\/[^"'\s\\]+\.(?:jpg|jpeg|png)/gi),
         ].map(m => m[0].replace(/\\u002F/g, '/').replace(/\\/g, ''));
 
-        // Deduplicate and pick a random result for variety
+        // Deduplicate — shuffle a handful of candidates and try each one
+        // until we get a real image back (Pinterest sometimes serves a
+        // broken/placeholder asset for a given URL, which used to make
+        // .pinterest send "the same unknown image every time").
         const unique = [...new Set(imgMatches)];
         if (!unique.length) throw new Error('No images found for that keyword. Try a different search.');
 
-        const picked = unique[Math.floor(Math.random() * Math.min(unique.length, 5))];
-        const buf = await fetchBuffer(picked);
+        const candidates = unique
+          .slice(0, Math.min(unique.length, 8))
+          .sort(() => Math.random() - 0.5);
+
+        let buf = null, lastErr;
+        for (const candidate of candidates) {
+          try {
+            buf = await fetchBuffer(candidate);
+            break;
+          } catch (e) { lastErr = e; }
+        }
+        if (!buf) throw lastErr || new Error('All candidate images failed to load');
+
         await sock.sendMessage(jid, {
           image: buf,
           caption: `📌 *Pinterest:* ${input}\n_Found ${unique.length} results_`,

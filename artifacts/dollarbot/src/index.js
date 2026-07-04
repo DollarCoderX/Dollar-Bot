@@ -14,7 +14,7 @@ const fs = require('fs');
 const pino = require('pino');
 const http = require('http');
 
-const { handleMessage, handleGroupParticipants } = require('./handler');
+const { handleMessage, handleGroupParticipants, handleEditedMessage } = require('./handler');
 const config = require('./config');
 const store = require('./lib/store');
 const { extractBody } = require('./lib/messages');
@@ -91,17 +91,42 @@ setInterval(() => {
   }
 }, 5 * 60 * 1000);
 
-// ── Auto-Like Status Timer ───────────────────────────────────────────────
-global.isAutoLikeActive = true;
-setInterval(() => {
-  global.isAutoLikeActive = !global.isAutoLikeActive;
-}, 60000);
-
-// ── Dummy HTTP Server for Render / Railway ───────────────────────────────
+// ── Keepalive / Preview page ─────────────────────────────────────────────
+// Simple HTML status page so pinging the app in a browser shows something
+// nicer than plain text, while still returning fast for uptime pingers.
 const PORT = process.env.PORT || 3000;
 const server = http.createServer((req, res) => {
-  res.writeHead(200, { 'Content-Type': 'text/plain' });
-  res.end('DollarBot V-Ultra is Alive & Running!');
+  if (req.url === '/health' || req.url === '/ping') {
+    res.writeHead(200, { 'Content-Type': 'text/plain' });
+    return res.end('OK');
+  }
+  const uptimeMs = Date.now() - (global.botStartTime || (global.botStartTime = Date.now()));
+  const uptimeStr = (() => {
+    const s = Math.floor(uptimeMs / 1000);
+    return `${Math.floor(s / 3600)}h ${Math.floor((s % 3600) / 60)}m ${s % 60}s`;
+  })();
+  res.writeHead(200, { 'Content-Type': 'text/html' });
+  res.end(`<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>DollarBot V-Ultra</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;
+    background:radial-gradient(circle at top,#1a1a2e,#0d0d17);color:#eee;
+    font-family:-apple-system,Segoe UI,Roboto,sans-serif;text-align:center}
+  .card{background:#161625;padding:40px 50px;border-radius:16px;box-shadow:0 0 40px rgba(0,255,150,0.08)}
+  h1{font-size:1.8rem;margin:0 0 8px}
+  .dot{display:inline-block;width:10px;height:10px;border-radius:50%;background:#3ddc84;
+    box-shadow:0 0 8px #3ddc84;margin-right:8px;animation:pulse 1.5s infinite}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+  p{color:#9a9ab0;margin:6px 0}
+</style></head>
+<body>
+  <div class="card">
+    <h1><span class="dot"></span>DollarBot V-Ultra</h1>
+    <p>Alive &amp; running 💵</p>
+    <p>Uptime: ${uptimeStr}</p>
+  </div>
+</body></html>`);
 });
 server.on('error', (err) => {
   if (err.code === 'EADDRINUSE') {
@@ -219,6 +244,17 @@ async function startBot(method, phone) {
   });
   installSafeSend(sock);
 
+  // Anti-edit: must run BEFORE msgStore.bind's own messages.update listener,
+  // since that listener merges the edit payload into the cached message —
+  // running after it would mean we compare the "original" against itself.
+  sock.ev.on('messages.update', updates => {
+    for (const u of updates || []) {
+      handleEditedMessage(sock, u).catch(err => {
+        if (!/ECONNRESET|EPIPE/i.test(err.message)) console.log('[Anti-Edit Error]', err.message);
+      });
+    }
+  });
+
   // Bind store so it caches messages for group key retries
   msgStore.bind(sock.ev);
 
@@ -299,6 +335,29 @@ async function startBot(method, phone) {
   });
 
   sock.ev.on('creds.update', saveCreds);
+
+  // ── Incoming call handler ────────────────────────────────────────────────
+  // NOTE: Baileys only exposes call *events* (offer/ringing/reject/terminate)
+  // and a rejectCall() API — it does not implement WebRTC/VoIP, so there is
+  // no way to actually answer a call or inject/stream live TTS audio into it
+  // ("Luna answers with a voice" is not achievable through this library).
+  // As the closest real substitute: auto-decline incoming calls and let the
+  // caller know via a text message instead, so callers aren't left hanging.
+  sock.ev.on('call', async (calls) => {
+    for (const c of calls) {
+      if (c.status !== 'offer') continue;
+      try {
+        await sock.rejectCall(c.id, c.from);
+        await sock.sendMessage(c.chatId || c.from, {
+          text:
+            `📵 *Luna can't take voice/video calls.*\n\n` +
+            `WhatsApp calls aren't supported by this bot — please send a text message instead and I'll get right back to you!`,
+        });
+      } catch (e) {
+        console.log('[Call Handler] Failed to reject/notify:', e.message);
+      }
+    }
+  });
 
   // ── Message handler ──────────────────────────────────────────────────────
   sock.ev.on('messages.upsert', async ({ messages, type }) => {

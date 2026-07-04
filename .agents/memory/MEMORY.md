@@ -11,3 +11,5 @@
 - [Downloader quality fix](downloader-quality.md) — Pinterest: extracts originals > 736x > 564x > 474x > 236x quality order; resolves pin.it shortlinks. Instagram: 3-method fallback (saveinsta API → snapinsta API → direct scrape). Twitter: twitsave → ssstwitter fallback.
 - [GetBot OTP flow](getbot-otp-flow.md) — Brevo email OTP self-registration; real per-slot Baileys sockets via lib/subbot.js; use resolveRealNumber not senderNum when storing a slot's identity.
 - [Root .env not auto-loaded](root-env-loading.md) — dollarbot has no dotenv; keys in root `.env` silently ignored (GROQ_KEYS warning) unless the dev/start script passes `--env-file-if-exists=../../.env` to node.
+- [AI persona command bridge](aicommandbridge.md) — personas can trigger real bot commands via `[RUN:x]` marker; runBridgedCommand must lazy-require handler.js to avoid circular-require deadlock.
+- [Baileys call limits](baileys-call-limits.md) — Baileys exposes call events + rejectCall() only; no answer/live-audio API, so voice-call AI features are infeasible — auto-reject + text fallback is the real substitute.

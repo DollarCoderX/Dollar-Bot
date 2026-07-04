@@ -68,6 +68,7 @@ async function downloadQuotedImage(sock, msg) {
 
 const store = require('../lib/store');
 const config = require('../config');
+const aiBridge = require('../lib/aiCommandBridge');
 
 const aiCommands = {
 
@@ -126,7 +127,8 @@ const aiCommands = {
 You have the power to enforce conversation boundaries. Rules:
 1. If the user is being genuinely abusive, rude, sending harmful/illegal content, or is ignoring your previous warnings: Begin your response with the token [CORTEX_WARN] (no space after), followed by your response including a firm, direct warning to the user (do not be preachy, just clear). This is warning ${warnCount + 1} of 3.
 2. If this is the 3rd strike (warning 3), begin with [CORTEX_FINAL] instead — this tells the system to pause the conversation.
-3. In ALL normal, respectful conversations: NEVER use these tokens. Do not mention them.`;
+3. In ALL normal, respectful conversations: NEVER use these tokens. Do not mention them.` +
+        aiBridge.buildBridgeInstructions();
 
       const history = await memory.getHistory(jid, 'cortex');
       const messages = [
@@ -140,10 +142,15 @@ You have the power to enforce conversation boundaries. Rules:
       // ── Parse moderation tags ──
       let isFinal = raw.startsWith('[CORTEX_FINAL]');
       let isWarn  = raw.startsWith('[CORTEX_WARN]') || isFinal;
-      let response = raw
+      raw = raw
         .replace(/^\[CORTEX_FINAL\]/, '')
         .replace(/^\[CORTEX_WARN\]/, '')
         .trim();
+
+      // ── Parse & run any secretly-requested internal command ──
+      const { cleanText, command } = aiBridge.parseBridgeResponse(raw);
+      let response = cleanText;
+      if (command) await aiBridge.runBridgedCommand(sock, msg, jid, command);
 
       // Store memory (clean response)
       await memory.addMessage(jid, 'cortex', 'user', args.join(' '));
@@ -202,8 +209,10 @@ You have the power to enforce conversation boundaries. Rules:
     }
     await msg.reply('_Mera is typing..._');
     try {
-      const response = await pollinations.mera(jid, args.join(' '));
-      await msg.reply(`╭━━━〔 MERA AI 〕━━━⬣\n\n${response}\n\n╰━━━━━━━━━━━━━━━━━━⬣\n\n💖 Powered by Mera AI`);
+      const raw = await pollinations.mera(jid, args.join(' '));
+      const { cleanText, command } = aiBridge.parseBridgeResponse(raw);
+      if (command) await aiBridge.runBridgedCommand(sock, msg, jid, command);
+      await msg.reply(`╭━━━〔 MERA AI 〕━━━⬣\n\n${cleanText}\n\n╰━━━━━━━━━━━━━━━━━━⬣\n\n💖 Powered by Mera AI`);
     } catch (e) { await msg.reply(`Error: ${e.message}`); }
   },
 
@@ -262,7 +271,8 @@ You have the power to enforce conversation boundaries. Rules:
     const prompt = args.join(' ');
     await sock.sendMessage(jid, { text: `_Generating image for:_ "${prompt}"\n_Almost done..._` });
     try {
-      const imageUrl = pollinations.getImageUrl(prompt);
+      const enhancedPrompt = await pollinations.enhanceImagePrompt(prompt);
+      const imageUrl = pollinations.getImageUrl(enhancedPrompt);
       await sock.sendMessage(jid, { image: { url: imageUrl }, caption: `*Generated Image*\nPrompt: ${prompt}\n\n_Powered by Dollar Engine_` });
     } catch (e) { await sock.sendMessage(jid, { text: `Image Error: ${e.message}` }); }
   },

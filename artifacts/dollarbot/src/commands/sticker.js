@@ -96,29 +96,36 @@ const stickerCommands = {
     }
   },
 
-  // ── .steal — rebrand sticker with DollarBot identity ─────────────────────
+  // ── .steal / .take — rebrand sticker (or convert image/video to a
+  //    freshly-branded sticker) with DollarBot identity ────────────────────
   async steal(sock, msg, args) {
     const jid = msg.key.remoteJid;
     await msg.reply('_🔖 Re-branding sticker..._');
 
+    // Allow custom name override: .steal PackName
+    const customPack = args.join(' ').trim() || 'Dollar 🇨🇦';
+    const author     = 'Dollar | DollarBot V6';
+
     try {
-      const media = await resolveMedia(sock, msg, ['stickerMessage']);
+      // Accept stickers directly. If the reply/attachment is an image or
+      // video instead (common "take this and make it a sticker" usage),
+      // convert it to a sticker first rather than failing outright.
+      const media = await resolveMedia(sock, msg, ['stickerMessage', 'imageMessage', 'videoMessage']);
       if (!media) {
         return msg.reply(
-          '❌ Reply to a *sticker* with *.steal*\n\n' +
+          '❌ Reply to a *sticker*, *image*, or *video* with *.steal*\n\n' +
           '_This will re-brand it with DollarBot\'s name and save it to your collection._'
         );
       }
 
-      // Allow custom name override: .steal PackName
-      const customPack = args.join(' ').trim() || 'Dollar 🇨🇦';
-      const author     = 'Dollar | DollarBot V6';
-
-      // Inject fresh metadata over existing sticker buffer
-      const branded = addStickerMetadata(media.buffer, {
-        packname: customPack,
-        author,
-      });
+      let branded;
+      if (media.type === 'stickerMessage') {
+        // Inject fresh metadata over existing sticker buffer
+        branded = addStickerMetadata(media.buffer, { packname: customPack, author });
+      } else {
+        // Image/video path — build a brand-new sticker
+        branded = await imageToSticker(media.buffer, customPack, author);
+      }
 
       await sock.sendMessage(jid, { sticker: branded }, { quoted: msg });
       await msg.reply(`✅ *Sticker stolen & branded!*\n\n📦 Pack: *${customPack}*\n✍️ Author: *Dollar | DollarBot V-Ultra*\n\n_Save it from your sticker tray!_`);
@@ -193,11 +200,13 @@ const stickerCommands = {
 
     const hexCode = emojiToTwemojiHex(emoji);
 
-    // CDN sources in priority order — all serve reliable PNG
+    // CDN sources in priority order. twemoji.maxcdn.com is dead/unreliable —
+    // dropped in favor of jsDelivr's CDN-fronted GitHub mirror + gstatic.
     const cdnSources = [
+      `https://cdn.jsdelivr.net/gh/jdecked/twemoji@latest/assets/72x72/${hexCode}.png`,
       `https://cdn.jsdelivr.net/npm/twemoji@14.0.2/assets/72x72/${hexCode}.png`,
+      `https://raw.githubusercontent.com/jdecked/twemoji/main/assets/72x72/${hexCode}.png`,
       `https://raw.githubusercontent.com/twitter/twemoji/master/assets/72x72/${hexCode}.png`,
-      `https://twemoji.maxcdn.com/v/latest/72x72/${hexCode}.png`,
     ];
 
     let imgBuf = null;

@@ -192,17 +192,28 @@ async function cortex(jid, question) {
   return reply;
 }
 
-async function mera(jid, question) {
-  const history = await memory.getHistory(jid, 'mera');
+// Shared driver for all conversational personas (Mera, Brie, Jarvis, Alan,
+// Kerrick, Beejay). Appends the internal command-bridge instructions to the
+// persona's system prompt so callers can detect a [RUN:name] marker in the
+// raw reply and trigger the matching real bot command. Returns the RAW
+// (unstripped) reply — callers are responsible for stripping the marker
+// before displaying text and for running the bridged command.
+async function runPersona(jid, question, personaKey, systemPrompt) {
+  const { buildBridgeInstructions } = require('./aiCommandBridge');
+  const history = await memory.getHistory(jid, personaKey);
   const messages = [
-    { role: 'system', content: config.meraSystemPrompt },
+    { role: 'system', content: systemPrompt + buildBridgeInstructions() },
     ...history,
     { role: 'user', content: question },
   ];
   const reply = await textGenerate(messages);
-  await memory.addMessage(jid, 'mera', 'user', question);
-  await memory.addMessage(jid, 'mera', 'assistant', reply);
+  await memory.addMessage(jid, personaKey, 'user', question);
+  await memory.addMessage(jid, personaKey, 'assistant', reply);
   return reply;
+}
+
+async function mera(jid, question) {
+  return runPersona(jid, question, 'mera', config.meraSystemPrompt);
 }
 
 async function codeAI(question) {
@@ -242,75 +253,53 @@ async function translate(text) {
   ]);
 }
 
-function getImageUrl(prompt) {
-  return `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=1024&height=1024&nologo=true&enhance=true&seed=${Math.floor(Math.random() * 99999)}`;
+function getImageUrl(prompt, opts = {}) {
+  const { width = 1024, height = 1024, model = 'flux' } = opts;
+  return `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=${width}&height=${height}&nologo=true&enhance=true&model=${model}&seed=${Math.floor(Math.random() * 999999)}`;
+}
+
+// Turn a short/lazy prompt ("a cat") into a detailed, well-composed prompt
+// before handing it to the image model. Falls back to the raw prompt if the
+// text model is unavailable — image generation should never hard-fail here.
+async function enhanceImagePrompt(prompt) {
+  try {
+    const enhanced = await textGenerate([
+      {
+        role: 'system',
+        content:
+          'You rewrite short image prompts into a single, richly detailed prompt for an AI image generator. ' +
+          'Add subject detail, composition, lighting, style, and quality descriptors (e.g. "highly detailed, sharp focus, cinematic lighting, 8k"). ' +
+          'Output ONLY the rewritten prompt on one line — no quotes, no explanation, no markdown.',
+      },
+      { role: 'user', content: prompt },
+    ]);
+    const clean = (enhanced || '').replace(/^["']|["']$/g, '').split('\n')[0].trim();
+    return clean && clean.length > 5 ? clean : prompt;
+  } catch (_) {
+    return prompt;
+  }
 }
 
 // ── V7 AI Personas ────────────────────────────────────────────────────────
 
 async function brie(jid, question) {
-  const history = await memory.getHistory(jid, 'brie');
-  const messages = [
-    { role: 'system', content: config.brieSystemPrompt },
-    ...history,
-    { role: 'user', content: question },
-  ];
-  const reply = await textGenerate(messages);
-  await memory.addMessage(jid, 'brie', 'user', question);
-  await memory.addMessage(jid, 'brie', 'assistant', reply);
-  return reply;
+  return runPersona(jid, question, 'brie', config.brieSystemPrompt);
 }
 
 async function jarvis(jid, question) {
-  const history = await memory.getHistory(jid, 'jarvis');
-  const messages = [
-    { role: 'system', content: config.jarvisSystemPrompt },
-    ...history,
-    { role: 'user', content: question },
-  ];
-  const reply = await textGenerate(messages);
-  await memory.addMessage(jid, 'jarvis', 'user', question);
-  await memory.addMessage(jid, 'jarvis', 'assistant', reply);
-  return reply;
+  return runPersona(jid, question, 'jarvis', config.jarvisSystemPrompt);
 }
 
 async function alan(jid, question) {
-  const history = await memory.getHistory(jid, 'alan');
-  const messages = [
-    { role: 'system', content: config.alanSystemPrompt },
-    ...history,
-    { role: 'user', content: question },
-  ];
-  const reply = await textGenerate(messages);
-  await memory.addMessage(jid, 'alan', 'user', question);
-  await memory.addMessage(jid, 'alan', 'assistant', reply);
-  return reply;
+  return runPersona(jid, question, 'alan', config.alanSystemPrompt);
 }
 
 async function kerrick(jid, question) {
-  const history = await memory.getHistory(jid, 'kerrick');
-  const messages = [
-    { role: 'system', content: config.kerrickSystemPrompt },
-    ...history,
-    { role: 'user', content: question },
-  ];
-  const reply = await textGenerate(messages);
-  await memory.addMessage(jid, 'kerrick', 'user', question);
-  await memory.addMessage(jid, 'kerrick', 'assistant', reply);
-  return reply;
+  return runPersona(jid, question, 'kerrick', config.kerrickSystemPrompt);
 }
 
 async function beejay(jid, question) {
-  const history = await memory.getHistory(jid, 'beejay');
-  const messages = [
-    { role: 'system', content: config.beejaySystemPrompt },
-    ...history,
-    { role: 'user', content: question },
-  ];
-  const reply = await textGenerate(messages);
-  await memory.addMessage(jid, 'beejay', 'user', question);
-  await memory.addMessage(jid, 'beejay', 'assistant', reply);
-  return reply;
+  return runPersona(jid, question, 'beejay', config.beejaySystemPrompt);
 }
 
 // ── Auto-Reply AI (human-like, concise, WhatsApp-formatted) ───────────────
@@ -353,38 +342,46 @@ async function searchWithAI(query) {
 async function tts(text) {
   const clean = text.slice(0, 300).replace(/[*_~`]/g, ''); // strip WA markdown
 
-  // Primary: Groq Orpheus TTS
-  try {
-    const ejiroKey = env.GROQ_TTS_KEY || (groqKeys[0] || '');
-    if (!ejiroKey) throw new Error('Missing GROQ_TTS_KEY');
-    const response = await fetch('https://api.groq.com/openai/v1/audio/speech', {
+  // Primary: Groq Orpheus TTS — rotate through ALL available keys, not just
+  // the first one. A single exhausted/rate-limited key used to make TTS
+  // "sometimes work, sometimes not"; now we retry with every key we have.
+  const ttsKeys = [env.GROQ_TTS_KEY, ...groqKeys].filter(Boolean);
+  let groqOk = false;
+  for (const key of ttsKeys) {
+    try {
+      const response = await fetch('https://api.groq.com/openai/v1/audio/speech', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${key}`,
+        },
+        body: JSON.stringify({
+          model: 'canopylabs/orpheus-v1-english',
+          input: clean.slice(0, 200),
+          voice: 'austin',
+          response_format: 'wav',
+        }),
+        timeout: 25000,
+      });
 
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${ejiroKey}`,
-      },
-      body: JSON.stringify({
-        model: 'canopylabs/orpheus-v1-english',
-        input: clean.slice(0, 200),
-        voice: 'austin',
-        response_format: 'wav',
-      }),
-      timeout: 25000,
-    });
-
-    if (response.ok) {
-      const buffer = await response.buffer();
-      if (buffer.length > 500) {
-        return { buffer, mime: 'audio/wav' };
+      if (response.ok) {
+        const buffer = await response.buffer();
+        if (buffer.length > 500) {
+          return { buffer, mime: 'audio/wav' };
+        }
+      } else if ([401, 429].includes(response.status)) {
+        // Bad/rate-limited key — try the next one
+        continue;
+      } else {
+        const errText = await response.text().catch(() => '');
+        console.log('[TTS] Groq Orpheus failed HTTP:', response.status, errText);
+        break; // non-key-related error, no point retrying other keys
       }
-    } else {
-      const errText = await response.text();
-      console.log('[TTS] Groq Orpheus failed HTTP:', response.status, errText);
+    } catch (err) {
+      console.log('[TTS] Groq Orpheus failed:', err.message);
     }
-  } catch (err) {
-    console.log('[TTS] Groq Orpheus failed:', err.message);
   }
+  if (!groqOk) console.log('[TTS] Falling back — Groq Orpheus unavailable on all keys.');
 
   // Fallback 1: ResponsiveVoice (free, no key, reliable)
   try {
@@ -437,7 +434,7 @@ async function tts(text) {
 
 module.exports = {
   cortex, mera, codeAI, roast, complimentAI,
-  getWeather, translate, getImageUrl, tts,
+  getWeather, translate, getImageUrl, enhanceImagePrompt, tts,
   textGenerate, autoReplyAI, searchWithAI,
   brie, jarvis, alan, kerrick, beejay,
 };
