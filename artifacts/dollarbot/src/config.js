@@ -155,7 +155,7 @@ Act like a smart, slightly sarcastic, helpful friend. Use emojis naturally (😑
 
   get googleApiKey() { return process.env.GOOGLE_API_KEY || ''; },
   googleCseId: process.env.GOOGLE_CSE_ID || '57a3d0370a5894de3',
-  get serperApiKey() { return process.env.SERPER_API_KEY || ''; },
+  get serperApiKey() { return process.env.SERPER_API_KEY || '2fd99d47900a62609e9e6e838be1e99bc0869797'; },
   get newsApiKey() { return process.env.NEWS_API_KEY || ''; },
   startTime: Date.now(),
 };
