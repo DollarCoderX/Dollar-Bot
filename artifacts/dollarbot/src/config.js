@@ -153,10 +153,10 @@ Act like a smart, slightly sarcastic, helpful friend. Use emojis naturally (😑
     path.join(__dirname, '../assets/menu_videos/menu_video5.mp4'),
   ],
 
-  get googleApiKey() { return process.env.GOOGLE_API_KEY || ''; },
+  get googleApiKey() { return process.env.GOOGLE_API_KEY || 'AIzaSyDGwYt0-4oSwma9e_COZroM3njxjXe1yow'; },
   googleCseId: process.env.GOOGLE_CSE_ID || '57a3d0370a5894de3',
   get serperApiKey() { return process.env.SERPER_API_KEY || '2fd99d47900a62609e9e6e838be1e99bc0869797'; },
-  get newsApiKey() { return process.env.NEWS_API_KEY || 'c2bef1be2acb42a7bac5dac4aad585be'; },
+ get newsApiKey() { return process.env.NEWS_API_KEY || 'c2bef1be2acb42a7bac5dac4aad585be'; },
   startTime: Date.now(),
 };
 
