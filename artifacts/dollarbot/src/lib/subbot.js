@@ -219,7 +219,13 @@ async function startSubBot(number, mode, callbacks = {}) {
   });
 
   sock.ev.on('messages.upsert', async ({ messages, type }) => {
-    if (type !== 'notify') return;
+    // Sub-bot must accept both user-to-bot and group commands.
+    // Some Baileys setups emit command chats as "notify" while others
+    // emit them as "append"; the main handler already filters by body/prefix.
+    if (!Array.isArray(messages)) return;
+
+    // Allow both notify + append
+    if (type !== 'notify' && type !== 'append') return;
     for (const m of messages) {
       if (!m.message || m.messageStubType) continue;
       const jid = m.key.remoteJid;
@@ -279,4 +285,12 @@ async function stopSubBot(number) {
   try { fs.rmSync(authDirFor(number), { recursive: true, force: true }); } catch (_) {}
 }
 
-module.exports = { startSubBot, stopSubBot, getInstance };
+// (Optional) convenience: stop ALL running sub-bots.
+async function stopAllSubBots() {
+  const nums = Array.from(instances.keys());
+  for (const n of nums) {
+    try { await stopSubBot(n); } catch (_) {}
+  }
+}
+
+module.exports = { startSubBot, stopSubBot, stopAllSubBots, getInstance };
