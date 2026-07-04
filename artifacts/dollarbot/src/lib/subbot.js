@@ -26,6 +26,13 @@ const pino = require('pino');
 const { extractBody } = require('./messages');
 const { installSafeSend } = require('./safe-send');
 
+// Import shared handlers so sub-bots behave exactly like the main bot
+const {
+  handleMessage,
+  handleGroupParticipants,
+  handleEditedMessage,
+} = require('../handler');
+
 /**
  * Sub-bot auth persistence
  * -----------------------
@@ -170,9 +177,49 @@ async function startSubBot(number, mode, callbacks = {}) {
     }
   });
 
+  // Bind msg store / anti-delete needs the same global cache as main bot
+  const msgStore = {
+    messages: {},
+    bind(ev) {
+      ev.on('messages.upsert', ({ messages: msgs }) => {
+        for (const m of msgs) {
+          if (!m.message || !m.key?.remoteJid) continue;
+          const jid = m.key.remoteJid;
+          if (!this.messages[jid]) this.messages[jid] = { array: [] };
+          if (!this.messages[jid].array.some(e => e.key.id === m.key.id))
+            this.messages[jid].array.push(m);
+        }
+      });
+      ev.on('messages.update', updates => {
+        for (const u of updates) {
+          const jid = u.key?.remoteJid;
+          if (!jid || !this.messages[jid]) continue;
+          const idx = this.messages[jid].array.findIndex(m => m.key.id === u.key.id);
+          if (idx >= 0 && u.update)
+            this.messages[jid].array[idx] = { ...this.messages[jid].array[idx], ...u.update };
+        }
+      });
+    },
+  };
+  global.msgStore = msgStore;
+
+  // Anti-edit (needs messages cache to find original)
+  sock.ev.on('messages.update', updates => {
+    for (const u of updates || []) {
+      handleEditedMessage(sock, u).catch(() => {});
+    }
+  });
+
+  // Cache messages for anti-delete
+  msgStore.bind(sock.ev);
+
+  sock.ev.on('groups-participants.update', async (update) => {
+    // Welcome / goodbye for sub-bots
+    await handleGroupParticipants(sock, update);
+  });
+
   sock.ev.on('messages.upsert', async ({ messages, type }) => {
     if (type !== 'notify') return;
-    const { handleMessage } = require('../handler');
     for (const m of messages) {
       if (!m.message || m.messageStubType) continue;
       const jid = m.key.remoteJid;
