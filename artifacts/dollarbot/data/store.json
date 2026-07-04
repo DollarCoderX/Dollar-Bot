@@ -113,10 +113,11 @@
     "2349037855461": {
       "number": "2349037855461",
       "email": "praisejiro43210@gmail.com",
-      "name": "80793233842185",
-      "assignedAt": "2026-07-04, 8:01:37 a.m.",
+      "name": "2349037855461",
+      "assignedAt": "2026-07-04, 8:11:13 a.m.",
       "plan": "free",
-      "cmdCount": 0
+      "cmdCount": 0,
+      "status": "connected"
     }
   },
   "getbotUsers": {
@@ -134,9 +135,9 @@
     },
     "2349037855461": {
       "email": "praisejiro43210@gmail.com",
-      "name": "80793233842185",
+      "name": "2349037855461",
       "cmdCount": 0,
-      "registeredAt": 1783166497808
+      "registeredAt": 1783167073944
     }
   },
   "mem_80793233842185_lid_autoreply": {
@@ -454,5 +455,10 @@
     ],
     "totalCount": 2,
     "lastActive": 1783087602937
+  },
+  "getbot_pending_80793233842185": {
+    "step": "email",
+    "chatJid": "80793233842185@lid",
+    "expiry": 1783168236909
   }
 }
