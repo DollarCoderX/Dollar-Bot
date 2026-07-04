@@ -26,7 +26,22 @@ const pino = require('pino');
 const { extractBody } = require('./messages');
 const { installSafeSend } = require('./safe-send');
 
-const SUBBOT_AUTH_ROOT = process.env.SUBBOT_AUTH_DIR || path.join(__dirname, '../../subbot_auth');
+/**
+ * Sub-bot auth persistence
+ * -----------------------
+ * Main bot uses:
+ *   AUTH_DIR = ../auth_info_baileys
+ *
+ * To ensure sub-bots survive shutdown/restart, we store each slot's
+ * Baileys multi-file auth inside the SAME persistent folder tree:
+ *   auth_info_baileys/subbots/<number>/
+ *
+ * If you still want custom storage, set SUBBOT_AUTH_DIR in env.
+ */
+const SUBBOT_AUTH_ROOT = process.env.SUBBOT_AUTH_DIR
+  ? process.env.SUBBOT_AUTH_DIR
+  : path.join(__dirname, '../../auth_info_baileys', 'subbots');
+
 if (!fs.existsSync(SUBBOT_AUTH_ROOT)) fs.mkdirSync(SUBBOT_AUTH_ROOT, { recursive: true });
 
 const logger = pino({ level: 'silent' });
@@ -35,7 +50,7 @@ const logger = pino({ level: 'silent' });
 const instances = new Map();
 
 function authDirFor(number) {
-  return path.join(SUBBOT_AUTH_ROOT, number);
+  return path.join(SUBBOT_AUTH_ROOT, String(number));
 }
 
 function getInstance(number) {
