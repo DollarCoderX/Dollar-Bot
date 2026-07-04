@@ -770,6 +770,15 @@ async function handleMessage(sock, msg) {
     // Helper to clear typing indicator when done (always call after command)
     const stopTyping = () => sock.sendPresenceUpdate('paused', jid).catch(() => {});
 
+    // ── GetBot free-plan command limit — blocks the command once a
+    //    self-registered free-plan user exceeds their quota. Skips the
+    //    getbot/getbotcancel commands themselves so users can still manage
+    //    their own slot after being limited. ───────────────────────────────
+    if (!isOwner && cmd !== 'getbot' && cmd !== 'getbotcancel') {
+      const limited = await getBotCommands.checkGetBotLimit(sock, msg, jid, sender);
+      if (limited) { stopTyping(); return; }
+    }
+
     // ────────────────────────────────────────────────────────────────────────
     switch (cmd) {
 

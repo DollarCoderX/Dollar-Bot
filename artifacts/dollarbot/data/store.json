@@ -94,14 +94,6 @@
     "ts": 1781674977147
   },
   "botSessions": {
-    "80793233842185": {
-      "number": "80793233842185",
-      "email": "praiseifeanyix@gmail.com",
-      "name": "80793233842185",
-      "assignedAt": "2026-07-03, 3:31:56 a.m.",
-      "plan": "free",
-      "cmdCount": 0
-    },
     "136795362738331": {
       "number": "136795362738331",
       "email": "akewudas530@gmail.com",
@@ -117,15 +109,17 @@
       "assignedAt": "2026-07-03, 7:39:42 a.m.",
       "plan": "free",
       "cmdCount": 0
+    },
+    "2349037855461": {
+      "number": "2349037855461",
+      "email": "praisejiro43210@gmail.com",
+      "name": "80793233842185",
+      "assignedAt": "2026-07-04, 8:01:37 a.m.",
+      "plan": "free",
+      "cmdCount": 0
     }
   },
   "getbotUsers": {
-    "80793233842185": {
-      "email": "praiseifeanyix@gmail.com",
-      "name": "80793233842185",
-      "cmdCount": 0,
-      "registeredAt": 1783063916320
-    },
     "136795362738331": {
       "email": "akewudas530@gmail.com",
       "name": "136795362738331",
@@ -137,6 +131,12 @@
       "name": "35850528227559",
       "cmdCount": 0,
       "registeredAt": 1783078782932
+    },
+    "2349037855461": {
+      "email": "praisejiro43210@gmail.com",
+      "name": "80793233842185",
+      "cmdCount": 0,
+      "registeredAt": 1783166497808
     }
   },
   "mem_80793233842185_lid_autoreply": {

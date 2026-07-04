@@ -51,6 +51,14 @@ async function startSubBot(number, mode, callbacks = {}) {
   // Reuse an already-running instance if present
   const existing = instances.get(number);
   if (existing && existing.status === 'connected') {
+    // Fire onConnected immediately so the caller's message flow doesn't
+    // hang waiting for a connection event that will never come again.
+    try {
+      await callbacks.onConnected?.({
+        number: existing.number || number,
+        displayName: existing.displayName || existing.number || number,
+      });
+    } catch (_) {}
     return existing;
   }
   if (existing) {
@@ -83,13 +91,19 @@ async function startSubBot(number, mode, callbacks = {}) {
       keys: makeCacheableSignalKeyStore(state.keys, logger),
     },
     logger,
-    printQRInTerminal: false,
-    browser: ['DollarBot', 'Chrome', '125.0.0.0'],
+    // Same fingerprint as the main bot's pairing flow (proven reliable) —
+    // avoids the "printQRInTerminal + pairing code" mismatch that made
+    // sub-bot pairing codes fail more often than the main terminal flow.
+    printQRInTerminal: mode !== 'pair',
+    browser: ['Windows', 'Chrome', '125.0.6422.112'],
     connectTimeoutMs: 60000,
     defaultQueryTimeoutMs: 10000,
     keepAliveIntervalMs: 25000,
+    retryRequestDelayMs: 250,
+    maxMsgRetryCount: 3,
     markOnlineOnConnect: true,
     syncFullHistory: false,
+    fireInitQueries: true,
   });
   installSafeSend(sock);
   instance.sock = sock;
@@ -165,6 +179,9 @@ async function startSubBot(number, mode, callbacks = {}) {
   });
 
   // ── Pairing code: requested once the socket is created, before scanning ──
+  // Timing matches the main bot's terminal flow exactly (8s initial wait for
+  // the WebSocket handshake to fully settle, 5s between retries, 5 attempts)
+  // since that flow is the one confirmed to work reliably.
   if (mode === 'pair' && !hasSession) {
     setTimeout(async () => {
       let attempts = 0;
@@ -172,17 +189,20 @@ async function startSubBot(number, mode, callbacks = {}) {
         try {
           const code = await sock.requestPairingCode(number);
           instance.pairCode = code;
+          console.log(`[SubBot ${number}] Pairing code issued: ${code}`);
           try { await callbacks.onPairCode?.(code); } catch (_) {}
         } catch (e) {
           attempts++;
-          if (attempts < 5) setTimeout(tryCode, 4000);
-          else {
+          console.log(`[SubBot ${number}] Pairing code attempt ${attempts}/5 failed: ${e.message}`);
+          if (attempts < 5) {
+            setTimeout(tryCode, 5000);
+          } else {
             try { await callbacks.onError?.(e); } catch (_) {}
           }
         }
       };
       tryCode();
-    }, 3000);
+    }, 8000);
   }
 
   return instance;
