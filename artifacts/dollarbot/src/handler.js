@@ -10,7 +10,7 @@ const { convertToOggOpus, transcribeAudio } = require('./lib/audio');
 const shockCommands = require('./commands/shock');
 
 const userCommands    = require('./commands/user');
-puppy error    const ownerCommands   = require('./commands/owner');
+const ownerCommands   = require('./commands/owner');
 const aiCommands      = require('./commands/ai');
 const funCommands     = require('./commands/fun');
 const utilityCommands = require('./commands/utility');
